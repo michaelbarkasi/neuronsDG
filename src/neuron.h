@@ -50,7 +50,7 @@ class neuron {
       const double t_per_bin = 1.0, 
       const double sample_rate = 1e4
     );
-    virtual ~neuron() {}
+    virtual ~neuron() {};
     
     // Member functions for loading data
     void load_trial_data(const MatrixXd& td);
@@ -65,7 +65,8 @@ class neuron {
     NumericMatrix fetch_spike_raster_R() const;
     
     // Member functions for fetching analysis results
-    NumericVector fetch_autocorr() const;
+    VectorXd fetch_autocorr() const;
+    NumericVector fetch_autocorr_R() const;
     
     // Member functions for data analysis
     void compute_autocorrelation();
