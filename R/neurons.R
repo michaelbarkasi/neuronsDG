@@ -32,16 +32,17 @@ new_neuron <- function(
   id_num = 0, 
   recording_name = "not_provided", 
   type = "generic", 
+  hemi = "not_provided",
   sim = FALSE, 
   unit_time = "ms", 
   unit_sample_rate = "Hz", 
   unit_data = "mV", 
   t_per_bin = 1.0, 
   sample_rate = 1e4
-  ) {
+) {
   neuron <- new(
     neuron, 
-    id_num, recording_name, type, sim, unit_time, unit_sample_rate, unit_data, t_per_bin, sample_rate
+    id_num, recording_name, type, hemi, sim, unit_time, unit_sample_rate, unit_data, t_per_bin, sample_rate
   )
   return(neuron)
 }

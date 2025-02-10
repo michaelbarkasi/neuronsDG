@@ -10,6 +10,11 @@
 using namespace Rcpp;
 using namespace Eigen;
 
+// Helper functions
+CharacterVector enum_prefix(std::string prefix, int n);
+
+// Neuron class
+
 class neuron {
 
   private:
@@ -18,6 +23,7 @@ class neuron {
     const int id_num = 0;                               // Fixed ID number for each neuron
     const std::string recording_name = "not_provided";  // Recording (if any) on which this neuron is based
     const std::string type = "generic";                 // Type of neuron, e.g. "generic", "blackbox" "LIF", "McCullochPitts", "excitatory", "inhibitory", etc.
+    const std::string hemi = "not_provided";            // Hemisphere of neuron, e.g. "left", "right"
     const bool sim = false;                             // Whether this neuron is simulated or based on recorded data
     
     // Unit specifications
@@ -27,7 +33,7 @@ class neuron {
     
     // Unit conversions 
     const double t_per_bin = 1.0;                       // Time (in above units) per bin, e.g., 1 ms per bin
-    const double sample_rate = 1e4;                     // Sample rate (in above units), e.g., 1000 Hz
+    const double sample_rate = 1e4;                     // Sample rate (in above units), e.g., 10000 Hz
     
     // Data fields
     MatrixXd trial_data;                                // NxM matrix of doubles, rows as recording times (in "unit_time"), columns as trials, data values in "unit_data"
@@ -43,6 +49,7 @@ class neuron {
       const int id_num = 0, 
       const std::string recording_name = "not_provided", 
       const std::string type = "generic", 
+      const std::string hemi = "not_provided",
       const bool sim = false, 
       const std::string unit_time = "ms", 
       const std::string unit_sample_rate = "Hz", 
@@ -57,19 +64,22 @@ class neuron {
     void load_trial_data_R(const NumericMatrix& td);
     void load_spike_raster(const MatrixXd& sr);
     void load_spike_raster_R(const NumericMatrix& sr);
+    void infer_raster();
+    void infer_trial();
     
     // Member functions for fetching data
     MatrixXd fetch_trial_data() const;
     NumericMatrix fetch_trial_data_R() const;
     MatrixXd fetch_spike_raster() const;
     NumericMatrix fetch_spike_raster_R() const;
+    List fetch_id_data() const;
     
     // Member functions for fetching analysis results
     VectorXd fetch_autocorr() const;
     NumericVector fetch_autocorr_R() const;
     
     // Member functions for data analysis
-    void compute_autocorrelation();
+    void compute_autocorrelation(const std::string& bin_count_action); // action must be 'sum', 'boolean', or 'mean'
 
 };
 
