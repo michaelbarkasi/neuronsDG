@@ -46,7 +46,3 @@ new_neuron <- function(
   )
   return(neuron)
 }
-
-
-
-
