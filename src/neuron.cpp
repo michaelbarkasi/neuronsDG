@@ -43,9 +43,16 @@ double EDF_autocorr(
     const double& lag,
     const double& A, 
     const double& tau, 
-    const double& bias_term
+    const double& bias_term,
+    const int& return_grad
 ) {
-  return A * exp(-lag/tau) + bias_term;
+  if (return_grad == 0) { // No gradient, return function output
+    return A * exp(-lag/tau) + bias_term;
+  } else if (return_grad == 1) { // gradient wrt A
+    return exp(-lag/tau);
+  } else if (return_grad == 2) { // gradient wrt tau
+    return A * exp(-lag/tau) * (lag/(tau*tau));
+  }
 }
 
 /*
@@ -79,6 +86,27 @@ neuron::neuron(
 { 
   // No initialization operations
 }
+
+/*
+ * ***********************************************************************************
+ * Member function implementations, adjust settings
+ */
+
+void neuron::set_edf_initials(
+    double a0, 
+    double t0
+  ) {
+    A0 = a0;
+    tau0 = t0;
+  };
+
+void neuron::set_edf_termination(
+    double ct, 
+    int me
+  ) {
+    ctol = ct;
+    max_evals = me;
+  };
 
 /*
  * ***********************************************************************************
@@ -219,12 +247,19 @@ List neuron::fetch_id_data() const {
  * Member function implementations, fetch analysis results
  */
 
-// Fetching autocorrelation (Rcpp vector)
+// Fetching autocorrelation 
 VectorXd neuron::fetch_autocorr() const {return autocorr;}
 
-// Fetching autocorrelation (Rcpp vector)
+// Fetching autocorrelation 
 NumericVector neuron::fetch_autocorr_R() const {return wrap(autocorr);}
 NumericVector neuron::fetch_autocorr_edf_R() const {return wrap(autocorr_edf);}
+
+// Fetch fitted EDF parameters 
+NumericVector neuron::fetch_EDF_parameters() const {
+    NumericVector results = {A, tau, bias_term};
+    results.names() = CharacterVector({"A", "tau", "bias_term"});
+    return results;
+  }
 
 /*
  * ***********************************************************************************
@@ -311,7 +346,7 @@ double neuron::bounded_MSE_EDF_autocorr(
   ) {
     
     /*
-     * EDF: autocor = A*exp(-((lag)/tau)) + bias_term
+     * EDF: autocor = A*exp(-lag/tau) + bias_term
      */
     
     // Grab neuron and estimated autocorrelation 
@@ -321,26 +356,51 @@ double neuron::bounded_MSE_EDF_autocorr(
     
     // Find mean squared error of autocorr prediction from these parameters x
     double bias_term = nrn->bias_term;
-    double sum_err_sq = 0.0;
-    for (int i = 0; i < max_lag; i++) {
+    double mse = 0.0;
+    for (int i = 1; i < max_lag; i++) {
+      // i = 1 because we throw out the first bin, which dominates
       double lag = (double)i;
-      double pred = EDF_autocorr(lag, x[0], x[1], bias_term);
+      double pred = EDF_autocorr(lag, x[0], x[1], bias_term, 0);
       double err = est_autocorr(i) - pred;
-      sum_err_sq += err * err;
+      mse += err * err;
     }
-    double mse = sum_err_sq/(double)max_lag;
+    mse = mse/(double)(max_lag - 1.0);
     
     // Apply penalty to keep both parameters positive
     double penalty_multiple = nrn->penalty_multiple;
     double p1 = penalty_multiple/(x[0] * x[0]);
     double p2 = penalty_multiple/(x[1] * x[1]);
     
+    // Compute gradient if needed
+    if (!grad.empty()) {
+      
+      // Compute gradient of mse
+      std::vector<double> grd = {0.0, 0.0};
+      for (int i = 1; i < max_lag; i++) {
+        // i = 1 because we throw out the first bin, which dominates
+        double lag = (double)i;
+        double fx = est_autocorr(i) - EDF_autocorr(lag, x[0], x[1], bias_term, 0);
+        double gA = -EDF_autocorr(lag, x[0], x[1], bias_term, 1);
+        double gtau = -EDF_autocorr(lag, x[0], x[1], bias_term, 2);
+        grd[0] += 2.0 * fx * gA;
+        grd[1] += 2.0 * fx * gtau;
+      }
+      grd[0] = grd[0]/(double)(max_lag - 1.0);
+      grd[1] = grd[1]/(double)(max_lag - 1.0);
+      
+      // Compute gradient of penalty
+      grd[0] = grd[0] - (2.0 * penalty_multiple * x[0])/(x[0] * x[0] * x[0] * x[0]);
+      grd[1] = grd[1] - (2.0 * penalty_multiple * x[1])/(x[1] * x[1] * x[1] * x[1]);
+      
+      grad.assign({grd[0], grd[1]});
+    } 
+    
     return mse + p1 + p2;
     
   }
 
 void neuron::fit_autocorrelation() { 
-    
+   
     // Grab initial parameters
     std::vector<double> x = {A0, tau0};
     size_t n = x.size();
@@ -348,25 +408,24 @@ void neuron::fit_autocorrelation() {
     // Set penalty multiple 
     int max_lag = autocorr.size();
     double sum_err0_sq = 0.0;
-    for (int i = 0; i < max_lag; i++) {
+    for (int i = 1; i < max_lag; i++) {
+      // i = 1 because we throw out the first bin, which dominates
       double lag = (double)i;
-      double pred0 = EDF_autocorr(lag, A0, tau0, bias_term);
+      double pred0 = EDF_autocorr(lag, A0, tau0, bias_term, 0);
       double err0 = autocorr(i) - pred0;
       sum_err0_sq += err0 * err0;
     }
-    double mse0 = sum_err0_sq/(double)max_lag;
+    double mse0 = sum_err0_sq/(double)(max_lag - 1.0);
     
     // Set bias term
     bias_term = lambda * t_per_bin;
     bias_term = bias_term * bias_term;
     
-    // When A is 1.0 and tau is 10.0, want p1 + p2 = mse0 * 0.05
-    penalty_multiple = (mse0 * 0.05)/(1.0/(A0 * A0) + 1.0/(tau0 * tau0));
+    // When A is 1.0 and tau is 10.0, want p1 + p2 = mse0 * 0.25
+    penalty_multiple = (mse0 * 0.25)/(1.0/(A0 * A0) + 1.0/(tau0 * tau0));
     
     // Set up NLopt optimizer
-    double ctol = 1e4;
-    int max_evals = 500;
-    nlopt::opt opt(nlopt::LN_SBPLX, n); // LD_LBFGS would need gradient function
+    nlopt::opt opt(nlopt::LD_LBFGS, n); // LD_LBFGS would need gradient function
     opt.set_min_objective(neuron::bounded_MSE_EDF_autocorr, this);
     opt.set_ftol_rel(ctol);       // stop when iteration changes objective fn value by less than this fraction 
     opt.set_maxeval(max_evals);   // Maximum number of evaluations to try
@@ -386,14 +445,14 @@ void neuron::fit_autocorrelation() {
     
     // Compute final modelled autocorrelation 
     autocorr_edf.resize(max_lag);
-    for (int i = 0; i < max_lag; i++) {
+    for (int i = 1; i < max_lag; i++) {
       double lag = (double)i;
-      autocorr_edf(i) = EDF_autocorr(lag, x[0], x[1], bias_term);
+      autocorr_edf(i) = EDF_autocorr(lag, x[0], x[1], bias_term, 0);
     }
     
-    // Save optimization results
+    // Save optimization results, in proper time units
     A = x[0];
-    tau = x[1];
+    tau = x[1] * t_per_bin;
     
   } 
 
@@ -404,12 +463,15 @@ void neuron::fit_autocorrelation() {
 RCPP_MODULE(neuron) {
   class_<neuron>("neuron")
   .constructor<int, std::string, std::string, std::string, bool, std::string, std::string, std::string, double, double>()
+  .method("set_edf_initials", &neuron::set_edf_initials)
+  .method("set_edf_termination", &neuron::set_edf_termination)
   .method("load_trial_data_R", &neuron::load_trial_data_R)
   .method("load_spike_raster_R", &neuron::load_spike_raster_R)
   .method("fetch_trial_data_R", &neuron::fetch_trial_data_R)
   .method("fetch_spike_raster_R", &neuron::fetch_spike_raster_R)
   .method("fetch_autocorr_R", &neuron::fetch_autocorr_R)
   .method("fetch_autocorr_edf_R", &neuron::fetch_autocorr_edf_R)
+  .method("fetch_EDF_parameters", &neuron::fetch_EDF_parameters)
   .method("fetch_id_data", &neuron::fetch_id_data)
   .method("compute_autocorrelation", &neuron::compute_autocorrelation)
   .method("fit_autocorrelation", &neuron::fit_autocorrelation);

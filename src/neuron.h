@@ -44,7 +44,9 @@ class neuron {
     // Analysis fields
     VectorXd autocorr;                                  // Estimated (observed) autocorrelation of trial_data
     VectorXd autocorr_edf;                              // Estimated autocorrelation of trial_data using EDF model
-    double A0 = 1.0;                                    // Initial amplitude of EDF model of autocorrelation 
+    int max_evals = 500;                                // Max number of evals when fitting EDF to autocorrelation
+    double ctol = 1e-7;                                 // Convergence tolerance when fitting EDF to autocorrelation
+    double A0 = 0.1;                                    // Initial amplitude of EDF model of autocorrelation 
     double tau0 = 10.0;                                 // Initial time constant of EDF model of autocorrelation
     double A;                                           // Fitted amplitude of EDF model of autocorrelation
     double tau;                                         // Fitted time constant of EDF model of autocorrelation
@@ -68,6 +70,10 @@ class neuron {
     );
     virtual ~neuron() {};
     
+    // Member functions for adjusting settings
+    void set_edf_initials(double a0, double t0);
+    void set_edf_termination(double ct, int me);
+    
     // Member functions for loading data
     void load_trial_data(const MatrixXd& td);
     void load_trial_data_R(const NumericMatrix& td);
@@ -87,6 +93,7 @@ class neuron {
     VectorXd fetch_autocorr() const;
     NumericVector fetch_autocorr_R() const;
     NumericVector fetch_autocorr_edf_R() const;
+    NumericVector fetch_EDF_parameters() const;
     
     // Member functions for data analysis
     void compute_autocorrelation(const std::string& bin_count_action); // action must be 'sum', 'boolean', or 'mean'
