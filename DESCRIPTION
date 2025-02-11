@@ -10,3 +10,4 @@ Description: Defines a Cpp class 'neuron' intended to model a single neuron, acc
 License: GPL (>= 2)
 Imports: Rcpp (>= 1.0.13), RcppEigen
 LinkingTo: Rcpp, RcppEigen
+SystemRequirements: NLopt

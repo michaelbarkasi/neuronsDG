@@ -1,4 +1,3 @@
-useDynLib(neurons, .registration=TRUE)
+useDynLib(neurons, .registration = TRUE)
 importFrom(Rcpp, evalCpp)
 exportPattern("^[[:alpha:]]+")
-
