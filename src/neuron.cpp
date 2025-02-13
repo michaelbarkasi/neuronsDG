@@ -233,6 +233,24 @@ NumericVector dichot_gauss_sigma_formula(
     
   }
 
+NumericMatrix makePositiveDefinite(const NumericMatrix& NumX) {
+  
+  MatrixXd X = to_eMat(NumX);
+  SelfAdjointEigenSolver<MatrixXd> solver(X);
+  VectorXd eigenvalues = solver.eigenvalues();
+  MatrixXd eigenvectors = solver.eigenvectors();
+  
+  // Ensure all eigenvalues are positive
+  for (int i = 0; i < eigenvalues.size(); ++i) {
+    if (eigenvalues(i) < 1e-10) {  // Adjust small or negative values
+      eigenvalues(i) = 1e-10;
+    }
+  }
+  
+  // Reconstruct the matrix
+  return to_NumMat(eigenvectors * eigenvalues.asDiagonal() * eigenvectors.transpose());
+}
+
 /*
  * ***********************************************************************************
  * Main neuron class
@@ -245,10 +263,10 @@ neuron::neuron(
   const std::string type, 
   const std::string hemi,
   bool sim, 
-  const std::string unit_time, 
-  const std::string unit_sample_rate, 
-  const std::string unit_data, 
-  const double t_per_bin, 
+  std::string unit_time, 
+  std::string unit_sample_rate, 
+  std::string unit_data, 
+  double t_per_bin, 
   const double sample_rate
 ) 
   : id_num(id_num), 
@@ -666,7 +684,7 @@ double neuron::sigma_loss(
     }
     
     // Create sigma from its diagonal
-    NumericMatrix SIGMA = toeplitz(sigma_diag, sigma_diag);
+    NumericMatrix SIGMA = makePositiveDefinite(toeplitz(sigma_diag, sigma_diag));
     
     // Compute formula
     NumericVector output = dichot_gauss_sigma_formula(dichot_threshold, autocorr_fitted0, SIGMA);
@@ -735,7 +753,7 @@ neuron neuron::dichot_gauss_simulation(
     }
     
     // Make random draws
-    NumericMatrix sigma_gauss_matrix = toeplitz(sigma_gauss1, sigma_gauss1);
+    NumericMatrix sigma_gauss_matrix = makePositiveDefinite(toeplitz(sigma_gauss1, sigma_gauss1));
     NumericVector mu = rep(0.0, max_lag + 1);
     NumericMatrix simulated_trials_transpose = mvnorm_random(
       trials, 
@@ -757,11 +775,10 @@ neuron neuron::dichot_gauss_simulation(
     neuron my_sim = neuron(*this);
     
     // Load with simulated trials
-    // ... seems like these are needed for sim, but they also mess up the analysis of the observed data. 
-    // my_sim.load_trial_data(simulated_trials);
-    // my_sim.sim = true;
-    // my_sim.unit_time = "bin";
-    // my_sim.t_per_bin = 1.0;
+    my_sim.load_trial_data(simulated_trials);
+    my_sim.sim = true;
+    my_sim.unit_time = "bin";
+    my_sim.t_per_bin = 1.0;
     
     // Return simulated neuron
     return(my_sim);
