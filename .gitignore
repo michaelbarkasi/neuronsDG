@@ -1,11 +1,8 @@
-.Rproj.user
-.Rhistory
-.RData
-.Ruserdata
-.DS_Store
+.*
+*.Rproj
+*.gitattributes
 src/*.o
 src/*.so
 src/*.dll
-src/.DS_Store
-man/.DS_Store
 Read-and-delete-me
+.Rproj.user

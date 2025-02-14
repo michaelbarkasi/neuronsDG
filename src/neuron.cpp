@@ -7,6 +7,8 @@
  * Helper functions
  */
 
+const double Inf = 1e20;
+
 // Build sequence of numbered string prefixes
 CharacterVector enum_prefix(std::string prefix, int n) {
   CharacterVector result(n);
@@ -53,6 +55,12 @@ NumericVector to_NumVec(
       num_vec(i) = vec(i);
     }
     return num_vec;
+  }
+// ... overload 
+NumericVector to_NumVec(
+    const std::vector<double>& vec
+  ) {
+    return wrap(vec);
   }
 
 // Convert to Eigen matrix with doubles
@@ -106,28 +114,26 @@ double EDF_autocorr(
 
 // Multivariate normal CDF
 double mvnorm_cdf(
-    const NumericVector& lower, 
     const NumericVector& upper, 
-    const NumericVector& mean, 
     const NumericMatrix& sigma  // covariance matrix of dimension n less than 1000
   ) {
     
     if (sigma.nrow() != sigma.ncol()) {Rcpp::stop("Covariance matrix must be square");}
     if (sigma.nrow() >= 1000) {Rcpp::stop("Covariance matrix must be less than 1000x1000");}
-    if (lower.size() != upper.size()) {Rcpp::stop("Lower and upper bounds must be same length");}
-    if (mean.size() != sigma.nrow() || mean.size() != lower.size()) {Rcpp::stop("Bounds and mean vectors must have the same length as sigma diagonal");}
+    if (sigma.nrow() != upper.size()) {Rcpp::stop("Matrix diagonal and upper bounds must be same length");}
     
-    Function pmvnorm("pmvnorm"); // Calls mvtnorm::pmvnorm from R
+    Function pmvnorm("pmvnorm", Environment::namespace_env("mvtnorm"));
     // ... uses Genz algorithm
     
-    return as<double>(
-      pmvnorm(
-        Named("lower") = lower, 
+    double prob = as<double>(
+      pmvnorm( // by default, lower = -Inf and mean = 0.
         Named("upper") = upper, 
-        Named("mean") = mean, 
-        Named("sigma") = sigma
+        Named("corr") = sigma, // "corr", or "sigma"? "corr" seems to return expected results
+        Named("keepAttr") = false
       )
     );
+    
+    return prob;
     
   }
 
@@ -194,62 +200,134 @@ NumericMatrix toeplitz(
   }
 
 // For estimating sigma for dichotomized Gaussian simulation
-NumericVector dichot_gauss_sigma_formula(
+NumericVector dg_sigma_formula(
     const double& threshold,      // threshold for dichotomization
     const NumericVector& cov,     // desired covarance after dichotomization
     const NumericMatrix& sigma    // covariance matrix
   ) {
+    // We know threshold and cov. By finding the sigma which sends this function 
+    //   to zero, we can find the covariance needed for dichotomized Gaussian simulation
    
     // Check dimension
     int dim = sigma.nrow();
     if (dim != sigma.ncol()) {Rcpp::stop("Covariance matrix must be square");}
     if (dim != cov.size()) {Rcpp::stop("Covariance vector must have the same length as sigma diagonal");}
     
-    // Find probability of a point being below the threshold along both dimensions
-    NumericVector lower = Rcpp::rep(-1e100, dim);
+    // Find probability of a point being below the threshold along all dimensions
     NumericVector upper = Rcpp::rep(threshold, dim); 
     double Phi2 = mvnorm_cdf(
-      lower,
       upper, 
-      0.0, 
       sigma
     );
-    
+   
     // Find probability of a point being below the threshold along one dimension
     double Phi = norm_cdf(
       threshold, 
-      0.0,   // mean
-      1,     // sd
-      false  // return cdf
+      0.0,     // mean
+      1.0,     // sd
+      false    // return cdf
     );
     
     // desired sigma will be the one which sends all elements to zero
     NumericVector output(dim);
-    double Phi2PhiPhi = Phi2 * Phi * Phi;
     for (int i = 0; i < dim; i++) {
-      output[i] = cov[i] - Phi2PhiPhi;
+      output[i] = cov[i] - Phi2 + Phi * Phi;
     }
+    
     return output;
     
   }
 
-NumericMatrix makePositiveDefinite(const NumericMatrix& NumX) {
+// Wrapper for use with find-root-bisection algorithm 
+double dg_sigma_formula_scalar(
+    const double& threshold,      // threshold for dichotomization
+    const double& cov,            // desired covarance after dichotomization
+    const double& sigma           // correlation coefficient
+) {
   
-  MatrixXd X = to_eMat(NumX);
-  SelfAdjointEigenSolver<MatrixXd> solver(X);
-  VectorXd eigenvalues = solver.eigenvalues();
-  MatrixXd eigenvectors = solver.eigenvectors();
+  // Construct covariance matrix sigma (2x2)
+  NumericMatrix sigmaMat(2, 2);
+  sigmaMat(_,0) = NumericVector::create(1.0, sigma);
+  sigmaMat(_,1) = NumericVector::create(sigma, 1.0);
   
-  // Ensure all eigenvalues are positive
-  for (int i = 0; i < eigenvalues.size(); ++i) {
-    if (eigenvalues(i) < 1e-10) {  // Adjust small or negative values
-      eigenvalues(i) = 1e-10;
+  // Extend cov to have lag = 0 on front
+  NumericVector cov1 = {1.0, cov};
+  
+  // Evaluate formula and return second value
+  NumericVector output = dg_sigma_formula(threshold, cov1, sigmaMat);
+  return output[1];
+  
+}
+
+// Function to find sigma by root bisection 
+double dg_find_sigma_RootBisection(
+    const double& threshold,      // threshold for dichotomization
+    const double& cov             // desired covarance after dichotomization
+) {
+  
+  // Set search parameters 
+  const int max_iter = 50; 
+  const double tol = 1e-4;
+  
+  // Initiate sigmas
+  double sigma_lower = -0.999;
+  double sigma_upper = 0.999;
+  
+  // Evaluate formula
+  double fx_lower = dg_sigma_formula_scalar(threshold, cov, sigma_lower);
+  double fx_upper = dg_sigma_formula_scalar(threshold, cov, sigma_upper);
+  
+  // Run checks 
+  if (abs(fx_lower) < tol) {return sigma_lower;}
+  else if (abs(fx_upper) < tol) {return sigma_upper;}
+  else if (fx_lower * fx_upper > tol) {return 0.0;} // Both initial covariance values lie on same side of zero crossing
+  
+  // Run bisection
+  double fx = Inf;
+  double sigma_mid;
+  int iter = 0;
+  while (abs(fx) > tol && iter < max_iter) {
+    
+    // Find midpoint
+    sigma_mid = (sigma_lower + sigma_upper)/2.0;
+    fx = dg_sigma_formula_scalar(threshold, cov, sigma_mid);
+    
+    // Update bounds
+    if (fx > 0.0) {
+      sigma_lower = sigma_mid;
+    } else {
+      sigma_upper = sigma_mid;
     }
+    
+    // Update iteration
+    iter++;
+    
   }
   
-  // Reconstruct the matrix
-  return to_NumMat(eigenvectors * eigenvalues.asDiagonal() * eigenvectors.transpose());
+  return sigma_mid; 
+  
 }
+
+// Function to make a matrix positive definite
+NumericMatrix makePositiveDefinite(
+    const NumericMatrix& NumX
+  ) {
+    
+    MatrixXd X = to_eMat(NumX);
+    SelfAdjointEigenSolver<MatrixXd> solver(X);
+    VectorXd eigenvalues = solver.eigenvalues();
+    MatrixXd eigenvectors = solver.eigenvectors();
+    
+    // Ensure all eigenvalues are positive
+    for (int i = 0; i < eigenvalues.size(); ++i) {
+      if (eigenvalues(i) < 1e-10) {  // Adjust small or negative values
+        eigenvalues(i) = 1e-10;
+      }
+    }
+    
+    // Reconstruct the matrix
+    return to_NumMat(eigenvectors * eigenvalues.asDiagonal() * eigenvectors.transpose());
+  }
 
 /*
  * ***********************************************************************************
@@ -258,30 +336,37 @@ NumericMatrix makePositiveDefinite(const NumericMatrix& NumX) {
 
 // Constructor
 neuron::neuron(
-  const int id_num, 
-  const std::string recording_name, 
-  const std::string type, 
-  const std::string hemi,
-  bool sim, 
-  std::string unit_time, 
-  std::string unit_sample_rate, 
-  std::string unit_data, 
-  double t_per_bin, 
-  const double sample_rate
-) 
-  : id_num(id_num), 
+    const int id_num, 
+    const std::string recording_name, 
+    const std::string type, 
+    const std::string genotype,
+    const std::string sex,
+    const std::string hemi,
+    const std::string region,
+    const std::string age,
+    bool sim, 
+    std::string unit_time, 
+    std::string unit_sample_rate, 
+    std::string unit_data, 
+    double t_per_bin, 
+    const double sample_rate
+  ) : id_num(id_num), 
     recording_name(recording_name), 
     type(type), 
+    genotype(genotype),
+    sex(sex),
     hemi(hemi), 
+    region(region),
+    age(age),
     sim(sim), 
     unit_time(unit_time), 
     unit_sample_rate(unit_sample_rate), 
     unit_data(unit_data), 
     t_per_bin(t_per_bin), 
     sample_rate(sample_rate)
-{ 
-  // No initialization operations
-}
+  { 
+      // No initialization operations
+  }
 
 /*
  * ***********************************************************************************
@@ -306,7 +391,7 @@ void neuron::set_edf_termination(
 
 /*
  * ***********************************************************************************
- * Member function implementations, basic data handling
+ * Member function implementations, basic data handling, loading
  */
 
 // Loading trial data (Eigen matrix)
@@ -364,6 +449,11 @@ void neuron::load_spike_raster_R(const NumericMatrix& sr) {
     
   } 
 
+/*
+ * ***********************************************************************************
+ * Member function implementations, basic data handling, fetching
+ */
+
 // Fetching trial data (Eigen matrix)
 MatrixXd neuron::fetch_trial_data() const {return trial_data;} 
 
@@ -384,6 +474,40 @@ NumericMatrix neuron::fetch_spike_raster_R() const {
     colnames(spike_raster_R) = CharacterVector::create("time", "trial");
     return spike_raster_R;
   } 
+
+// Method to return fields with neuron ID information
+List neuron::fetch_id_data() const {
+  
+  return List::create(
+    _["id_num"] = id_num,
+    _["recording_name"] = recording_name,
+    _["type"] = type,
+    _["genotype"] = genotype,
+    _["sex"] = sex,
+    _["hemi"] = hemi,
+    _["region"] = region,
+    _["age"] = age,
+    _["sim"] = sim,
+    _["unit_time"] = unit_time,
+    _["unit_sample_rate"] = unit_sample_rate,
+    _["unit_data"] = unit_data,
+    _["t_per_bin"] = t_per_bin,
+    _["sample_rate"] = sample_rate
+  );
+  
+}
+
+// Method to return firing rate
+NumericVector neuron::fetch_lambda() const {
+  NumericVector lambdas = {lambda, lambda_bin};
+  lambdas.names() = CharacterVector({"lambda", "lambda_bin"});
+  return lambdas;
+}
+
+/*
+ * ***********************************************************************************
+ * Member function implementations, basic data handling, misc
+ */
 
 // Infer trial data from spike raster
 void neuron::infer_trial() {
@@ -421,31 +545,6 @@ void neuron::infer_raster() {
       }
     }
     
-  }
-
-// Method to return fields with neuron ID information
-List neuron::fetch_id_data() const {
-   
-    return List::create(
-      _["id_num"] = id_num,
-      _["recording_name"] = recording_name,
-      _["type"] = type,
-      _["hemi"] = hemi,
-      _["sim"] = sim,
-      _["unit_time"] = unit_time,
-      _["unit_sample_rate"] = unit_sample_rate,
-      _["unit_data"] = unit_data,
-      _["t_per_bin"] = t_per_bin,
-      _["sample_rate"] = sample_rate
-    );
-    
-  }
-
-// Method to return firing rate
-NumericVector neuron::fetch_lambda() const {
-    NumericVector lambdas = {lambda, lambda_bin};
-    lambdas.names() = CharacterVector({"lambda", "lambda_bin"});
-    return lambdas;
   }
 
 /*
@@ -573,7 +672,7 @@ double neuron::bounded_MSE_EDF_autocorr(
     }
     mse = mse/(double)(max_lag - 1.0);
     
-    // Apply penalty to keep both parameters positive]
+    // Apply penalty to keep both parameters positive
     double penalty_multiple = nrn->penalty_multiple;
     double p1 = penalty_multiple/(x[0] * x[0]);
     double p2 = penalty_multiple/(x[1] * x[1]);
@@ -645,7 +744,7 @@ void neuron::fit_autocorrelation() {
       nlopt::result sc = opt.optimize(x, min_fx);
       success_code = static_cast<int>(sc);
     } catch (std::exception& e) { 
-      if (true) {
+      if (false) {
         Rcpp::Rcout << "Optimization failed: " << e.what() << std::endl;
       } 
       success_code = 0;
@@ -665,102 +764,47 @@ void neuron::fit_autocorrelation() {
     
   } 
 
-double neuron::sigma_loss(
-    const std::vector<double>& x, // the diagonal of the covariance matrix sigma
-    std::vector<double>& grad,
-    void* data                    // neuron object (this)
+void neuron::dg_parameters(
+    const bool& verbose
   ) {
     
-    // Grab neuron 
-    neuron* nrn = static_cast<neuron*>(data);
-    
-    // Grab fitted autocorrelation 
-    NumericVector autocorr_fitted = to_NumVec(nrn->autocorr_edf);
-    int max_lag = autocorr_fitted.size();
-    
-    // Grab threshold
-    double dichot_threshold = nrn->gamma;
-    
-    // Extend sigma_diag and autocorr_fitted to have lag = 0 on front
-    std::vector<double> sigma_diag(max_lag + 1);
-    NumericVector autocorr_fitted0(max_lag + 1);
-    for (int i = 0; i <= max_lag; i++) {
-      if (i == 0) {
-        sigma_diag[i] = 1.0;
-        autocorr_fitted0(i) = 1.0;
-      } else {
-        sigma_diag[i] = x[i - 1];
-        autocorr_fitted0(i) = autocorr_fitted(i - 1);
-      }
-    }
-    
-    // Create sigma from its diagonal
-    NumericMatrix SIGMA = makePositiveDefinite(toeplitz(sigma_diag, sigma_diag));
-    
-    // Compute formula
-    NumericVector output = dichot_gauss_sigma_formula(dichot_threshold, autocorr_fitted0, SIGMA);
-    
-    // Return sum of squares
-    double ls = Rcpp::sum(output * output);
-    Rcpp::Rcout << "loss: " << ls << std::endl;
-    return Rcpp::sum(output * output);
-    
-  }
-
-void neuron::dichot_gauss_parameters() {
+    if (verbose) {Rcpp::Rcout << "Finding dichotomized Gaussian parameters for neuron " << id_num << ", " << recording_name << " ..." << std::endl;}
     
     // Check that autocorrelation has been modeled
-    if (autocorr_edf.size() == 0) {
-      Rcpp::stop("autocorr_edf must be computed before dichot_gauss_parameters");
+    int max_lag = autocorr_edf.size();
+    if (max_lag == 0) {
+      Rcpp::stop("autocorr_edf must be computed before dg_parameters");
     }
     
     // Compute gamma (dichotomizing threshold) needed to simulate firing rate lambda 
     gamma = norm_cdf(
       1 - lambda_bin,
-      0,   // mean
-      1,   // sd
-      true // return inverse
+      0.0,   // mean
+      1.0,   // sd
+      true   // return inverse
     );
     
-    Rcpp::Rcout << "lambda_bin: " << lambda_bin << std::endl;
-    Rcpp::Rcout << "gamma: " << gamma << std::endl;
+    // Resize sigma_gauss
+    sigma_gauss.resize(max_lag);
     
-    // Use optimization to find the autocorrelation vector SIGMA needed to simulate the observed autocorrelation
-    std::vector<double> x = to_dVec(autocorr_edf*10);
-    size_t n = x.size();
-    
-    // Set up NLopt optimizer
-    nlopt::opt opt(nlopt::LN_NELDERMEAD, n); // LD_LBFGS would need gradient function
-    opt.set_min_objective(neuron::sigma_loss, this);
-    opt.set_ftol_rel(ctol);       // stop when iteration changes objective fn value by less than this fraction 
-    opt.set_maxeval(max_evals);   // Maximum number of evaluations to try
-    
-    // Find Sigma
-    int success_code = 0;
-    double min_fx;
-    try {
-      nlopt::result sc = opt.optimize(x, min_fx);
-      success_code = static_cast<int>(sc);
-    } catch (std::exception& e) {
-      if (true) {
-        Rcpp::Rcout << "Optimization failed: " << e.what() << std::endl;
-      }
-      success_code = 0;
+    // Find sigma_gauss for each lag
+    for (int i = 0; i < max_lag; i++) {
+      sigma_gauss[i] = dg_find_sigma_RootBisection(gamma, autocorr_edf[i]);
     }
-    Rcpp::Rcout << "success_code: " << success_code << std::endl;
-    
-    // Save 
-    sigma_gauss = x;
-    
+   
   }
 
-neuron neuron::dichot_gauss_simulation(
-    const int& trials
+// Make dichotomized Gaussian simulation of neuron
+neuron neuron::dg_simulation(
+    const int& trials,
+    const bool& verbose
   ) {
+   
+    if (verbose) {Rcpp::Rcout << "Running dichotomized Gaussian simulation of neuron " << id_num << ", " << recording_name << " ..." << std::endl;}
     
-    // Assuming that the binning was done by summation
+    // Check that sigma_guass has been computed
     int max_lag = sigma_gauss.size();
-    if (max_lag == 0) {Rcpp::stop("sigma_gauss must be computed before dichot_gauss_simulation");}
+    if (max_lag == 0) {Rcpp::stop("sigma_gauss must be computed before dg_simulation");}
     
     // Add 1 to front of sigma_gauss 
     std::vector<double> sigma_gauss1(max_lag + 1);
@@ -797,8 +841,84 @@ neuron neuron::dichot_gauss_simulation(
     my_sim.unit_time = "bin";
     my_sim.t_per_bin = 1.0;
     
-    // Return simulated neuron
-    return(my_sim);
+    // return simulation 
+    return my_sim;
+    
+  }
+
+// Estimate autocorrelation parameters for a neuron with dichotomized Gaussian simulations
+NumericMatrix neuron::estimate_autocorr_params(
+    const int& trials_per_sim, 
+    const int& num_sims,
+    const std::string& bin_count_action,
+    const double& A0,
+    const double& tau0,
+    const double& ctol,
+    const int& max_evals,
+    const bool& verbose
+  ) {
+    
+    if (verbose) {
+      Rcpp::Rcout << "Estimating autocorrelation parameters for neuron " << id_num << ", " << recording_name << " ..." << std::endl;
+    }
+    
+    // Pre-process base neuron, if needed
+    if (autocorr_edf.size() == 0) {
+      // ... set exponential decay function (EDF) parameters 
+      set_edf_initials(A0, tau0);
+      set_edf_termination(ctol, max_evals);
+      // ... compute autocorrelation
+      compute_autocorrelation(bin_count_action);
+      // ... fit autocorrelation 
+      fit_autocorrelation();
+    }
+    
+    // Find parameters for dichotomized Gaussian simulation
+    dg_parameters(
+      false // verbose?
+    );
+    
+    // Initialize matrix to hold results 
+    NumericMatrix sim_results(num_sims, 9); 
+    
+    for (int s = 0; s < num_sims; s++) {
+      
+      // Simulate neuron with dichotomized Gaussian
+      neuron my_sim = dg_simulation(
+        trials_per_sim, 
+        false // verbose?
+      );
+      
+      // Set exponential decay function (EDF) parameters 
+      my_sim.set_edf_initials(A0, tau0);
+      my_sim.set_edf_termination(ctol, max_evals);
+      
+      // Compute autocorrelation
+      my_sim.compute_autocorrelation(bin_count_action);
+      
+      // Fit autocorrelation 
+      my_sim.fit_autocorrelation();
+      
+      // Fetch results 
+      VectorXd autocorr_edf_tail_eigen = my_sim.autocorr_edf.tail(my_sim.autocorr_edf.size() - 1);
+      NumericVector autocorr_edf_tail = to_NumVec(autocorr_edf_tail_eigen);
+      NumericVector sim_results_row = {
+        my_sim.lambda, 
+        my_sim.lambda_bin, 
+        my_sim.A, 
+        my_sim.tau, 
+        my_sim.bias_term,
+        my_sim.autocorr_edf[0],
+        max(autocorr_edf_tail),
+        mean(autocorr_edf_tail),
+        min(autocorr_edf_tail)
+        };
+      
+      sim_results.row(s) = sim_results_row;
+      
+    }
+    
+    return sim_results;
     
   }
 
@@ -809,7 +929,7 @@ neuron neuron::dichot_gauss_simulation(
 RCPP_EXPOSED_CLASS(neuron)
 RCPP_MODULE(neuron) {
   class_<neuron>("neuron")
-  .constructor<int, std::string, std::string, std::string, bool, std::string, std::string, std::string, double, double>()
+  .constructor<int, std::string, std::string, std::string, std::string, std::string, std::string, std::string, bool, std::string, std::string, std::string, double, double>()
   .method("set_edf_initials", &neuron::set_edf_initials)
   .method("set_edf_termination", &neuron::set_edf_termination)
   .method("load_trial_data_R", &neuron::load_trial_data_R)
@@ -824,7 +944,8 @@ RCPP_MODULE(neuron) {
   .method("fetch_lambda", &neuron::fetch_lambda)
   .method("compute_autocorrelation", &neuron::compute_autocorrelation)
   .method("fit_autocorrelation", &neuron::fit_autocorrelation)
-  .method("dichot_gauss_parameters", &neuron::dichot_gauss_parameters)
-  .method("dichot_gauss_simulation", &neuron::dichot_gauss_simulation); // Returns MatrixXd??
+  .method("dg_parameters", &neuron::dg_parameters)
+  .method("dg_simulation", &neuron::dg_simulation)
+  .method("estimate_autocorr_params", &neuron::estimate_autocorr_params);
 }
 

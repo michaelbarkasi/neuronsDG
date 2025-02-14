@@ -20,7 +20,10 @@ CharacterVector enum_prefix(std::string prefix, int n);
 
 // Conert between vector types
 std::vector<double> to_dVec(const VectorXd& vec);
+std::vector<double> to_dVec(const NumericVector& vec);
 VectorXd to_eVec(const std::vector<double>& vec);
+NumericVector to_NumVec(const VectorXd& vec);
+NumericVector to_NumVec(const std::vector<double>& vec);
 
 // Exponential decay function (with gradients) for modelling
 double EDF_autocorr(
@@ -33,11 +36,11 @@ double EDF_autocorr(
 
 // Probability distributions
 double mvnorm_cdf(
-    const VectorXd& x, 
-    const VectorXd& mu, 
-    const MatrixXd& sigma
+    const NumericVector& upper, 
+    const NumericMatrix& sigma
   );
 
+// Normal CDF inverse
 double norm_cdf(
     const double& x, 
     const double& mu, 
@@ -45,6 +48,7 @@ double norm_cdf(
     const bool& inverse
   );
 
+// Multivariate normal random number generator
 MatrixXd mvnorm_random(
     int n, 
     VectorXd mu, 
@@ -58,10 +62,28 @@ NumericMatrix toeplitz(
   );
 
 // Formula for estimating sigma for dichotomized Gaussian simulation
-NumericVector dichot_gauss_sigma_formula(
+NumericVector dg_sigma_formula(
     const double& threshold,      // threshold for dichotomization
     const NumericVector& cov,     // desired covarance after dichotomization
     const NumericMatrix& sigma    // covariance matrix
+  );
+
+// Wrapper for use with find-root-bisection algorithm 
+double dg_sigma_formula_scalar(
+    const double& threshold,      // threshold for dichotomization
+    const double& cov,            // desired covarance after dichotomization
+    const double& sigma           // covariance matrix
+  );
+
+// Function to find sigma by root bisection 
+double dg_find_sigma_RootBisection(
+    const double& threshold,      // threshold for dichotomization
+    const double& cov             // desired covarance after dichotomization
+  );
+
+// Function to make a matrix positive definite
+NumericMatrix makePositiveDefinite(
+    const NumericMatrix& NumX
   );
 
 // Neuron class
@@ -75,8 +97,12 @@ class neuron {
     // ID parameters
     int id_num = 0;                               // Fixed ID number for each neuron
     std::string recording_name = "not_provided";  // Recording (if any) on which this neuron is based
-    std::string type = "generic";                 // Type of neuron, e.g. "generic", "blackbox" "LIF", "McCullochPitts", "excitatory", "inhibitory", etc.
+    std::string type = "generic";                 // Modeled electrophysiology of neuron of neuron, e.g. "generic", "blackbox" "LIF", "McCullochPitts", "excitatory", "inhibitory", etc.
+    std::string genotype = "WT";                  // Genotype of animal, e.g. "WT", "KO", "MECP2", "transgenic", etc.
+    std::string sex = "not_provided";             // Sex of animal
     std::string hemi = "not_provided";            // Hemisphere of neuron, e.g. "left", "right"
+    std::string region = "not_provided";          // Brain region of neuron, e.g. "V1", "M1", "CA1", "PFC", etc.
+    std::string age = "not_provided";             // Age of neuron, e.g. "P0", "P7", "P14", "adult", etc.
     bool sim = false;                             // Whether this neuron is simulated or based on recorded data
     
     // Unit specifications
@@ -97,7 +123,7 @@ class neuron {
     // Analysis fields
     VectorXd autocorr;                            // Estimated (observed) autocorrelation of trial_data
     VectorXd autocorr_edf;                        // Estimated autocorrelation of trial_data using EDF model
-    std::vector<double> sigma_gauss;              // Covariance matrix for Gaussian simulation
+    std::vector<double> sigma_gauss;              // Covariance values for Gaussian simulation, in time units of bin
     int max_evals = 500;                          // Max number of evals when fitting EDF to autocorrelation
     double ctol = 1e-7;                           // Convergence tolerance when fitting EDF to autocorrelation
     double A0 = 0.1;                              // Initial amplitude of EDF model of autocorrelation 
@@ -106,14 +132,18 @@ class neuron {
     double tau;                                   // Fitted time constant of EDF model of autocorrelation
     double bias_term;                             // Bias term for EDF model of autocorrelation
     double penalty_multiple;                      // For scaling boundary penalty terms when fitting EDF model of autocorrelation
-    double gamma;                                 // Threshold for dichotomized Gaussian simulation
+    double gamma;                                 // Threshold for dichotomized Gaussian simulation (in time units of bin)
     
     // Constructor and Destructor
     neuron(
       const int id_num = 0, 
       const std::string recording_name = "not_provided", 
       const std::string type = "generic", 
+      const std::string genotype = "WT",
+      const std::string sex = "not_provided",
       const std::string hemi = "not_provided",
+      const std::string region = "not_provided",
+      const std::string age = "not_provided",
       const bool sim = false, 
       const std::string unit_time = "ms", 
       const std::string unit_sample_rate = "Hz", 
@@ -122,6 +152,9 @@ class neuron {
       const double sample_rate = 1e4
     );
     virtual ~neuron() {};
+    
+    // Copy method 
+    neuron(const neuron& other) = default;
     
     // Member functions for adjusting settings
     void set_edf_initials(double a0, double t0);
@@ -161,13 +194,18 @@ class neuron {
       void* data                    // neuron object (this)
     );
     void fit_autocorrelation();
-    static double sigma_loss(
-      const std::vector<double>& x,
-      std::vector<double>&grad,
-      void* data
+    void dg_parameters(const bool& verbose);
+    neuron dg_simulation(const int& trials, const bool& verbose);
+    NumericMatrix estimate_autocorr_params(
+        const int& trials_per_sim, 
+        const int& num_sims,
+        const std::string& bin_count_action,
+        const double& A0,
+        const double& tau0,
+        const double& ctol,
+        const int& max_evals,
+        const bool& verbose
     );
-    void dichot_gauss_parameters();
-    neuron dichot_gauss_simulation(const int& trials);
 
 };
 
