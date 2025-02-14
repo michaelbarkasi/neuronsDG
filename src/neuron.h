@@ -92,6 +92,7 @@ class neuron {
     MatrixXd trial_data;                          // NxM matrix of doubles, rows as recording times (in "unit_time"), columns as trials, data values in "unit_data"
     MatrixXd spike_raster;                        // Nx2 matrix, each row one spike, columns as time (in "unit_time") and trial number
     double lambda;                                // Mean value of neuron, in "unit_data" per "unit_time"
+    double lambda_bin;                            // Mean value of neuron, in "unit_data" per bin
     
     // Analysis fields
     VectorXd autocorr;                            // Estimated (observed) autocorrelation of trial_data
@@ -140,11 +141,13 @@ class neuron {
     MatrixXd fetch_spike_raster() const;
     NumericMatrix fetch_spike_raster_R() const;
     List fetch_id_data() const;
+    NumericVector fetch_lambda() const;
     
     // Member functions for fetching analysis results
     VectorXd fetch_autocorr() const;
     NumericVector fetch_autocorr_R() const;
     NumericVector fetch_autocorr_edf_R() const;
+    NumericVector fetch_sigma_gauss_R() const; // continuous (normal) equivalent of autocorr_edf
     NumericVector fetch_EDF_parameters() const;
     
     // Member functions for data analysis

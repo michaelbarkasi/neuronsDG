@@ -317,6 +317,7 @@ void neuron::load_trial_data(const MatrixXd& td) {
     
     // Compute mean neuron value (e.g., firing rate)
     lambda = trial_data.sum()/(double)(trial_data.rows() * trial_data.cols());
+    lambda_bin = lambda * t_per_bin;
     
     // Make spike raaster
     if (unit_data == "spike") {
@@ -333,6 +334,7 @@ void neuron::load_trial_data_R(const NumericMatrix& td) {
     
     // Compute mean neuron value (e.g., firing rate)
     lambda = trial_data.sum()/(double)(trial_data.rows() * trial_data.cols());
+    lambda_bin = lambda * t_per_bin;
     
     // Make spike raster
     if (unit_data == "spike") {
@@ -358,6 +360,7 @@ void neuron::load_spike_raster_R(const NumericMatrix& sr) {
     
     // Compute mean neuron value (e.g., firing rate)
     lambda = trial_data.sum()/(double)(trial_data.rows() * trial_data.cols());
+    lambda_bin = lambda * t_per_bin;
     
   } 
 
@@ -438,6 +441,13 @@ List neuron::fetch_id_data() const {
     
   }
 
+// Method to return firing rate
+NumericVector neuron::fetch_lambda() const {
+    NumericVector lambdas = {lambda, lambda_bin};
+    lambdas.names() = CharacterVector({"lambda", "lambda_bin"});
+    return lambdas;
+  }
+
 /*
  * ***********************************************************************************
  * Member function implementations, fetch analysis results
@@ -449,6 +459,7 @@ VectorXd neuron::fetch_autocorr() const {return autocorr;}
 // Fetching autocorrelation 
 NumericVector neuron::fetch_autocorr_R() const {return wrap(autocorr);}
 NumericVector neuron::fetch_autocorr_edf_R() const {return wrap(autocorr_edf);}
+NumericVector neuron::fetch_sigma_gauss_R() const {return wrap(sigma_gauss);}
 
 // Fetch fitted EDF parameters 
 NumericVector neuron::fetch_EDF_parameters() const {
@@ -634,7 +645,7 @@ void neuron::fit_autocorrelation() {
       nlopt::result sc = opt.optimize(x, min_fx);
       success_code = static_cast<int>(sc);
     } catch (std::exception& e) { 
-      if (false) {
+      if (true) {
         Rcpp::Rcout << "Optimization failed: " << e.what() << std::endl;
       } 
       success_code = 0;
@@ -690,6 +701,8 @@ double neuron::sigma_loss(
     NumericVector output = dichot_gauss_sigma_formula(dichot_threshold, autocorr_fitted0, SIGMA);
     
     // Return sum of squares
+    double ls = Rcpp::sum(output * output);
+    Rcpp::Rcout << "loss: " << ls << std::endl;
     return Rcpp::sum(output * output);
     
   }
@@ -703,14 +716,17 @@ void neuron::dichot_gauss_parameters() {
     
     // Compute gamma (dichotomizing threshold) needed to simulate firing rate lambda 
     gamma = norm_cdf(
-      1 - lambda,
+      1 - lambda_bin,
       0,   // mean
       1,   // sd
       true // return inverse
     );
     
+    Rcpp::Rcout << "lambda_bin: " << lambda_bin << std::endl;
+    Rcpp::Rcout << "gamma: " << gamma << std::endl;
+    
     // Use optimization to find the autocorrelation vector SIGMA needed to simulate the observed autocorrelation
-    std::vector<double> x = to_dVec(autocorr_edf);
+    std::vector<double> x = to_dVec(autocorr_edf*10);
     size_t n = x.size();
     
     // Set up NLopt optimizer
@@ -726,11 +742,12 @@ void neuron::dichot_gauss_parameters() {
       nlopt::result sc = opt.optimize(x, min_fx);
       success_code = static_cast<int>(sc);
     } catch (std::exception& e) {
-      if (false) {
+      if (true) {
         Rcpp::Rcout << "Optimization failed: " << e.what() << std::endl;
       }
       success_code = 0;
     }
+    Rcpp::Rcout << "success_code: " << success_code << std::endl;
     
     // Save 
     sigma_gauss = x;
@@ -801,8 +818,10 @@ RCPP_MODULE(neuron) {
   .method("fetch_spike_raster_R", &neuron::fetch_spike_raster_R)
   .method("fetch_autocorr_R", &neuron::fetch_autocorr_R)
   .method("fetch_autocorr_edf_R", &neuron::fetch_autocorr_edf_R)
+  .method("fetch_sigma_gauss_R", &neuron::fetch_sigma_gauss_R)
   .method("fetch_EDF_parameters", &neuron::fetch_EDF_parameters)
   .method("fetch_id_data", &neuron::fetch_id_data)
+  .method("fetch_lambda", &neuron::fetch_lambda)
   .method("compute_autocorrelation", &neuron::compute_autocorrelation)
   .method("fit_autocorrelation", &neuron::fit_autocorrelation)
   .method("dichot_gauss_parameters", &neuron::dichot_gauss_parameters)
