@@ -1,33 +1,42 @@
 
-# Title Page ###########################################################################################################
-# 
+# Intro ################################################################################################################
+
 # Neurons: A framework for neuron modelling, simulation, and analysis
-# 
+
 # By Mike Barkasi
 # GNU GPLv3: https://www.gnu.org/licenses/gpl-3.0.en.html
 #   Copyright (c) 2025
-#   
-# Front matter #########################################################################################################
 
-# Prelim code:
-#   (none)
-
-# Prelim comments and warnings: 
-#   1. This script defines the R6 object class Neuron and related helper R6 classes, along with methods for them. 
-#         Neuron objects and their methods are intended to be a flexible, common framework for integrating, 
-#         analyzing, and simulating different kinds of neuron data. 
-
-#library(Rcpp)
-#library(RcppEigen)
-
-# Source Cpp ###########################################################################################################
-
-#sourceCpp("src/neuron.cpp")
+#' @useDynLib neurons, .registration = TRUE
+#' @import Rcpp
+#' @import RcppEigen 
+NULL
 
 .onLoad <- function(libname, pkgname) {
-  Rcpp::loadModule("neuron", TRUE)
-}
+    Rcpp::loadModule("neuron", TRUE)
+  }
 
+# Define functions #####################################################################################################
+
+#' Initialize neuron object
+#' 
+#' This function initializes a new neuron object with specified parameters. The neuron objects are the main tools for running autocorrelation analyses of spike data.
+#' 
+#' @param id_num Numeric identifier for the neuron (default: 0).
+#' @param recording_name Recording (if any) on which this neuron is based (default: "not_provided").
+#' @param type Modeled electrophysiology of neuron, e.g. "generic", "blackbox" "LIF", "McCullochPitts", "excitatory", "inhibitory", etc. (default: "generic").
+#' @param genotype Genotype of animal, e.g. "WT", "KO", "MECP2", "transgenic", etc. (default: "not_provided").
+#' @param sex Sex of animal (default: "not_provided").
+#' @param hemi Hemisphere of neuron in which neuron is located, e.g. "left", "right" (default: "not_provided").
+#' @param region Brain region in which neuron is located, e.g. "V1", "M1", "CA1", "PFC", etc. (default: "not_provided").
+#' @param age Age of animal, e.g. "P0", "P7", "P14", "adult", etc. (default: "not_provided").
+#' @param sim Logical indicating if neuron is simulated (TRUE) or recorded (FALSE) (default: FALSE).
+#' @param unit_time Unit of time for spike raster or other recording data, e.g. "ms", "s", etc. (default: "ms").
+#' @param unit_sample_rate Unit of sample rate for spike raster or other recording data, e.g. "Hz", "kHz", etc. (default: "Hz").
+#' @param unit_data Unit of data for spike raster or other recording data, e.g. "mV", "spike", etc. (default: "mV").
+#' @param t_per_bin Time (in above units) per bin, e.g., 1 ms per bin (default: 1.0).
+#' @return A new neuron object.
+#' @export
 new_neuron <- function(
     id_num = 0, 
     recording_name = "not_provided", 
@@ -51,20 +60,22 @@ new_neuron <- function(
     return(neuron)
   }
 
-# Load neuron data from raster file
+#' Load neuron data from raster file
+#' 
+#' This function loads spike raster data from a data frame or CSV file and converts each unique cell into a neuron object. The raster data frame must contain columns for cell identifier, spike time in milliseconds, and trial number. Optional metadata columns can also be included.
+#' 
+#' @param raster_df Data frame (or file name to csv importable as such), each row a spike; must have columns: cell, time_in_ms, trial; optional columns: recording_name, hemisphere, genotype, sex, region, age.
+#' @param bin_size Size of time bins in milliseconds (default: 20).
+#' @param sample_rt Sample rate in the default unit for neuron objects, Hz (default: 1e4).
+#' @param time_cutoff Maximum time (in ms) to include spikes; spikes occurring after this time will be excluded (default: Inf).
+#' @return A list of neuron objects, one per unique cell in the raster data.
+#' @export
 load.rasters.as.neurons <- function(
     raster_df,
     bin_size = 20, 
     sample_rt = 1e4,
     time_cutoff = Inf
   ) {
-    
-    # Input: 
-    #   raster_df: Data frame (or file name to csv importable as such), each row a spike; 
-    #                 must have columns: cell, time_in_ms, trial
-    #                 optional columns: recording_name, hemisphere, genotype, sex, region, age
-    # Output: 
-    #   neuron_list: List of neuron objects, one per cell
     
     # Load data
     if (class(raster_df) == "character") {
@@ -173,9 +184,21 @@ make.plot.title <- function(
     
   }
 
-# Function to plot autocorrelation of neuron
+#' Function to plot autocorrelation of neuron
+#' 
+#' Wrapper function to fetch and plot autocorrelation information from a neuron object. Assumes the autocorrelation has already been computed. 
+#' 
+#' @name plot.autocorrelation 
+#' @rdname plot-autocorrelation
+#' @usage plot.autocorrelation(nrn, plot_title = "Est. autocorr", bias_term = 0, plot_time_cutoff = Inf)
+#' @param nrn Neuron object for which to plot autocorrelation.
+#' @param plot_title Title for the plot (default: "Est. autocorr").
+#' @param bias_term Bias term to plot as a horizontal line (default: 0).
+#' @param plot_time_cutoff Maximum lag (in bins) to display on the x-axis (default: Inf).
+#' @return A ggplot object showing the estimated and fitted autocorrelation.
+#' @export
 plot.autocorrelation <- function(
-    nrn,                      # neuron object
+    nrn,
     plot_title = "Est. autocorr",
     bias_term = 0,
     plot_time_cutoff = Inf
@@ -207,19 +230,30 @@ plot.autocorrelation <- function(
         y = "Autocorrelation"
       ) + 
       theme_minimal()
-    plot(plt)
+    return(plt)
     
   }
 
-# Function to plot spike raster of neuron
+#' Function to plot spike raster of neuron
+#' 
+#' Wrapper function to fetch and plot spike raster from a neuron object. Assumes the spike raster has already been loaded.
+#' 
+#' @name plot.raster
+#' @rdname plot-raster
+#' @usage plot.raster(nrn, plot_title = "Spike raster", zero_as_onset = TRUE)
+#' @param nrn Neuron object for which to plot spike raster.
+#' @param plot_title Title for the plot (default: "Spike raster").
+#' @param zero_as_onset Logical indicating whether to plot a vertical line at time zero to indicate stimulus onset (default: TRUE).
+#' @return A ggplot object showing the spike raster.
+#' @export
 plot.raster <- function(
-    neuron,                   # neuron object
+    nrn,  
     plot_title = "Spike raster",
     zero_as_onset = TRUE
   ) {
     
     # Grab raster and time bounds
-    spike.raster <- as.data.frame(neuron$fetch_spike_raster_R())
+    spike.raster <- as.data.frame(nrn$fetch_spike_raster_R())
     total_time <- max(spike.raster$time) - min(spike.raster$time)
     dx <- total_time * 0.0025
     
@@ -231,7 +265,7 @@ plot.raster <- function(
         linewidth = 0.5
       ) +
       labs(
-        title = make.plot.title(neuron, plot_title),
+        title = make.plot.title(nrn, plot_title),
         x = "Time (ms)",
         y = "Trial"
       ) + 
@@ -239,11 +273,17 @@ plot.raster <- function(
     if (zero_as_onset && min(spike.raster$time) <= 0) plt <- plt + 
       geom_vline(xintercept = 0, linetype = "solid", linewidth = 1, color = "darkblue") 
     
-    plot(plt)
+    return(plt)
     
   }
 
-# Helper function for testing assumption of autocorrelation processing
+#' Helper function for testing assumption of autocorrelation processing
+#' 
+#' The approach we're using is valid if autocorr (red lines) is below mean firing rate (blue line). If so, then the equation we're using to convert spiking autocorr to guassian sigma should work. 
+#' 
+#' @param autocor_results Data frame of autocorrelation results from the \code{process.autocorr} function.
+#' @return Nothing; this function produces a base-R plot for visual inspection.
+#' @export
 test.sigma.assumption <- function(
     autocor_results
   ) {
@@ -266,22 +306,32 @@ test.sigma.assumption <- function(
     lines(autocor_results$max_autocorr, col = "red4")
     lines(autocor_results$mean_autocorr, col = "red3")
     lines(autocor_results$min_autocorr, col = "red")
-    # Approach we're using is valid if autocorr (red lines) is below mean 
-    # firing rate (blue line). If so, then the equation we're using to 
-    # convert spiking autocorr to guassian sigma should work. 
     
   }
 
-# Function to process autocorrelation of neuron list
+#' Function to process autocorrelation of neuron list
+#' 
+#' First estimates autocorrelation of each neuron in the list, then fits an exponential decay function to the estimated autocorrelation, and finally collects and returns summary statistics for each neuron.
+#' 
+#' @param neuron_list An R list of neuron objects.
+#' @param bin_count_action Method for counting spikes in each bin when computing autocorrelation; one of "boolean", "mean", or "sum" (default: "sum").
+#' @param A0 Initial guess for amplitude parameter of exponential decay function (default: 0.001).
+#' @param tau0 Initial guess for time constant parameter of exponential decay function (default: 1.0).
+#' @param ctol Convergence tolerance for fitting exponential decay function (default: 1e-8).
+#' @param max_evals Maximum number of evaluations for fitting exponential decay function (default: 500).
+#' @param check_autofiring_ratio Logical indicating whether to check the assumption that autocorrelation values are below the mean firing rate with \code{test.sigma.assumption} function (default: FALSE).
+#' @param print_plots Logical indicating whether to print autocorrelation plots for each neuron (default: FALSE).
+#' @param plot_time_cutoff Maximum lag (in bins) to display on the x-axis of plots (default: Inf).
+#' @return A data frame with one row per neuron and columns for lambda (mean spike rate per ms and per bin), amplitude (A), time constant (tau), bias term, first autocorrelation value, maximum autocorrelation value, mean autocorrelation value, and minimum autocorrelation value.
+#' @export
 process.autocorr <- function(
-    neuron_list,              # An R list of neuron objects
-    bin_count_action = "sum", # "boolean", "mean", or "sum" 
+    neuron_list,
+    bin_count_action = "sum", 
     A0 = 0.001,
     tau0 = 1.0,
     ctol = 1e-8,
     max_evals = 500,
     check_autofiring_ratio = FALSE,
-    return_summary = FALSE,
     print_plots = FALSE,
     plot_time_cutoff = Inf
   ) {
@@ -341,7 +391,7 @@ process.autocorr <- function(
         sim <- id_data$sim
         if (sim) recording_name <- paste(recording_name, "(sim)")
         
-        plot.autocorrelation(nrn, "Est. autocorr", bias_term, plot_time_cutoff)
+        plot(plot.autocorrelation(nrn, "Est. autocorr", bias_term, plot_time_cutoff))
         
       }
       
@@ -364,12 +414,27 @@ process.autocorr <- function(
       test.sigma.assumption(as.data.frame(autocor_results))
     }
     
-    if (return_summary) return(as.data.frame(autocor_results))
+    return(as.data.frame(autocor_results))
     
   }
 
+#' Function to estimate autocorrelation parameters using dichotomized Gaussian simulations
+#' 
+#' This function performs the same estimate-and-fit procedure as \code{process.autocorr}, but does so multiple times for each neuron using simulated spike rasters generated from a dichotomized Gaussian model of that neuron. 
+#' 
+#' @param neuron_list An R list of neuron objects.
+#' @param n_trials_per_sim Number of trials to simulate for each simulation (default: 300).
+#' @param n_sims_per_neurons Number of simulations to run for each neuron (default: 100).
+#' @param bin_count_action Method for counting spikes in each bin when computing autocorrelation; one of "boolean", "mean", or "sum" (default: "sum").
+#' @param A0 Initial guess for amplitude parameter of exponential decay function (default: 0.001).
+#' @param tau0 Initial guess for time constant parameter of exponential decay function (default: 1.0).
+#' @param ctol Convergence tolerance for fitting exponential decay function (default: 1e-8).
+#' @param max_evals Maximum number of evaluations for fitting exponential decay function (default: 500).
+#' @param verbose Logical indicating whether to print progress messages (default: FALSE).
+#' @return A list containing a data frame of autocorrelation parameter estimates (one row per simulation), a data frame of neuron identifiers (one row per neuron), and the number of simulations run per neuron.
+#' @export
 estimate.autocorr.params <- function(
-    neuron_list,              # An R list of neuron objects
+    neuron_list,
     n_trials_per_sim = 300, 
     n_sims_per_neurons = 100, 
     bin_count_action = "sum", # "boolean", "mean", or "sum" 
@@ -435,5 +500,113 @@ estimate.autocorr.params <- function(
       neuron_id = neuron_id,
       n_sims_per_neurons = n_sims_per_neurons
     ))
+    
+  }
+
+#' Function to analyze autocorrelation estimates with bootstrapping
+#' 
+#' This function takes the output from \code{estimate.autocorr.params} and performs a bootstrap analysis to estimate the distribution of the mean time constant (tau) for different levels of specified covariates.
+#' 
+#' @param ests Output from \code{estimate.autocorr.params}, or a list of such outputs.
+#' @param covariate Character string or vector of character strings specifying the covariate(s) to analyze (e.g., "hemi").
+#' @param n_bs Number of bootstrap resamples to perform (default: 1e4).
+#' @param bins_per_sec Number of bins per second used when computing autocorrelation (default: 50, corresponding to 20 ms bins).
+#' @return A data frame with bootstrap resamples of the mean tau for each combination of covariate levels.
+#' @export
+analyze.autocorr <- function(
+    ests,
+    covariate,
+    n_bs = 1e4,
+    bins_per_sec = 50
+  ) {
+    
+    # Check input types
+    error_message <- "Input is not a valid estimate.autocorr.params output or list of such output."
+    if (class(ests) == "list") {
+      if ("n_sims_per_neurons" %in% names(ests)) {
+        if (!(all(covariate %in% names(ests$neuron_id)))) {
+          stop("Covariate not found in neuron_id.")
+        }
+        # ... this is single input, wrap in list
+        ests <- list(ests)
+      } else {
+        # ... check if list of proper inputs 
+        for (i in seq_along(ests)) {
+          if (!("n_sims_per_neurons" %in% names(ests[[i]]))) {
+            stop(error_message)
+          }
+          if (!(all(covariate %in% names(ests[[i]]$neuron_id)))) {
+            stop("Covariate not found in neuron_id.")
+          }
+        }
+      }
+    } else {
+      stop(error_message)
+    }
+    
+    # Combine batches into big data frame
+    ests_all <- data.frame()
+    for (i in seq_along(ests)) {
+      
+      # Grab estimate list 
+      est <- ests[[i]]
+      
+      # Expand neuron_id 
+      est$neuron_id <- est$neuron_id[rep(1:nrow(est$neuron_id), each = est$n_sims_per_neurons), ]
+      
+      # Combine with estimates 
+      est$estimates <- cbind(est$estimates, est$neuron_id)
+      
+      # Add to big data frame
+      ests_all <- rbind(ests_all, est$estimates)
+      
+    }
+    
+    # Get covariate levels and their interactions
+    est_covariates <- list() 
+    est_covariate_levels <- list()
+    for (c in c(covariate)) {
+      est_covariates[[c]] <- ests_all[,c]
+      est_covariate_levels[[c]] <- unique(ests_all[,c])
+    }
+    cov_X <- do.call(expand.grid, list(est_covariate_levels, stringsAsFactors = FALSE))
+    n_interX <- nrow(cov_X)
+    
+    # Run bootstraps 
+    resamples <- matrix(NA, nrow = n_bs, ncol = n_interX)
+    n_est <- nrow(ests_all)
+    interX_names <- c()
+    for (i in 1:n_interX) {
+      
+      lvl <- cov_X[i,]
+      interX_names <- c(interX_names, paste0(lvl, collapse = "_"))
+      lvl_mask <- rep(TRUE, n_est)
+      for (c in c(covariate)) {
+        lvl_mask <- lvl_mask & ests_all[,c] == lvl[[c]]
+      }
+      
+      if (any(lvl_mask)) {
+        lvl_lambda_Hz <- ests_all[lvl_mask, "lambda_bin"] * bins_per_sec 
+        lvl_tau_ests <- ests_all[lvl_mask, "tau"]
+        
+        n_cells <- length(unique(ests_all$id_num))
+        
+        for (j in 1:n_bs) {
+          # Net effect is to resample from each neuron's estimates in a way that 
+          #   accounts for the uncertainty estimated by the DG. E.g., if there are n neurons, 
+          #   each resample has a 1/n chance of drawing from a given neuron N; but, as N
+          #   is represented by n_sims values from the DG simulations, the probability of a given value
+          #   being drawn to represent N is determined by the simulations. 
+          resamples[j,i] <- mean(sample(lvl_tau_ests, n_cells, replace = TRUE))
+        }
+      }
+      
+    }
+    resamples <- as.data.frame(resamples)
+    colnames(resamples) <- interX_names
+    
+    resamples <- resamples[, colSums(!is.na(resamples)) > 0]
+    
+    return(resamples)
     
   }

@@ -18,7 +18,7 @@ using namespace Eigen;
 // Build sequence of numbered string prefixes
 CharacterVector enum_prefix(std::string prefix, int n);
 
-// Conert between vector types
+// Convert between vector types
 std::vector<double> to_dVec(const VectorXd& vec);
 std::vector<double> to_dVec(const NumericVector& vec);
 VectorXd to_eVec(const std::vector<double>& vec);
@@ -34,7 +34,7 @@ double EDF_autocorr(
     const int& return_grad // 0 = function output, 1 = gradient wrt A, 2 = gradient wrt tau
   );
 
-// Probability distributions
+// multivariate normal CDF
 double mvnorm_cdf(
     const NumericVector& upper, 
     const NumericMatrix& sigma
@@ -91,18 +91,20 @@ NumericMatrix makePositiveDefinite(
 class neuron {
   
   // private:
+  
+  // public:
 
   public:
     
     // ID parameters
-    int id_num = 0;                               // Fixed ID number for each neuron
+    int id_num = 0;                               // Fixed ID number for neuron
     std::string recording_name = "not_provided";  // Recording (if any) on which this neuron is based
-    std::string type = "generic";                 // Modeled electrophysiology of neuron of neuron, e.g. "generic", "blackbox" "LIF", "McCullochPitts", "excitatory", "inhibitory", etc.
+    std::string type = "generic";                 // Modeled electrophysiology of neuron, e.g. "generic", "blackbox" "LIF", "McCullochPitts", "excitatory", "inhibitory", etc.
     std::string genotype = "WT";                  // Genotype of animal, e.g. "WT", "KO", "MECP2", "transgenic", etc.
     std::string sex = "not_provided";             // Sex of animal
     std::string hemi = "not_provided";            // Hemisphere of neuron, e.g. "left", "right"
     std::string region = "not_provided";          // Brain region of neuron, e.g. "V1", "M1", "CA1", "PFC", etc.
-    std::string age = "not_provided";             // Age of neuron, e.g. "P0", "P7", "P14", "adult", etc.
+    std::string age = "not_provided";             // Age of animal, e.g. "P0", "P7", "P14", "adult", etc.
     bool sim = false;                             // Whether this neuron is simulated or based on recorded data
     
     // Unit specifications

@@ -1,0 +1,130 @@
+---
+title: "Dichotomized Gaussian analysis of KiloSort4 data"
+---
+
+This is an example vignette.
+
+```{r setup}
+# Set seed for reproducibility
+set.seed(12345) 
+# Load neurons package
+library(neurons) 
+# Set width of markdown code outputs
+options(width = 10000)
+# Set path to data 
+demo_data <- "/Users/michaelbarkasi/Library/CloudStorage/OneDrive-WashingtonUniversityinSt.Louis/projects_Oviedo_lab/_lateralized_recurrent_pathways/dichot-gaussian/data_demo"
+```
+
+We need to pull in meta data on the recordings. 
+
+```{r load_metadata} 
+kilo4_metadata <- read.csv(
+  system.file(
+    "extdata", 
+    "meta_data_kilo4demo.csv", 
+    package = "neurons"
+    )
+  )
+
+rownames(kilo4_metadata) <- paste0(
+  kilo4_metadata$DAY, 
+  "_",
+  kilo4_metadata$Neuralynx_ID
+  )
+
+kilo4_metadata <- kilo4_metadata[,c("HEMISPHERE","STRAIN","AGE","SEX")]
+
+```
+
+I removed the recording "2025-04-06_13-26-57" because each cell in it had only one responsive trial. 
+
+```{r preprocess_kilosort4_data}
+# old recordings used 1520 ms of silence, once settled
+# ... settling seems to take 500 ms
+spike.rasters.kilo4 <- preprocess.kilo4(
+  # ... for stimulus
+  #trial_time_start = -100, 
+  #trial_time_end = 1800 
+  # ... for silence
+  trial_time_start = 500, 
+  trial_time_end = 500 + 1520,
+  recording.folder = demo_data,
+  meta_data = kilo4_metadata, 
+  pure_trials_only = TRUE, 
+  verbose = TRUE
+) 
+```
+
+The output \textbf{spike.rasters.kilo4} is a list with three elements: \textbf{spikes}, \textbf{timeXtrial}, and \textbf{cluster.key}. The first element, \textbf{spikes}, is a data frame giving a sparse representation of the spike rasters from each recording. Each row is a spike, with columns giving information such as cell number, time, and genotype. Here are the first few rows of the \textbf{spikes} data frame:
+
+```{r}
+print(head(spike.rasters.kilo4$spikes))
+```
+
+The second element, \textbf{timeXtrial}, is a list of matrices, one per cell, with rows corresponding to time bins and columns to trials. Each entry is a binary indicator of whether the cell fired in that time bin during that trial. The third element, \textbf{cluster.key}, is a data frame with rows representing cells, columns giving information such as cell number, genotype, and number of spikes. 
+
+```{r}
+print(spike.rasters.kilo4$cluster.key)
+```
+
+With the kilosort4 data preprocessed into spike rasters, the next step is to convert them into a special class of object from the neuron package, \textbf{neuron}. 
+
+```{r create_neuron_objects}
+neurons.kilo4 <- load.rasters.as.neurons(spike.rasters.kilo4$spikes, sample_rt = 1e3)
+```
+
+We want to load the spike rasters as \textbf{neuron}s because \textbf{neurons}s come with built-in methods for estimating autocorrelation parameters with dichotomized Gaussian simulations. 
+
+```{r estimate_autocorr}
+# ... set number of sims to run per neuron
+n_sims <- 1000
+# ... set number of trials to simulate per neuron
+n_trials <- 500
+# ... run estimates on data
+autocor.ests.kilo4 <- estimate.autocorr.params(
+  neuron_list = neurons.kilo4,
+  n_trials_per_sim = n_trials, 
+  n_sims_per_neurons = n_sims, 
+  bin_count_action = "sum",
+  A0 = 0.001,
+  tau0 = 1.0,
+  ctol = 1e-8,
+  max_evals = 500,
+  verbose = FALSE
+  )
+
+```
+
+Run analysis: 
+
+```{r, stat_analysis}
+autocorr_results <- analyze.autocorr(
+  autocor.ests.kilo4,
+  covariate = c("HEMISPHERE","STRAIN"),
+  n_bs = 1e4,
+  bins_per_sec = 50
+)
+
+df <- data.frame(
+  value = unlist(autocorr_results, use.names = FALSE),
+  group = rep(names(autocorr_results), each = nrow(autocorr_results))
+)
+
+# Plot
+title_size <- 20 
+axis_size <- 12 
+legend_size <- 10
+ggplot(df, aes(x = value, fill = group)) +
+  geom_density(alpha = 0.6) +
+  #scale_y_continuous(transform = "log1p") +
+  labs(title = "Expected Time Constant", x = "ms", y = "Density") +
+  theme_minimal() + 
+  theme(
+    plot.title = element_text(hjust = 0.5, size = title_size),
+    axis.title = element_text(size = axis_size),
+    axis.text = element_text(size = axis_size),
+    legend.title = element_text(size = legend_size),
+    legend.text = element_text(size = legend_size),
+    legend.position = "none"
+  )
+```

@@ -11,12 +11,12 @@ const double Inf = 1e20;
 
 // Build sequence of numbered string prefixes
 CharacterVector enum_prefix(std::string prefix, int n) {
-  CharacterVector result(n);
-  for (int i = 0; i < n; ++i) {
-    result[i] = prefix + std::to_string(i + 1);
+    CharacterVector result(n);
+    for (int i = 0; i < n; ++i) {
+      result[i] = prefix + std::to_string(i + 1);
+    }
+    return result;
   }
-  return result;
-}
 
 // Convert to std::vector with doubles 
 std::vector<double> to_dVec(
@@ -243,70 +243,70 @@ double dg_sigma_formula_scalar(
     const double& threshold,      // threshold for dichotomization
     const double& cov,            // desired covarance after dichotomization
     const double& sigma           // correlation coefficient
-) {
-  
-  // Construct covariance matrix sigma (2x2)
-  NumericMatrix sigmaMat(2, 2);
-  sigmaMat(_,0) = NumericVector::create(1.0, sigma);
-  sigmaMat(_,1) = NumericVector::create(sigma, 1.0);
-  
-  // Extend cov to have lag = 0 on front
-  NumericVector cov1 = {1.0, cov};
-  
-  // Evaluate formula and return second value
-  NumericVector output = dg_sigma_formula(threshold, cov1, sigmaMat);
-  return output[1];
-  
-}
+  ) {
+    
+    // Construct covariance matrix sigma (2x2)
+    NumericMatrix sigmaMat(2, 2);
+    sigmaMat(_,0) = NumericVector::create(1.0, sigma);
+    sigmaMat(_,1) = NumericVector::create(sigma, 1.0);
+    
+    // Extend cov to have lag = 0 on front
+    NumericVector cov1 = {1.0, cov};
+    
+    // Evaluate formula and return second value
+    NumericVector output = dg_sigma_formula(threshold, cov1, sigmaMat);
+    return output[1];
+    
+  }
 
 // Function to find sigma by root bisection 
 double dg_find_sigma_RootBisection(
     const double& threshold,      // threshold for dichotomization
     const double& cov             // desired covarance after dichotomization
-) {
-  
-  // Set search parameters 
-  const int max_iter = 50; 
-  const double tol = 1e-4;
-  
-  // Initiate sigmas
-  double sigma_lower = -0.999;
-  double sigma_upper = 0.999;
-  
-  // Evaluate formula
-  double fx_lower = dg_sigma_formula_scalar(threshold, cov, sigma_lower);
-  double fx_upper = dg_sigma_formula_scalar(threshold, cov, sigma_upper);
-  
-  // Run checks 
-  if (abs(fx_lower) < tol) {return sigma_lower;}
-  else if (abs(fx_upper) < tol) {return sigma_upper;}
-  else if (fx_lower * fx_upper > tol) {return 0.0;} // Both initial covariance values lie on same side of zero crossing
-  
-  // Run bisection
-  double fx = Inf;
-  double sigma_mid;
-  int iter = 0;
-  while (abs(fx) > tol && iter < max_iter) {
+  ) {
     
-    // Find midpoint
-    sigma_mid = (sigma_lower + sigma_upper)/2.0;
-    fx = dg_sigma_formula_scalar(threshold, cov, sigma_mid);
+    // Set search parameters 
+    const int max_iter = 50; 
+    const double tol = 1e-4;
     
-    // Update bounds
-    if (fx > 0.0) {
-      sigma_lower = sigma_mid;
-    } else {
-      sigma_upper = sigma_mid;
+    // Initiate sigmas
+    double sigma_lower = -0.999;
+    double sigma_upper = 0.999;
+    
+    // Evaluate formula
+    double fx_lower = dg_sigma_formula_scalar(threshold, cov, sigma_lower);
+    double fx_upper = dg_sigma_formula_scalar(threshold, cov, sigma_upper);
+    
+    // Run checks 
+    if (abs(fx_lower) < tol) {return sigma_lower;}
+    else if (abs(fx_upper) < tol) {return sigma_upper;}
+    else if (fx_lower * fx_upper > tol) {return 0.0;} // Both initial covariance values lie on same side of zero crossing
+    
+    // Run bisection
+    double fx = Inf;
+    double sigma_mid;
+    int iter = 0;
+    while (abs(fx) > tol && iter < max_iter) {
+      
+      // Find midpoint
+      sigma_mid = (sigma_lower + sigma_upper)/2.0;
+      fx = dg_sigma_formula_scalar(threshold, cov, sigma_mid);
+      
+      // Update bounds
+      if (fx > 0.0) {
+        sigma_lower = sigma_mid;
+      } else {
+        sigma_upper = sigma_mid;
+      }
+      
+      // Update iteration
+      iter++;
+      
     }
     
-    // Update iteration
-    iter++;
+    return sigma_mid; 
     
   }
-  
-  return sigma_mid; 
-  
-}
 
 // Function to make a matrix positive definite
 NumericMatrix makePositiveDefinite(
@@ -477,32 +477,32 @@ NumericMatrix neuron::fetch_spike_raster_R() const {
 
 // Method to return fields with neuron ID information
 List neuron::fetch_id_data() const {
-  
-  return List::create(
-    _["id_num"] = id_num,
-    _["recording_name"] = recording_name,
-    _["type"] = type,
-    _["genotype"] = genotype,
-    _["sex"] = sex,
-    _["hemi"] = hemi,
-    _["region"] = region,
-    _["age"] = age,
-    _["sim"] = sim,
-    _["unit_time"] = unit_time,
-    _["unit_sample_rate"] = unit_sample_rate,
-    _["unit_data"] = unit_data,
-    _["t_per_bin"] = t_per_bin,
-    _["sample_rate"] = sample_rate
-  );
-  
-}
+    
+    return List::create(
+      _["id_num"] = id_num,
+      _["recording_name"] = recording_name,
+      _["type"] = type,
+      _["genotype"] = genotype,
+      _["sex"] = sex,
+      _["hemi"] = hemi,
+      _["region"] = region,
+      _["age"] = age,
+      _["sim"] = sim,
+      _["unit_time"] = unit_time,
+      _["unit_sample_rate"] = unit_sample_rate,
+      _["unit_data"] = unit_data,
+      _["t_per_bin"] = t_per_bin,
+      _["sample_rate"] = sample_rate
+    );
+    
+  }
 
 // Method to return firing rate
 NumericVector neuron::fetch_lambda() const {
-  NumericVector lambdas = {lambda, lambda_bin};
-  lambdas.names() = CharacterVector({"lambda", "lambda_bin"});
-  return lambdas;
-}
+    NumericVector lambdas = {lambda, lambda_bin};
+    lambdas.names() = CharacterVector({"lambda", "lambda_bin"});
+    return lambdas;
+  }
 
 /*
  * ***********************************************************************************

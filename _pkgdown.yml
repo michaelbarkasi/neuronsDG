@@ -1,0 +1,40 @@
+url: https://michaelbarkasi.github.io/neurons/
+template:
+  bootstrap: 5
+  light-switch: true
+
+navbar:
+  structure:
+    left:  [intro, reference, articles, tutorials, news]
+    right: [search, github, lightswitch]
+  components:
+    intro:
+      text: Introduction
+      href: index.html
+    reference:
+      text: Package Functions
+      href: reference/index.html
+    github:
+      icon: fab fa-github
+      href: https://github.com/michaelbarkasi/neurons
+    lightswitch:
+      text: "\U0001F319"
+      href: '#'
+
+articles:
+- title: Installation
+  navbar: Installation
+  contents:
+  - install
+
+- title: Tutorials
+  navbar: Tutorials
+  contents: 
+  - starts_with("tutorial_")
+
+- title: Legal
+  navbar: Legal
+  contents:
+  - license
+
+
