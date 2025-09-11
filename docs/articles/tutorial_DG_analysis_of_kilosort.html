@@ -10,7 +10,8 @@
 <link href="../deps/bootstrap-5.3.1/bootstrap.min.css" rel="stylesheet">
 <script src="../deps/bootstrap-5.3.1/bootstrap.bundle.min.js"></script><link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
-<script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Dichotomized Gaussian analysis of KiloSort4 data">
+<script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><link href="../extra.css" rel="stylesheet">
+<meta property="og:title" content="Dichotomized Gaussian analysis of KiloSort4 data">
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -74,19 +75,115 @@
 
     
     
-<p>This is an example vignette.</p>
+<p>This example tutorial will show how to run the dichotomized Gaussian
+analysis of autocorrelation on KiloSort4 data. The main aim of this
+analysis is to estimate the network time constant of single neurons in
+the left and right hemisphere of various genotypes of mice. We care
+about the network time constant because it’s an estimate of recurrence.
+Specifically, a higher network time constant indicates that a neuron
+receives a larger number of projections back on itself. Intuitively, the
+longer into the future a spike now increases the probability of a spike
+later, the stronger the connections from that neuron back onto itself
+must be.</p>
+<h1>
+Setup
+</h1>
+<p>The first step is to set up the R environment by setting a
+random-number generator seed and loading the neurons package.</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Set seed for reproducibility</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">12345</span><span class="op">)</span> </span>
 <span><span class="co"># Load neurons package</span></span>
-<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va">neurons</span><span class="op">)</span> </span>
-<span><span class="co"># Set width of markdown code outputs</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/options.html" class="external-link">options</a></span><span class="op">(</span>width <span class="op">=</span> <span class="fl">10000</span><span class="op">)</span></span>
-<span><span class="co"># Set path to data </span></span>
+<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va">neurons</span><span class="op">)</span> </span></code></pre></div>
+<p>The output of some of the functions used here will be wide, so we
+want to set the R markdown environment to allow for wide outputs without
+line wrapping.</p>
+<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Set width of markdown code outputs</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/options.html" class="external-link">options</a></span><span class="op">(</span>width <span class="op">=</span> <span class="fl">10000</span><span class="op">)</span></span></code></pre></div>
+<h1>
+Load data
+</h1>
+<p>The data is the output from kilosort4, plus a csv file with stimulus
+event information. For this tutorial, we will use the data that was
+recorded as of September 2, 2025. I’ve put a slightly curated version of
+the data in the following directory. You will need to provide your own
+path to the data.</p>
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Set path to data </span></span>
 <span><span class="va">demo_data</span> <span class="op">&lt;-</span> <span class="st">"/Users/michaelbarkasi/Library/CloudStorage/OneDrive-WashingtonUniversityinSt.Louis/projects_Oviedo_lab/_lateralized_recurrent_pathways/dichot-gaussian/data_demo"</span></span></code></pre></div>
+<p>Before loading the data, we need to ensure that it’s in the correct
+format. The function <strong>preprocess.kilo4</strong> expects
+<strong>data_path</strong> to point to a folder the subfolders of which
+each contain a single kilosort4 output. This output should be in its own
+folder <strong>kilosort4</strong>. While kilosort outputs many files,
+only six are needed:</p>
+<ul>
+<li>
+<strong>spike_positions.npy</strong>: 2D array giving the x and y
+position of each spike<br>
+</li>
+<li>
+<strong>spike_clusters.npy</strong>: integer giving the cluster
+number of each spike<br>
+</li>
+<li>
+<strong>spike_times.npy</strong>: sample number the spike occurred
+at<br>
+</li>
+<li>
+<strong>cluster_group.tsv</strong>: 2D array giving status of each
+cluster (0=noise, 1=MUA, 2=Good, 3=unsorted), hand-curated<br>
+</li>
+<li>
+<strong>cluster_info.tsv</strong>: 2D array giving the automatic
+output of kilosort4<br>
+</li>
+<li>
+<strong>includeVector.mat</strong>: MATLAB file giving whether each
+cluster is stimulus-responsive (1) or not (0)</li>
+</ul>
+<p>In addition, along with the kilosort4 subfolder, there should be a
+file <strong>StimulusStamps.csv</strong> in each recording folder. For
+example, here is the file structure of the demo data as it appears on my
+computer:</p>
+<div class="figure">
+<img src="fig_folderstructure.png" alt="Image showing folder structure necessary for &lt;b&gt;preprocess.kilo4&lt;/b&gt; function." width="50%"><p class="caption">
+Folder structure necessary for <b>preprocess.kilo4</b> function.
+</p>
+</div>
+<p>We also need to pull in meta data on the recordings. For this
+tutorial, I’ve put the csv file with that data in the neurons package
+itself. It can be loaded with the regular <strong>read.csv</strong>
+function in R.</p>
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">kilo4_metadata</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/utils/read.table.html" class="external-link">read.csv</a></span><span class="op">(</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span></span>
+<span>    <span class="st">"extdata"</span>, </span>
+<span>    <span class="st">"meta_data_kilo4demo.csv"</span>, </span>
+<span>    package <span class="op">=</span> <span class="st">"neurons"</span></span>
+<span>    <span class="op">)</span></span>
+<span>  <span class="op">)</span></span></code></pre></div>
+<p>For the purpose of statistical analysis, covariates of interest are
+all that’s needed from the meta data file. The neurons package will
+expect certain covariates to have specific names. It will also expect
+the data frame holding those covariates to have rows labeled with
+recording names that match the format of the recording names in the
+data.</p>
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Format and apply recording names to metadata as row names</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">rownames</a></span><span class="op">(</span><span class="va">kilo4_metadata</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span></span>
+<span>  <span class="va">kilo4_metadata</span><span class="op">$</span><span class="va">DAY</span>, </span>
+<span>  <span class="st">"_"</span>,</span>
+<span>  <span class="va">kilo4_metadata</span><span class="op">$</span><span class="va">Neuralynx_ID</span></span>
+<span>  <span class="op">)</span></span>
+<span><span class="co"># Keep only the relevant columns (covariates of interest)</span></span>
+<span><span class="va">kilo4_metadata</span> <span class="op">&lt;-</span> <span class="va">kilo4_metadata</span><span class="op">[</span>,<span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"HEMISPHERE"</span>,<span class="st">"STRAIN"</span>,<span class="st">"AGE"</span>,<span class="st">"SEX"</span><span class="op">)</span><span class="op">]</span></span>
+<span><span class="co"># Rename columns to match what's expected by neurons package </span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">colnames</a></span><span class="op">(</span><span class="va">kilo4_metadata</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"hemi"</span>, <span class="st">"genotype"</span>, <span class="st">"age"</span>, <span class="st">"sex"</span><span class="op">)</span></span></code></pre></div>
 <p>I removed the recording “2025-04-06_13-26-57” because each cell in it
 had only one responsive trial.</p>
-<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># old recordings used 1520 ms of silence, once settled</span></span>
 <span><span class="co"># ... settling seems to take 500 ms</span></span>
 <span><span class="va">spike.rasters.kilo4</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/preprocess.kilo4.html">preprocess.kilo4</a></span><span class="op">(</span></span>
@@ -97,7 +194,9 @@ had only one responsive trial.</p>
 <span>  trial_time_start <span class="op">=</span> <span class="fl">500</span>, </span>
 <span>  trial_time_end <span class="op">=</span> <span class="fl">500</span> <span class="op">+</span> <span class="fl">1520</span>,</span>
 <span>  recording.folder <span class="op">=</span> <span class="va">demo_data</span>,</span>
-<span>  pure_trials_only <span class="op">=</span> <span class="cn">TRUE</span>,       <span class="co"># Keep only trials with no overlap? </span></span>
+<span>  meta_data <span class="op">=</span> <span class="va">kilo4_metadata</span>, </span>
+<span>  pure_trials_only <span class="op">=</span> <span class="cn">TRUE</span>, </span>
+<span>  good_cells_only <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  verbose <span class="op">=</span> <span class="cn">TRUE</span></span>
 <span><span class="op">)</span> </span></code></pre></div>
 <pre><code><span><span class="co">## </span></span>
@@ -199,90 +298,93 @@ had only one responsive trial.</p>
 <span><span class="co">##  spike_times, class:  array, dim:  118866</span></span>
 <span><span class="co">##  cluster_group, class:  data.frame, dim:  0 2, col names (1st 5):  cluster_id, group</span></span>
 <span><span class="co">##  cluster_info, class:  data.frame, dim:  22 11, col names (1st 5):  cluster_id, Amplitude, ContamPct, KSLabel, amp</span></span></code></pre>
-<p>The output is a list with three elements: , , and . The first
-element, , is a data frame giving a sparse representation of the spike
-rasters from each recording. Each row is a spike, with columns giving
-information such as cell number, time, and genotype. Here are the first
-few rows of the data frame:</p>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<p>The output <strong>spike.rasters.kilo4</strong> is a list with three
+elements: <strong>spikes</strong>, <strong>timeXtrial</strong>, and
+<strong>cluster.key</strong>. The first element,
+<strong>spikes</strong>, is a data frame giving a sparse representation
+of the spike rasters from each recording. Each row is a spike, with
+columns giving information such as cell number, time, and genotype. Here
+are the first few rows of the <strong>spikes</strong> data frame:</p>
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">spike.rasters.kilo4</span><span class="op">$</span><span class="va">spikes</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">##      trial   sample cell time_in_ms      recording_name cluster     genotype   hemisphere</span></span>
-<span><span class="co">## 3463     1 11166.39    2   524.7279 2025-02-06_15-53-03      37 not_provided not_provided</span></span>
-<span><span class="co">## 3467     1 11170.48    1   528.8199 2025-02-06_15-53-03      26 not_provided not_provided</span></span>
-<span><span class="co">## 3505     1 11296.51    1   654.8471 2025-02-06_15-53-03      26 not_provided not_provided</span></span>
-<span><span class="co">## 3509     1 11312.48    3   670.8191 2025-02-06_15-53-03      38 not_provided not_provided</span></span>
-<span><span class="co">## 3542     1 11409.04    1   767.3772 2025-02-06_15-53-03      26 not_provided not_provided</span></span>
-<span><span class="co">## 3562     1 11445.43    1   803.7762 2025-02-06_15-53-03      26 not_provided not_provided</span></span></code></pre>
-<p>The second element, , is a list of matrices, one per cell, with rows
-corresponding to time bins and columns to trials. Each entry is a binary
-indicator of whether the cell fired in that time bin during that trial.
-The third element, , is a data frame with rows representing cells,
-columns giving information such as cell number, genotype, and number of
-spikes.</p>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<pre><code><span><span class="co">##      trial   sample cell time_in_ms      recording_name cluster hemi genotype age sex</span></span>
+<span><span class="co">## 3463     1 11166.39    2   524.7279 2025-02-06_15-53-03      37   RH      C57 P79   F</span></span>
+<span><span class="co">## 3467     1 11170.48    1   528.8199 2025-02-06_15-53-03      26   RH      C57 P79   F</span></span>
+<span><span class="co">## 3505     1 11296.51    1   654.8471 2025-02-06_15-53-03      26   RH      C57 P79   F</span></span>
+<span><span class="co">## 3509     1 11312.48    3   670.8191 2025-02-06_15-53-03      38   RH      C57 P79   F</span></span>
+<span><span class="co">## 3542     1 11409.04    1   767.3772 2025-02-06_15-53-03      26   RH      C57 P79   F</span></span>
+<span><span class="co">## 3562     1 11445.43    1   803.7762 2025-02-06_15-53-03      26   RH      C57 P79   F</span></span></code></pre>
+<p>The second element, <strong>timeXtrial</strong>, is a list of
+matrices, one per cell, with rows corresponding to time bins and columns
+to trials. Each entry is a binary indicator of whether the cell fired in
+that time bin during that trial. The third element,
+<strong>cluster.key</strong>, is a data frame with rows representing
+cells, columns giving information such as cell number, genotype, and
+number of spikes.</p>
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">spike.rasters.kilo4</span><span class="op">$</span><span class="va">cluster.key</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">##         recording.name cell cluster     genotype   hemisphere num.of.spikes num.of.responsive.trials</span></span>
-<span><span class="co">## 1  2025-02-06_15-53-03    2      37 not_provided not_provided           130                       24</span></span>
-<span><span class="co">## 2  2025-02-06_15-53-03    1      26 not_provided not_provided           207                       28</span></span>
-<span><span class="co">## 3  2025-02-06_15-53-03    3      38 not_provided not_provided           148                       28</span></span>
-<span><span class="co">## 4  2025-02-06_15-53-03    4      48 not_provided not_provided            44                       22</span></span>
-<span><span class="co">## 5  2025-02-06_15-53-03    5      51 not_provided not_provided            11                        7</span></span>
-<span><span class="co">## 6  2025-04-05_11-50-43   11      17 not_provided not_provided          1869                      337</span></span>
-<span><span class="co">## 7  2025-04-05_11-50-43   13      34 not_provided not_provided          1457                      271</span></span>
-<span><span class="co">## 8  2025-04-05_11-50-43   21      82 not_provided not_provided          2321                      325</span></span>
-<span><span class="co">## 9  2025-04-05_11-50-43    6       1 not_provided not_provided          2461                      396</span></span>
-<span><span class="co">## 10 2025-04-05_11-50-43    9      12 not_provided not_provided          4153                      355</span></span>
-<span><span class="co">## 11 2025-04-05_11-50-43   22      95 not_provided not_provided          2263                      360</span></span>
-<span><span class="co">## 12 2025-04-05_11-50-43    8      11 not_provided not_provided          1386                      344</span></span>
-<span><span class="co">## 13 2025-04-05_11-50-43    7       6 not_provided not_provided           788                      273</span></span>
-<span><span class="co">## 14 2025-04-05_11-50-43   12      22 not_provided not_provided           780                      305</span></span>
-<span><span class="co">## 15 2025-04-05_11-50-43   16      51 not_provided not_provided          1226                      247</span></span>
-<span><span class="co">## 16 2025-04-05_11-50-43   24      98 not_provided not_provided          2033                      328</span></span>
-<span><span class="co">## 17 2025-04-05_11-50-43   23      96 not_provided not_provided          1004                      304</span></span>
-<span><span class="co">## 18 2025-04-05_11-50-43   17      62 not_provided not_provided           396                      149</span></span>
-<span><span class="co">## 19 2025-04-05_11-50-43   20      80 not_provided not_provided          1900                      304</span></span>
-<span><span class="co">## 20 2025-04-05_11-50-43   10      16 not_provided not_provided          1686                      395</span></span>
-<span><span class="co">## 21 2025-04-05_11-50-43   15      41 not_provided not_provided          1104                      294</span></span>
-<span><span class="co">## 22 2025-04-05_11-50-43   18      67 not_provided not_provided           396                      227</span></span>
-<span><span class="co">## 23 2025-04-05_11-50-43   14      35 not_provided not_provided           259                      138</span></span>
-<span><span class="co">## 24 2025-04-05_11-50-43   19      69 not_provided not_provided            51                       45</span></span>
-<span><span class="co">## 25 2025-04-06_13-51-14   25      25 not_provided not_provided          2344                      455</span></span>
-<span><span class="co">## 26 2025-04-06_13-51-14   29      51 not_provided not_provided          8081                      401</span></span>
-<span><span class="co">## 27 2025-04-06_13-51-14   27      42 not_provided not_provided          3123                      449</span></span>
-<span><span class="co">## 28 2025-04-06_13-51-14   28      43 not_provided not_provided          2433                      449</span></span>
-<span><span class="co">## 29 2025-04-06_13-51-14   26      29 not_provided not_provided          2436                      457</span></span>
-<span><span class="co">## 30 2025-04-06_13-51-14   30      61 not_provided not_provided          1929                      428</span></span>
-<span><span class="co">## 31 2025-04-11_18-09-55   31      22 not_provided not_provided          2289                      259</span></span>
-<span><span class="co">## 32 2025-04-11_18-09-55   32      76 not_provided not_provided           502                      180</span></span>
-<span><span class="co">## 33 2025-06-02_15-13-06   35       8 not_provided not_provided           624                      171</span></span>
-<span><span class="co">## 34 2025-06-02_15-13-06   36      13 not_provided not_provided          3276                      220</span></span>
-<span><span class="co">## 35 2025-06-02_15-13-06   37      31 not_provided not_provided           364                      133</span></span>
-<span><span class="co">## 36 2025-06-02_15-13-06   34       4 not_provided not_provided            75                       54</span></span>
-<span><span class="co">## 37 2025-06-02_15-13-06   33       1 not_provided not_provided           364                      150</span></span>
-<span><span class="co">## 38 2025-06-03_13-59-05   38      10 not_provided not_provided           285                      155</span></span>
-<span><span class="co">## 39 2025-06-03_13-59-05   46      32 not_provided not_provided           586                      167</span></span>
-<span><span class="co">## 40 2025-06-03_13-59-05   47      34 not_provided not_provided            58                       48</span></span>
-<span><span class="co">## 41 2025-06-03_13-59-05   44      30 not_provided not_provided            73                       62</span></span>
-<span><span class="co">## 42 2025-06-03_13-59-05   43      28 not_provided not_provided            83                       66</span></span>
-<span><span class="co">## 43 2025-06-03_13-59-05   41      24 not_provided not_provided           268                      169</span></span>
-<span><span class="co">## 44 2025-06-03_13-59-05   42      26 not_provided not_provided           115                       94</span></span>
-<span><span class="co">## 45 2025-06-03_13-59-05   45      31 not_provided not_provided           420                      197</span></span>
-<span><span class="co">## 46 2025-06-03_13-59-05   39      11 not_provided not_provided           208                       99</span></span>
-<span><span class="co">## 47 2025-06-03_13-59-05   40      21 not_provided not_provided            82                       69</span></span>
-<span><span class="co">## 48 2025-06-03_13-59-05   48      41 not_provided not_provided            80                       67</span></span>
-<span><span class="co">## 49 2025-06-06_14-52-03   49       6 not_provided not_provided          1334                      297</span></span>
-<span><span class="co">## 50 2025-06-12_16-11-15   50      28 not_provided not_provided            26                       17</span></span>
-<span><span class="co">## 51 2025-06-12_16-11-15   51      55 not_provided not_provided           365                      195</span></span>
-<span><span class="co">## 52 2025-07-09_14-56-27   52       3 not_provided not_provided          2587                      449</span></span></code></pre>
+<pre><code><span><span class="co">##                             recording.name cell cluster num.of.spikes num.of.responsive.trials hemi  genotype age sex</span></span>
+<span><span class="co">## 2025-02-06_15-53-03    2025-02-06_15-53-03    2      37           130                       24   RH       C57 P79   F</span></span>
+<span><span class="co">## 2025-02-06_15-53-03.1  2025-02-06_15-53-03    1      26           207                       28   RH       C57 P79   F</span></span>
+<span><span class="co">## 2025-02-06_15-53-03.2  2025-02-06_15-53-03    3      38           148                       28   RH       C57 P79   F</span></span>
+<span><span class="co">## 2025-02-06_15-53-03.3  2025-02-06_15-53-03    4      48            44                       22   RH       C57 P79   F</span></span>
+<span><span class="co">## 2025-02-06_15-53-03.4  2025-02-06_15-53-03    5      51            11                        7   RH       C57 P79   F</span></span>
+<span><span class="co">## 2025-04-05_11-50-43    2025-04-05_11-50-43   11      17          1869                      337   RH Mecp2 HET P64   F</span></span>
+<span><span class="co">## 2025-04-05_11-50-43.1  2025-04-05_11-50-43   13      34          1457                      271   RH Mecp2 HET P64   F</span></span>
+<span><span class="co">## 2025-04-05_11-50-43.2  2025-04-05_11-50-43   21      82          2321                      325   RH Mecp2 HET P64   F</span></span>
+<span><span class="co">## 2025-04-05_11-50-43.3  2025-04-05_11-50-43    6       1          2461                      396   RH Mecp2 HET P64   F</span></span>
+<span><span class="co">## 2025-04-05_11-50-43.4  2025-04-05_11-50-43    9      12          4153                      355   RH Mecp2 HET P64   F</span></span>
+<span><span class="co">## 2025-04-05_11-50-43.5  2025-04-05_11-50-43   22      95          2263                      360   RH Mecp2 HET P64   F</span></span>
+<span><span class="co">## 2025-04-05_11-50-43.6  2025-04-05_11-50-43    8      11          1386                      344   RH Mecp2 HET P64   F</span></span>
+<span><span class="co">## 2025-04-05_11-50-43.7  2025-04-05_11-50-43    7       6           788                      273   RH Mecp2 HET P64   F</span></span>
+<span><span class="co">## 2025-04-05_11-50-43.8  2025-04-05_11-50-43   12      22           780                      305   RH Mecp2 HET P64   F</span></span>
+<span><span class="co">## 2025-04-05_11-50-43.9  2025-04-05_11-50-43   16      51          1226                      247   RH Mecp2 HET P64   F</span></span>
+<span><span class="co">## 2025-04-05_11-50-43.10 2025-04-05_11-50-43   24      98          2033                      328   RH Mecp2 HET P64   F</span></span>
+<span><span class="co">## 2025-04-05_11-50-43.11 2025-04-05_11-50-43   23      96          1004                      304   RH Mecp2 HET P64   F</span></span>
+<span><span class="co">## 2025-04-05_11-50-43.12 2025-04-05_11-50-43   17      62           396                      149   RH Mecp2 HET P64   F</span></span>
+<span><span class="co">## 2025-04-05_11-50-43.13 2025-04-05_11-50-43   20      80          1900                      304   RH Mecp2 HET P64   F</span></span>
+<span><span class="co">## 2025-04-05_11-50-43.14 2025-04-05_11-50-43   10      16          1686                      395   RH Mecp2 HET P64   F</span></span>
+<span><span class="co">## 2025-04-05_11-50-43.15 2025-04-05_11-50-43   15      41          1104                      294   RH Mecp2 HET P64   F</span></span>
+<span><span class="co">## 2025-04-05_11-50-43.16 2025-04-05_11-50-43   18      67           396                      227   RH Mecp2 HET P64   F</span></span>
+<span><span class="co">## 2025-04-05_11-50-43.17 2025-04-05_11-50-43   14      35           259                      138   RH Mecp2 HET P64   F</span></span>
+<span><span class="co">## 2025-04-05_11-50-43.18 2025-04-05_11-50-43   19      69            51                       45   RH Mecp2 HET P64   F</span></span>
+<span><span class="co">## 2025-04-06_13-51-14    2025-04-06_13-51-14   25      25          2344                      455   RH Mecp2 HET P65   F</span></span>
+<span><span class="co">## 2025-04-06_13-51-14.1  2025-04-06_13-51-14   29      51          8081                      401   RH Mecp2 HET P65   F</span></span>
+<span><span class="co">## 2025-04-06_13-51-14.2  2025-04-06_13-51-14   27      42          3123                      449   RH Mecp2 HET P65   F</span></span>
+<span><span class="co">## 2025-04-06_13-51-14.3  2025-04-06_13-51-14   28      43          2433                      449   RH Mecp2 HET P65   F</span></span>
+<span><span class="co">## 2025-04-06_13-51-14.4  2025-04-06_13-51-14   26      29          2436                      457   RH Mecp2 HET P65   F</span></span>
+<span><span class="co">## 2025-04-06_13-51-14.5  2025-04-06_13-51-14   30      61          1929                      428   RH Mecp2 HET P65   F</span></span>
+<span><span class="co">## 2025-04-11_18-09-55    2025-04-11_18-09-55   31      22          2289                      259   RH Mecp2 HET P59   F</span></span>
+<span><span class="co">## 2025-04-11_18-09-55.1  2025-04-11_18-09-55   32      76           502                      180   RH Mecp2 HET P59   F</span></span>
+<span><span class="co">## 2025-06-02_15-13-06    2025-06-02_15-13-06   35       8           624                      171   LH Shank3 KO P87   M</span></span>
+<span><span class="co">## 2025-06-02_15-13-06.1  2025-06-02_15-13-06   36      13          3276                      220   LH Shank3 KO P87   M</span></span>
+<span><span class="co">## 2025-06-02_15-13-06.2  2025-06-02_15-13-06   37      31           364                      133   LH Shank3 KO P87   M</span></span>
+<span><span class="co">## 2025-06-02_15-13-06.3  2025-06-02_15-13-06   34       4            75                       54   LH Shank3 KO P87   M</span></span>
+<span><span class="co">## 2025-06-02_15-13-06.4  2025-06-02_15-13-06   33       1           364                      150   LH Shank3 KO P87   M</span></span>
+<span><span class="co">## 2025-06-03_13-59-05    2025-06-03_13-59-05   38      10           285                      155   LH Shank3 KO P88   M</span></span>
+<span><span class="co">## 2025-06-03_13-59-05.1  2025-06-03_13-59-05   46      32           586                      167   LH Shank3 KO P88   M</span></span>
+<span><span class="co">## 2025-06-03_13-59-05.2  2025-06-03_13-59-05   47      34            58                       48   LH Shank3 KO P88   M</span></span>
+<span><span class="co">## 2025-06-03_13-59-05.3  2025-06-03_13-59-05   44      30            73                       62   LH Shank3 KO P88   M</span></span>
+<span><span class="co">## 2025-06-03_13-59-05.4  2025-06-03_13-59-05   43      28            83                       66   LH Shank3 KO P88   M</span></span>
+<span><span class="co">## 2025-06-03_13-59-05.5  2025-06-03_13-59-05   41      24           268                      169   LH Shank3 KO P88   M</span></span>
+<span><span class="co">## 2025-06-03_13-59-05.6  2025-06-03_13-59-05   42      26           115                       94   LH Shank3 KO P88   M</span></span>
+<span><span class="co">## 2025-06-03_13-59-05.7  2025-06-03_13-59-05   45      31           420                      197   LH Shank3 KO P88   M</span></span>
+<span><span class="co">## 2025-06-03_13-59-05.8  2025-06-03_13-59-05   39      11           208                       99   LH Shank3 KO P88   M</span></span>
+<span><span class="co">## 2025-06-03_13-59-05.9  2025-06-03_13-59-05   40      21            82                       69   LH Shank3 KO P88   M</span></span>
+<span><span class="co">## 2025-06-03_13-59-05.10 2025-06-03_13-59-05   48      41            80                       67   LH Shank3 KO P88   M</span></span>
+<span><span class="co">## 2025-06-06_14-52-03    2025-06-06_14-52-03   49       6          1334                      297   LH Shank3 KO P90   F</span></span>
+<span><span class="co">## 2025-06-12_16-11-15    2025-06-12_16-11-15   50      28            26                       17   LH Shank3 KO P75   M</span></span>
+<span><span class="co">## 2025-06-12_16-11-15.1  2025-06-12_16-11-15   51      55           365                      195   LH Shank3 KO P75   M</span></span>
+<span><span class="co">## 2025-07-09_14-56-27    2025-07-09_14-56-27   52       3          2587                      449   LH       C57 P79   F</span></span></code></pre>
 <p>With the kilosort4 data preprocessed into spike rasters, the next
 step is to convert them into a special class of object from the neuron
-package, .</p>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+package, <strong>neuron</strong>.</p>
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">neurons.kilo4</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/load.rasters.as.neurons.html">load.rasters.as.neurons</a></span><span class="op">(</span><span class="va">spike.rasters.kilo4</span><span class="op">$</span><span class="va">spikes</span>, sample_rt <span class="op">=</span> <span class="fl">1e3</span><span class="op">)</span></span></code></pre></div>
-<p>We want to load the spike rasters as s because s come with built-in
-methods for estimating autocorrelation parameters with dichotomized
-Gaussian simulations.</p>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<p>We want to load the spike rasters as <strong>neuron</strong>s because
+<strong>neurons</strong>s come with built-in methods for estimating
+autocorrelation parameters with dichotomized Gaussian simulations.</p>
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># ... set number of sims to run per neuron</span></span>
 <span><span class="va">n_sims</span> <span class="op">&lt;-</span> <span class="fl">1000</span></span>
 <span><span class="co"># ... set number of trials to simulate per neuron</span></span>
@@ -297,60 +399,39 @@ Gaussian simulations.</p>
 <span>  tau0 <span class="op">=</span> <span class="fl">1.0</span>,</span>
 <span>  ctol <span class="op">=</span> <span class="fl">1e-8</span>,</span>
 <span>  max_evals <span class="op">=</span> <span class="fl">500</span>,</span>
-<span>  verbose <span class="op">=</span> <span class="cn">TRUE</span></span>
+<span>  verbose <span class="op">=</span> <span class="cn">FALSE</span></span>
 <span>  <span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## Estimating autocorrelation parameters for neuron 2, 2025-02-06_15-53-03 ...</span></span>
-<span><span class="co">## Estimating autocorrelation parameters for neuron 1, 2025-02-06_15-53-03 ...</span></span>
-<span><span class="co">## Estimating autocorrelation parameters for neuron 3, 2025-02-06_15-53-03 ...</span></span>
-<span><span class="co">## Estimating autocorrelation parameters for neuron 4, 2025-02-06_15-53-03 ...</span></span>
-<span><span class="co">## Estimating autocorrelation parameters for neuron 5, 2025-02-06_15-53-03 ...</span></span>
-<span><span class="co">## Estimating autocorrelation parameters for neuron 11, 2025-04-05_11-50-43 ...</span></span>
-<span><span class="co">## Estimating autocorrelation parameters for neuron 13, 2025-04-05_11-50-43 ...</span></span>
-<span><span class="co">## Estimating autocorrelation parameters for neuron 21, 2025-04-05_11-50-43 ...</span></span>
-<span><span class="co">## Estimating autocorrelation parameters for neuron 6, 2025-04-05_11-50-43 ...</span></span>
-<span><span class="co">## Estimating autocorrelation parameters for neuron 9, 2025-04-05_11-50-43 ...</span></span>
-<span><span class="co">## Estimating autocorrelation parameters for neuron 22, 2025-04-05_11-50-43 ...</span></span>
-<span><span class="co">## Estimating autocorrelation parameters for neuron 8, 2025-04-05_11-50-43 ...</span></span>
-<span><span class="co">## Estimating autocorrelation parameters for neuron 7, 2025-04-05_11-50-43 ...</span></span>
-<span><span class="co">## Estimating autocorrelation parameters for neuron 12, 2025-04-05_11-50-43 ...</span></span>
-<span><span class="co">## Estimating autocorrelation parameters for neuron 16, 2025-04-05_11-50-43 ...</span></span>
-<span><span class="co">## Estimating autocorrelation parameters for neuron 24, 2025-04-05_11-50-43 ...</span></span>
-<span><span class="co">## Estimating autocorrelation parameters for neuron 23, 2025-04-05_11-50-43 ...</span></span>
-<span><span class="co">## Estimating autocorrelation parameters for neuron 17, 2025-04-05_11-50-43 ...</span></span>
-<span><span class="co">## Estimating autocorrelation parameters for neuron 20, 2025-04-05_11-50-43 ...</span></span>
-<span><span class="co">## Estimating autocorrelation parameters for neuron 10, 2025-04-05_11-50-43 ...</span></span>
-<span><span class="co">## Estimating autocorrelation parameters for neuron 15, 2025-04-05_11-50-43 ...</span></span>
-<span><span class="co">## Estimating autocorrelation parameters for neuron 18, 2025-04-05_11-50-43 ...</span></span>
-<span><span class="co">## Estimating autocorrelation parameters for neuron 14, 2025-04-05_11-50-43 ...</span></span>
-<span><span class="co">## Estimating autocorrelation parameters for neuron 19, 2025-04-05_11-50-43 ...</span></span>
-<span><span class="co">## Estimating autocorrelation parameters for neuron 25, 2025-04-06_13-51-14 ...</span></span>
-<span><span class="co">## Estimating autocorrelation parameters for neuron 29, 2025-04-06_13-51-14 ...</span></span>
-<span><span class="co">## Estimating autocorrelation parameters for neuron 27, 2025-04-06_13-51-14 ...</span></span>
-<span><span class="co">## Estimating autocorrelation parameters for neuron 28, 2025-04-06_13-51-14 ...</span></span>
-<span><span class="co">## Estimating autocorrelation parameters for neuron 26, 2025-04-06_13-51-14 ...</span></span>
-<span><span class="co">## Estimating autocorrelation parameters for neuron 30, 2025-04-06_13-51-14 ...</span></span>
-<span><span class="co">## Estimating autocorrelation parameters for neuron 31, 2025-04-11_18-09-55 ...</span></span>
-<span><span class="co">## Estimating autocorrelation parameters for neuron 32, 2025-04-11_18-09-55 ...</span></span>
-<span><span class="co">## Estimating autocorrelation parameters for neuron 35, 2025-06-02_15-13-06 ...</span></span>
-<span><span class="co">## Estimating autocorrelation parameters for neuron 36, 2025-06-02_15-13-06 ...</span></span>
-<span><span class="co">## Estimating autocorrelation parameters for neuron 37, 2025-06-02_15-13-06 ...</span></span>
-<span><span class="co">## Estimating autocorrelation parameters for neuron 34, 2025-06-02_15-13-06 ...</span></span>
-<span><span class="co">## Estimating autocorrelation parameters for neuron 33, 2025-06-02_15-13-06 ...</span></span>
-<span><span class="co">## Estimating autocorrelation parameters for neuron 38, 2025-06-03_13-59-05 ...</span></span>
-<span><span class="co">## Estimating autocorrelation parameters for neuron 46, 2025-06-03_13-59-05 ...</span></span>
-<span><span class="co">## Estimating autocorrelation parameters for neuron 47, 2025-06-03_13-59-05 ...</span></span>
-<span><span class="co">## Estimating autocorrelation parameters for neuron 44, 2025-06-03_13-59-05 ...</span></span>
-<span><span class="co">## Estimating autocorrelation parameters for neuron 43, 2025-06-03_13-59-05 ...</span></span>
-<span><span class="co">## Estimating autocorrelation parameters for neuron 41, 2025-06-03_13-59-05 ...</span></span>
-<span><span class="co">## Estimating autocorrelation parameters for neuron 42, 2025-06-03_13-59-05 ...</span></span>
-<span><span class="co">## Estimating autocorrelation parameters for neuron 45, 2025-06-03_13-59-05 ...</span></span>
-<span><span class="co">## Estimating autocorrelation parameters for neuron 39, 2025-06-03_13-59-05 ...</span></span>
-<span><span class="co">## Estimating autocorrelation parameters for neuron 40, 2025-06-03_13-59-05 ...</span></span>
-<span><span class="co">## Estimating autocorrelation parameters for neuron 48, 2025-06-03_13-59-05 ...</span></span>
-<span><span class="co">## Estimating autocorrelation parameters for neuron 49, 2025-06-06_14-52-03 ...</span></span>
-<span><span class="co">## Estimating autocorrelation parameters for neuron 50, 2025-06-12_16-11-15 ...</span></span>
-<span><span class="co">## Estimating autocorrelation parameters for neuron 51, 2025-06-12_16-11-15 ...</span></span>
-<span><span class="co">## Estimating autocorrelation parameters for neuron 52, 2025-07-09_14-56-27 ...</span></span></code></pre>
+<p>Run analysis:</p>
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">autocorr_results</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/analyze.autocorr.html">analyze.autocorr</a></span><span class="op">(</span></span>
+<span>  <span class="va">autocor.ests.kilo4</span>,</span>
+<span>  covariate <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"hemi"</span>,<span class="st">"genotype"</span><span class="op">)</span>,</span>
+<span>  n_bs <span class="op">=</span> <span class="fl">1e4</span>,</span>
+<span>  bins_per_sec <span class="op">=</span> <span class="fl">50</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">df</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
+<span>  value <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/unlist.html" class="external-link">unlist</a></span><span class="op">(</span><span class="va">autocorr_results</span>, use.names <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span>,</span>
+<span>  group <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">autocorr_results</span><span class="op">)</span>, each <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">autocorr_results</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Plot</span></span>
+<span><span class="va">title_size</span> <span class="op">&lt;-</span> <span class="fl">20</span> </span>
+<span><span class="va">axis_size</span> <span class="op">&lt;-</span> <span class="fl">12</span> </span>
+<span><span class="va">legend_size</span> <span class="op">&lt;-</span> <span class="fl">10</span></span>
+<span><span class="fu">ggplot2</span><span class="fu">::</span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="va">df</span>, <span class="fu">ggplot2</span><span class="fu">::</span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span>x <span class="op">=</span> <span class="va">value</span>, fill <span class="op">=</span> <span class="va">group</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu">ggplot2</span><span class="fu">::</span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_density.html" class="external-link">geom_density</a></span><span class="op">(</span>alpha <span class="op">=</span> <span class="fl">0.6</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="co">#scale_y_continuous(transform = "log1p") +</span></span>
+<span>  <span class="fu">ggplot2</span><span class="fu">::</span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">labs</a></span><span class="op">(</span>title <span class="op">=</span> <span class="st">"Expected Time Constant"</span>, x <span class="op">=</span> <span class="st">"ms"</span>, y <span class="op">=</span> <span class="st">"Density"</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu">ggplot2</span><span class="fu">::</span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggtheme.html" class="external-link">theme_minimal</a></span><span class="op">(</span><span class="op">)</span> <span class="op">+</span> </span>
+<span>  <span class="fu">ggplot2</span><span class="fu">::</span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/theme.html" class="external-link">theme</a></span><span class="op">(</span></span>
+<span>    plot.title <span class="op">=</span> <span class="fu">ggplot2</span><span class="fu">::</span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/element.html" class="external-link">element_text</a></span><span class="op">(</span>hjust <span class="op">=</span> <span class="fl">0.5</span>, size <span class="op">=</span> <span class="va">title_size</span><span class="op">)</span>,</span>
+<span>    axis.title <span class="op">=</span> <span class="fu">ggplot2</span><span class="fu">::</span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/element.html" class="external-link">element_text</a></span><span class="op">(</span>size <span class="op">=</span> <span class="va">axis_size</span><span class="op">)</span>,</span>
+<span>    axis.text <span class="op">=</span> <span class="fu">ggplot2</span><span class="fu">::</span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/element.html" class="external-link">element_text</a></span><span class="op">(</span>size <span class="op">=</span> <span class="va">axis_size</span><span class="op">)</span>,</span>
+<span>    legend.title <span class="op">=</span> <span class="fu">ggplot2</span><span class="fu">::</span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/element.html" class="external-link">element_text</a></span><span class="op">(</span>size <span class="op">=</span> <span class="va">legend_size</span><span class="op">)</span>,</span>
+<span>    legend.text <span class="op">=</span> <span class="fu">ggplot2</span><span class="fu">::</span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/element.html" class="external-link">element_text</a></span><span class="op">(</span>size <span class="op">=</span> <span class="va">legend_size</span><span class="op">)</span>,</span>
+<span>    legend.position <span class="op">=</span> <span class="st">"bottom"</span></span>
+<span>  <span class="op">)</span></span></code></pre></div>
   </main>
 </div>
 

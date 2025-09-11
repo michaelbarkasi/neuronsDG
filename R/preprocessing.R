@@ -36,7 +36,7 @@ load_mat <- function(path) {
 #'    \item{spike_clusters.npy}{integer giving the cluster number of each spike}
 #'    \item{spike_times.npy}{sample number the spike occurred at}
 #'    \item{cluster_group.tsv}{2D array giving status of each cluster (0=noise, 1=MUA, 2=Good, 3=unsorted), hand-curated}
-#'    \item{cluster_info.tsv}{2D array giving the automatic output of kilosort4}
+#'    \item{cluster_info.tsv}{2D array giving the automatic output of kilosort4. This file not needed if cluster_group.tsv has data.}
 #'    \item{includeVector.mat}{MATLAB file giving whether each cluster is stimulus-responsive (1) or not (0)}
 #' }
 #' 
@@ -135,11 +135,21 @@ import.kilo4 <- function(
       stim_responsive = rep(NA, length(data_list[["spike_clusters"]]))
     )
     # By default, use labels from cluster_info file
-    group_info <- data_list[["cluster_info"]][, "KSLabel"]
-    group_id <- data_list[["cluster_info"]][, "cluster_id"]
+    group_info <- c()
+    group_id <- c()
+    if ("cluster_info" %in% names(data_list)) {
+      group_info <- data_list[["cluster_info"]][, "KSLabel"]
+      group_id <- data_list[["cluster_info"]][, "cluster_id"]
+    } else {
+      group_id <- data_list[["cluster_group"]][, "cluster_id"]
+    }
     ## Uncomment if using kilosort1 data
     ## group_id <- unique(kilosort_spike_data$spike_clusters)
     # However, if cluster_group has data, it is hand-curated and better, so use that instead
+    if (any(colnames(data_list[["cluster_group"]]) == "KSLabel")) {
+      this_col <- which(colnames(data_list[["cluster_group"]]) == "KSLabel")
+      colnames(data_list[["cluster_group"]])[this_col] <- "group"
+    }
     group_info_curated <- data_list[["cluster_group"]][, "group"]
     group_id_curated <- data_list[["cluster_group"]][, "cluster_id"]
     if (length(group_info_curated) > 0) {

@@ -36,7 +36,7 @@ Base function to import raw kilosort4 and accompanying stimulus data. The functi
    \item{spike_clusters.npy}{integer giving the cluster number of each spike}
    \item{spike_times.npy}{sample number the spike occurred at}
    \item{cluster_group.tsv}{2D array giving status of each cluster (0=noise, 1=MUA, 2=Good, 3=unsorted), hand-curated}
-   \item{cluster_info.tsv}{2D array giving the automatic output of kilosort4}
+   \item{cluster_info.tsv}{2D array giving the automatic output of kilosort4. This file not needed if cluster_group.tsv has data.}
    \item{includeVector.mat}{MATLAB file giving whether each cluster is stimulus-responsive (1) or not (0)}
 }
 }
