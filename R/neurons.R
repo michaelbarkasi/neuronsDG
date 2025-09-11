@@ -10,6 +10,7 @@
 #' @useDynLib neurons, .registration = TRUE
 #' @import Rcpp
 #' @import RcppEigen 
+#' @import ggplot2
 NULL
 
 .onLoad <- function(libname, pkgname) {
@@ -104,8 +105,8 @@ load.rasters.as.neurons <- function(
         if (length(recording_name) != 1) recording_name <- "not_provided"
       } 
       hemi <- "not_provided"
-      if ("hemisphere" %in% colnames(raster_df)) {
-        hemi <- unique(raster_df$hemisphere[c_mask])
+      if ("hemi" %in% colnames(raster_df)) {
+        hemi <- unique(raster_df$hemi[c_mask])
         if (length(hemi) != 1) hemi <- "not_provided"
       }
       genotype <- "not_provided"
@@ -220,16 +221,16 @@ plot.autocorrelation <- function(
     df_temp <- df_temp[df_temp$bin <= plot_time_cutoff,]
     
     # Make plot
-    plt <- ggplot(df_temp) +
-      geom_line(aes(x = bin, y = autocorrelation), color = "blue") +  
-      geom_line(aes(x = bin, y = autocorrelation_fitted), color = "red") +  
-      geom_hline(yintercept = bias_term, linewidth = 2, linetype = "dotted", color = "darkgray") +
-      labs(
+    plt <- ggplot::ggplot(df_temp) +
+      ggplot::geom_line(aes(x = bin, y = autocorrelation), color = "blue") +  
+      ggplot::geom_line(aes(x = bin, y = autocorrelation_fitted), color = "red") +  
+      ggplot::geom_hline(yintercept = bias_term, linewidth = 2, linetype = "dotted", color = "darkgray") +
+      ggplot::labs(
         title = plot_title,
         x = "Lag (bins)",
         y = "Autocorrelation"
       ) + 
-      theme_minimal()
+      ggplot::theme_minimal()
     return(plt)
     
   }
@@ -258,20 +259,20 @@ plot.raster <- function(
     dx <- total_time * 0.0025
     
     # Make plot
-    plt <- ggplot(spike.raster) +
-      geom_segment(
+    plt <- ggplot::ggplot(spike.raster) +
+      ggplot::geom_segment(
         aes(x = time - dx, xend = time + dx, y = trial, yend = trial), 
         color = "black",
         linewidth = 0.5
       ) +
-      labs(
+      ggplot::labs(
         title = make.plot.title(nrn, plot_title),
         x = "Time (ms)",
         y = "Trial"
       ) + 
-      theme_minimal()
+      ggplot::theme_minimal()
     if (zero_as_onset && min(spike.raster$time) <= 0) plt <- plt + 
-      geom_vline(xintercept = 0, linetype = "solid", linewidth = 1, color = "darkblue") 
+      ggplot::geom_vline(xintercept = 0, linetype = "solid", linewidth = 1, color = "darkblue") 
     
     return(plt)
     

@@ -34,6 +34,9 @@ rownames(kilo4_metadata) <- paste0(
 
 kilo4_metadata <- kilo4_metadata[,c("HEMISPHERE","STRAIN","AGE","SEX")]
 
+# Rename columns to match what's expected by neurons package 
+colnames(kilo4_metadata) <- c("hemi", "genotype", "age", "sex")
+
 ```
 
 I removed the recording "2025-04-06_13-26-57" because each cell in it had only one responsive trial. 
@@ -51,6 +54,7 @@ spike.rasters.kilo4 <- preprocess.kilo4(
   recording.folder = demo_data,
   meta_data = kilo4_metadata, 
   pure_trials_only = TRUE, 
+  good_cells_only = TRUE,
   verbose = TRUE
 ) 
 ```
@@ -100,7 +104,7 @@ Run analysis:
 ```{r, stat_analysis}
 autocorr_results <- analyze.autocorr(
   autocor.ests.kilo4,
-  covariate = c("HEMISPHERE","STRAIN"),
+  covariate = c("hemi","genotype"),
   n_bs = 1e4,
   bins_per_sec = 50
 )
@@ -114,17 +118,17 @@ df <- data.frame(
 title_size <- 20 
 axis_size <- 12 
 legend_size <- 10
-ggplot(df, aes(x = value, fill = group)) +
-  geom_density(alpha = 0.6) +
+ggplot2::ggplot(df, ggplot2::aes(x = value, fill = group)) +
+  ggplot2::geom_density(alpha = 0.6) +
   #scale_y_continuous(transform = "log1p") +
-  labs(title = "Expected Time Constant", x = "ms", y = "Density") +
-  theme_minimal() + 
-  theme(
-    plot.title = element_text(hjust = 0.5, size = title_size),
-    axis.title = element_text(size = axis_size),
-    axis.text = element_text(size = axis_size),
-    legend.title = element_text(size = legend_size),
-    legend.text = element_text(size = legend_size),
-    legend.position = "none"
+  ggplot2::labs(title = "Expected Time Constant", x = "ms", y = "Density") +
+  ggplot2::theme_minimal() + 
+  ggplot2::theme(
+    plot.title = ggplot2::element_text(hjust = 0.5, size = title_size),
+    axis.title = ggplot2::element_text(size = axis_size),
+    axis.text = ggplot2::element_text(size = axis_size),
+    legend.title = ggplot2::element_text(size = legend_size),
+    legend.text = ggplot2::element_text(size = legend_size),
+    legend.position = "bottom"
   )
 ```
