@@ -99,6 +99,7 @@ spike.rasters.kilo4 <- preprocess.kilo4(
   meta_data = kilo4_metadata, 
   pure_trials_only = TRUE, 
   good_cells_only = TRUE,
+  stim_responsive_only = FALSE,
   verbose = TRUE
 ) 
 ```
@@ -125,7 +126,7 @@ neurons.kilo4 <- load.rasters.as.neurons(spike.rasters.kilo4$spikes, sample_rt =
 
 We want to load the spike rasters as **neuron**s because **neurons**s come with built-in methods for estimating autocorrelation parameters with dichotomized Gaussian simulations. 
 
-```{r estimate_autocorr, eval=FALSE}
+```{r estimate_autocorr}
 # ... set number of sims to run per neuron
 n_sims <- 1000
 # ... set number of trials to simulate per neuron
@@ -147,7 +148,7 @@ autocor.ests.kilo4 <- estimate.autocorr.params(
 
 Run analysis: 
 
-```{r stat_analysis, eval=FALSE}
+```{r stat_analysis}
 autocorr_results <- analyze.autocorr(
   autocor.ests.kilo4,
   covariate = c("hemi","genotype"),

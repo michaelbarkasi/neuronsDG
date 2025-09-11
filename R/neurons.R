@@ -11,10 +11,27 @@
 #' @import Rcpp
 #' @import RcppEigen 
 #' @import ggplot2
+#' @import parallel
 NULL
 
 .onLoad <- function(libname, pkgname) {
     Rcpp::loadModule("neuron", TRUE)
+  }
+
+core_num <- parallel::detectCores() - 2 # Set to 1 to disable parallel processing (e.g., on windows)
+
+runparallel <- function(
+    input, 
+    funct, 
+    ...
+  ) {
+    results <- parallel::mclapply( 
+      X = input, FUN = funct, ...,
+      mc.preschedule = TRUE, mc.set.seed = TRUE,
+      mc.silent = FALSE, mc.cores = core_num,
+      mc.cleanup = TRUE, mc.allow.recursive = TRUE 
+      )
+    return(results)
   }
 
 # Define functions #####################################################################################################
@@ -453,16 +470,9 @@ estimate.autocorr.params <- function(
     # Initialize neuron id df
     neuron_id <- data.frame()
     
-    # Loop through neurons in the list
-    for (i in seq_along(neuron_list)) {
-      
+    est_autocorr_params <- function(i) {
       # Get neuron 
       nrn <- neuron_list[[i]]
-      
-      # Get neuron id 
-      nrn_id <- as.data.frame(lapply(nrn$fetch_id_data(), rep, times = 1))
-      neuron_id <- rbind(neuron_id, nrn_id)
-      
       # Run simulations to estimate value for this neuron
       dg_estimates_nrn <- nrn$estimate_autocorr_params(
         n_trials_per_sim,
@@ -474,12 +484,26 @@ estimate.autocorr.params <- function(
         max_evals,
         verbose
       )
+      return(dg_estimates_nrn)
+    }
+    
+    dg_estimates_nrn_list <- runparallel(seq_along(neuron_list), est_autocorr_params)
+    
+    # Loop through neurons in the list
+    for (i in seq_along(neuron_list)) {
+      
+      # Get neuron 
+      nrn <- neuron_list[[i]]
+      
+      # Get neuron id 
+      nrn_id <- as.data.frame(lapply(nrn$fetch_id_data(), rep, times = 1))
+      neuron_id <- rbind(neuron_id, nrn_id)
       
       # Load estimates into matrix
       row_idx_initial <- (i - 1) * n_sims_per_neurons + 1
       row_idx_final <- i * n_sims_per_neurons
       row_idx <- row_idx_initial:row_idx_final
-      dg_estimates[row_idx,] <- dg_estimates_nrn
+      dg_estimates[row_idx,] <- dg_estimates_nrn_list[[i]]
       
     }
     

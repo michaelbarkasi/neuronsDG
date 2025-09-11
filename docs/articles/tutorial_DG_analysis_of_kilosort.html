@@ -91,7 +91,9 @@ Setup
 <p>The first step is to set up the R environment by setting a
 random-number generator seed and loading the neurons package.</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Set seed for reproducibility</span></span>
+<code class="sourceCode R"><span><span class="co"># Clear the R workspace to start fresh</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/rm.html" class="external-link">rm</a></span><span class="op">(</span>list <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/ls.html" class="external-link">ls</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="co"># Set seed for reproducibility</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">12345</span><span class="op">)</span> </span>
 <span><span class="co"># Load neurons package</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va">neurons</span><span class="op">)</span> </span></code></pre></div>
@@ -107,8 +109,10 @@ Load data
 <p>The data is the output from kilosort4, plus a csv file with stimulus
 event information. For this tutorial, we will use the data that was
 recorded as of September 2, 2025. I’ve put a slightly curated version of
-the data in the following directory. You will need to provide your own
-path to the data.</p>
+the data in the following directory. I also removed the recording
+“2025-04-06_13-26-57” because each cell in it had only one responsive
+trial and “2025-07-03_11-45-06” because it had no data in it. You will
+need to provide your own path to the data.</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Set path to data </span></span>
 <span><span class="va">demo_data</span> <span class="op">&lt;-</span> <span class="st">"/Users/michaelbarkasi/Library/CloudStorage/OneDrive-WashingtonUniversityinSt.Louis/projects_Oviedo_lab/_lateralized_recurrent_pathways/dichot-gaussian/data_demo"</span></span></code></pre></div>
@@ -137,8 +141,7 @@ cluster (0=noise, 1=MUA, 2=Good, 3=unsorted), hand-curated<br>
 </li>
 <li>
 <strong>cluster_info.tsv</strong>: 2D array giving the automatic
-output of kilosort4<br>
-</li>
+output of kilosort4; not needed if cluster_group.tsv has data.</li>
 <li>
 <strong>includeVector.mat</strong>: MATLAB file giving whether each
 cluster is stimulus-responsive (1) or not (0)</li>
@@ -148,7 +151,7 @@ file <strong>StimulusStamps.csv</strong> in each recording folder. For
 example, here is the file structure of the demo data as it appears on my
 computer:</p>
 <div class="figure">
-<img src="fig_folderstructure.png" alt="Image showing folder structure necessary for &lt;b&gt;preprocess.kilo4&lt;/b&gt; function." width="50%"><p class="caption">
+<img src="fig_folderstructure.png" alt="Image showing folder structure necessary for &lt;b&gt;preprocess.kilo4&lt;/b&gt; function." width="90%"><p class="caption">
 Folder structure necessary for <b>preprocess.kilo4</b> function.
 </p>
 </div>
@@ -181,22 +184,44 @@ data.</p>
 <span><span class="va">kilo4_metadata</span> <span class="op">&lt;-</span> <span class="va">kilo4_metadata</span><span class="op">[</span>,<span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"HEMISPHERE"</span>,<span class="st">"STRAIN"</span>,<span class="st">"AGE"</span>,<span class="st">"SEX"</span><span class="op">)</span><span class="op">]</span></span>
 <span><span class="co"># Rename columns to match what's expected by neurons package </span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">colnames</a></span><span class="op">(</span><span class="va">kilo4_metadata</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"hemi"</span>, <span class="st">"genotype"</span>, <span class="st">"age"</span>, <span class="st">"sex"</span><span class="op">)</span></span></code></pre></div>
-<p>I removed the recording “2025-04-06_13-26-57” because each cell in it
-had only one responsive trial.</p>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<h1>
+Preprocess data into spike rasters
+</h1>
+<p>With this setup, we can now preprocess the data using the
+<strong>preprocess.kilo4</strong> function. This function needs a path
+(such as <strong>demo_data</strong>) for the actual data. Meta data
+(such as <strong>kilo4_metadata</strong>) can also be provided, but is
+not necessary. If left out, the preprocessed output will simply lack
+information about covariates.</p>
+<p>The main purpose of <strong>preprocess.kilo4</strong> is to convert
+the raw spike times into spike rasters of a standardized format expected
+by the neurons package. The key step here is partitioning the recordings
+into trials, which <strong>preprocess.kilo4</strong> does with start and
+stop times relative to a stimulus. For example, if we want to analyze
+information about responses to stimuli, we would want to set the start
+time to something negataive (before the stimulus) and the end time to
+something positive (after the stimulus), like so:</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a>trial_time_start <span class="ot">=</span> <span class="sc">-</span><span class="dv">100</span>, </span>
+<span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a>trial_time_end <span class="ot">=</span> <span class="dv">1800</span> </span></code></pre></div>
+<p>However, for estimating autocorrelation, we want to analyze the
+spontaneous activity during a period of silence after the stimulus. In
+this case, we want to set the start time to be some time after the
+stimulus (to allow for settling) and the end time to be some time later.
+Previous data from patch-clamp recordings used 1520 ms of silence after
+period of settling. So, to analyze the new data, we will do the same,
+using a 500 ms settling period. So we set the start and end times like
+so:</p>
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># old recordings used 1520 ms of silence, once settled</span></span>
 <span><span class="co"># ... settling seems to take 500 ms</span></span>
 <span><span class="va">spike.rasters.kilo4</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/preprocess.kilo4.html">preprocess.kilo4</a></span><span class="op">(</span></span>
-<span>  <span class="co"># ... for stimulus</span></span>
-<span>  <span class="co">#trial_time_start = -100, </span></span>
-<span>  <span class="co">#trial_time_end = 1800 </span></span>
-<span>  <span class="co"># ... for silence</span></span>
 <span>  trial_time_start <span class="op">=</span> <span class="fl">500</span>, </span>
 <span>  trial_time_end <span class="op">=</span> <span class="fl">500</span> <span class="op">+</span> <span class="fl">1520</span>,</span>
 <span>  recording.folder <span class="op">=</span> <span class="va">demo_data</span>,</span>
 <span>  meta_data <span class="op">=</span> <span class="va">kilo4_metadata</span>, </span>
 <span>  pure_trials_only <span class="op">=</span> <span class="cn">TRUE</span>, </span>
 <span>  good_cells_only <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  stim_responsive_only <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  verbose <span class="op">=</span> <span class="cn">TRUE</span></span>
 <span><span class="op">)</span> </span></code></pre></div>
 <pre><code><span><span class="co">## </span></span>
@@ -207,6 +232,18 @@ had only one responsive trial.</p>
 <span><span class="co">##  spike_times, class:  array, dim:  183219</span></span>
 <span><span class="co">##  cluster_group, class:  data.frame, dim:  29 2, col names (1st 5):  cluster_id, group</span></span>
 <span><span class="co">##  cluster_info, class:  data.frame, dim:  76 11, col names (1st 5):  cluster_id, Amplitude, ContamPct, KSLabel, amp</span></span>
+<span><span class="co">## ---</span></span>
+<span><span class="co">## Imported data: /2025-04-03_11-18-50/kilosort4/cluster_group.tsv</span></span>
+<span><span class="co">##  spike_clusters, class:  array, dim:  408776</span></span>
+<span><span class="co">##  spike_positions, class:  matrix array, dim:  408776 2</span></span>
+<span><span class="co">##  spike_times, class:  array, dim:  408776</span></span>
+<span><span class="co">##  cluster_group, class:  data.frame, dim:  110 2, col names (1st 5):  cluster_id, KSLabel</span></span>
+<span><span class="co">## ---</span></span>
+<span><span class="co">## Imported data: /2025-04-03_11-38-39/kilosort4/cluster_group.tsv</span></span>
+<span><span class="co">##  spike_clusters, class:  array, dim:  401485</span></span>
+<span><span class="co">##  spike_positions, class:  matrix array, dim:  401485 2</span></span>
+<span><span class="co">##  spike_times, class:  array, dim:  401485</span></span>
+<span><span class="co">##  cluster_group, class:  data.frame, dim:  114 2, col names (1st 5):  cluster_id, KSLabel</span></span>
 <span><span class="co">## ---</span></span>
 <span><span class="co">## Imported data: /2025-04-05_11-50-43/kilosort4/cluster_info.tsv</span></span>
 <span><span class="co">##  spike_clusters, class:  array, dim:  570256</span></span>
@@ -298,6 +335,18 @@ had only one responsive trial.</p>
 <span><span class="co">##  spike_times, class:  array, dim:  118866</span></span>
 <span><span class="co">##  cluster_group, class:  data.frame, dim:  0 2, col names (1st 5):  cluster_id, group</span></span>
 <span><span class="co">##  cluster_info, class:  data.frame, dim:  22 11, col names (1st 5):  cluster_id, Amplitude, ContamPct, KSLabel, amp</span></span></code></pre>
+<p>Notice that in addition to the start and stop times and pointers to
+the data, we also have three Boolean variables,
+<strong>pure_trials_only</strong>, <strong>good_cells_only</strong>, and
+<strong>verbose</strong>. The first, <strong>pure_trials_only</strong>,
+controls whether trials which overlap with another (i.e., have a start
+time before the end time of the previous trial) are included in the
+data. The second, <strong>good_cells_only</strong>, controls whether
+spike clusters are included only if they were hand currated. We need
+this set to TRUE, as the autocorrelation analysis requires very clean
+data. Finally, if <strong>verbose</strong> is set to TRUE, the function
+will print out information about the files it is finding and
+parsing.</p>
 <p>The output <strong>spike.rasters.kilo4</strong> is a list with three
 elements: <strong>spikes</strong>, <strong>timeXtrial</strong>, and
 <strong>cluster.key</strong>. The first element,
@@ -305,15 +354,15 @@ elements: <strong>spikes</strong>, <strong>timeXtrial</strong>, and
 of the spike rasters from each recording. Each row is a spike, with
 columns giving information such as cell number, time, and genotype. Here
 are the first few rows of the <strong>spikes</strong> data frame:</p>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">spike.rasters.kilo4</span><span class="op">$</span><span class="va">spikes</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">##      trial   sample cell time_in_ms      recording_name cluster hemi genotype age sex</span></span>
-<span><span class="co">## 3463     1 11166.39    2   524.7279 2025-02-06_15-53-03      37   RH      C57 P79   F</span></span>
-<span><span class="co">## 3467     1 11170.48    1   528.8199 2025-02-06_15-53-03      26   RH      C57 P79   F</span></span>
-<span><span class="co">## 3505     1 11296.51    1   654.8471 2025-02-06_15-53-03      26   RH      C57 P79   F</span></span>
-<span><span class="co">## 3509     1 11312.48    3   670.8191 2025-02-06_15-53-03      38   RH      C57 P79   F</span></span>
-<span><span class="co">## 3542     1 11409.04    1   767.3772 2025-02-06_15-53-03      26   RH      C57 P79   F</span></span>
-<span><span class="co">## 3562     1 11445.43    1   803.7762 2025-02-06_15-53-03      26   RH      C57 P79   F</span></span></code></pre>
+<span><span class="co">## 3458     1 11143.25   11   501.5949 2025-02-06_15-53-03      40   RH      C57 P79   F</span></span>
+<span><span class="co">## 3460     1 11150.55   24   508.8879 2025-02-06_15-53-03      66   RH      C57 P79   F</span></span>
+<span><span class="co">## 3463     1 11166.39    8   524.7279 2025-02-06_15-53-03      37   RH      C57 P79   F</span></span>
+<span><span class="co">## 3467     1 11170.48    2   528.8199 2025-02-06_15-53-03      26   RH      C57 P79   F</span></span>
+<span><span class="co">## 3468     1 11178.33    7   536.6739 2025-02-06_15-53-03      33   RH      C57 P79   F</span></span>
+<span><span class="co">## 3479     1 11225.75   10   584.0950 2025-02-06_15-53-03      39   RH      C57 P79   F</span></span></code></pre>
 <p>The second element, <strong>timeXtrial</strong>, is a list of
 matrices, one per cell, with rows corresponding to time bins and columns
 to trials. Each entry is a binary indicator of whether the cell fired in
@@ -321,70 +370,314 @@ that time bin during that trial. The third element,
 <strong>cluster.key</strong>, is a data frame with rows representing
 cells, columns giving information such as cell number, genotype, and
 number of spikes.</p>
-<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">spike.rasters.kilo4</span><span class="op">$</span><span class="va">cluster.key</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">##                             recording.name cell cluster num.of.spikes num.of.responsive.trials hemi  genotype age sex</span></span>
-<span><span class="co">## 2025-02-06_15-53-03    2025-02-06_15-53-03    2      37           130                       24   RH       C57 P79   F</span></span>
-<span><span class="co">## 2025-02-06_15-53-03.1  2025-02-06_15-53-03    1      26           207                       28   RH       C57 P79   F</span></span>
-<span><span class="co">## 2025-02-06_15-53-03.2  2025-02-06_15-53-03    3      38           148                       28   RH       C57 P79   F</span></span>
-<span><span class="co">## 2025-02-06_15-53-03.3  2025-02-06_15-53-03    4      48            44                       22   RH       C57 P79   F</span></span>
-<span><span class="co">## 2025-02-06_15-53-03.4  2025-02-06_15-53-03    5      51            11                        7   RH       C57 P79   F</span></span>
-<span><span class="co">## 2025-04-05_11-50-43    2025-04-05_11-50-43   11      17          1869                      337   RH Mecp2 HET P64   F</span></span>
-<span><span class="co">## 2025-04-05_11-50-43.1  2025-04-05_11-50-43   13      34          1457                      271   RH Mecp2 HET P64   F</span></span>
-<span><span class="co">## 2025-04-05_11-50-43.2  2025-04-05_11-50-43   21      82          2321                      325   RH Mecp2 HET P64   F</span></span>
-<span><span class="co">## 2025-04-05_11-50-43.3  2025-04-05_11-50-43    6       1          2461                      396   RH Mecp2 HET P64   F</span></span>
-<span><span class="co">## 2025-04-05_11-50-43.4  2025-04-05_11-50-43    9      12          4153                      355   RH Mecp2 HET P64   F</span></span>
-<span><span class="co">## 2025-04-05_11-50-43.5  2025-04-05_11-50-43   22      95          2263                      360   RH Mecp2 HET P64   F</span></span>
-<span><span class="co">## 2025-04-05_11-50-43.6  2025-04-05_11-50-43    8      11          1386                      344   RH Mecp2 HET P64   F</span></span>
-<span><span class="co">## 2025-04-05_11-50-43.7  2025-04-05_11-50-43    7       6           788                      273   RH Mecp2 HET P64   F</span></span>
-<span><span class="co">## 2025-04-05_11-50-43.8  2025-04-05_11-50-43   12      22           780                      305   RH Mecp2 HET P64   F</span></span>
-<span><span class="co">## 2025-04-05_11-50-43.9  2025-04-05_11-50-43   16      51          1226                      247   RH Mecp2 HET P64   F</span></span>
-<span><span class="co">## 2025-04-05_11-50-43.10 2025-04-05_11-50-43   24      98          2033                      328   RH Mecp2 HET P64   F</span></span>
-<span><span class="co">## 2025-04-05_11-50-43.11 2025-04-05_11-50-43   23      96          1004                      304   RH Mecp2 HET P64   F</span></span>
-<span><span class="co">## 2025-04-05_11-50-43.12 2025-04-05_11-50-43   17      62           396                      149   RH Mecp2 HET P64   F</span></span>
-<span><span class="co">## 2025-04-05_11-50-43.13 2025-04-05_11-50-43   20      80          1900                      304   RH Mecp2 HET P64   F</span></span>
-<span><span class="co">## 2025-04-05_11-50-43.14 2025-04-05_11-50-43   10      16          1686                      395   RH Mecp2 HET P64   F</span></span>
-<span><span class="co">## 2025-04-05_11-50-43.15 2025-04-05_11-50-43   15      41          1104                      294   RH Mecp2 HET P64   F</span></span>
-<span><span class="co">## 2025-04-05_11-50-43.16 2025-04-05_11-50-43   18      67           396                      227   RH Mecp2 HET P64   F</span></span>
-<span><span class="co">## 2025-04-05_11-50-43.17 2025-04-05_11-50-43   14      35           259                      138   RH Mecp2 HET P64   F</span></span>
-<span><span class="co">## 2025-04-05_11-50-43.18 2025-04-05_11-50-43   19      69            51                       45   RH Mecp2 HET P64   F</span></span>
-<span><span class="co">## 2025-04-06_13-51-14    2025-04-06_13-51-14   25      25          2344                      455   RH Mecp2 HET P65   F</span></span>
-<span><span class="co">## 2025-04-06_13-51-14.1  2025-04-06_13-51-14   29      51          8081                      401   RH Mecp2 HET P65   F</span></span>
-<span><span class="co">## 2025-04-06_13-51-14.2  2025-04-06_13-51-14   27      42          3123                      449   RH Mecp2 HET P65   F</span></span>
-<span><span class="co">## 2025-04-06_13-51-14.3  2025-04-06_13-51-14   28      43          2433                      449   RH Mecp2 HET P65   F</span></span>
-<span><span class="co">## 2025-04-06_13-51-14.4  2025-04-06_13-51-14   26      29          2436                      457   RH Mecp2 HET P65   F</span></span>
-<span><span class="co">## 2025-04-06_13-51-14.5  2025-04-06_13-51-14   30      61          1929                      428   RH Mecp2 HET P65   F</span></span>
-<span><span class="co">## 2025-04-11_18-09-55    2025-04-11_18-09-55   31      22          2289                      259   RH Mecp2 HET P59   F</span></span>
-<span><span class="co">## 2025-04-11_18-09-55.1  2025-04-11_18-09-55   32      76           502                      180   RH Mecp2 HET P59   F</span></span>
-<span><span class="co">## 2025-06-02_15-13-06    2025-06-02_15-13-06   35       8           624                      171   LH Shank3 KO P87   M</span></span>
-<span><span class="co">## 2025-06-02_15-13-06.1  2025-06-02_15-13-06   36      13          3276                      220   LH Shank3 KO P87   M</span></span>
-<span><span class="co">## 2025-06-02_15-13-06.2  2025-06-02_15-13-06   37      31           364                      133   LH Shank3 KO P87   M</span></span>
-<span><span class="co">## 2025-06-02_15-13-06.3  2025-06-02_15-13-06   34       4            75                       54   LH Shank3 KO P87   M</span></span>
-<span><span class="co">## 2025-06-02_15-13-06.4  2025-06-02_15-13-06   33       1           364                      150   LH Shank3 KO P87   M</span></span>
-<span><span class="co">## 2025-06-03_13-59-05    2025-06-03_13-59-05   38      10           285                      155   LH Shank3 KO P88   M</span></span>
-<span><span class="co">## 2025-06-03_13-59-05.1  2025-06-03_13-59-05   46      32           586                      167   LH Shank3 KO P88   M</span></span>
-<span><span class="co">## 2025-06-03_13-59-05.2  2025-06-03_13-59-05   47      34            58                       48   LH Shank3 KO P88   M</span></span>
-<span><span class="co">## 2025-06-03_13-59-05.3  2025-06-03_13-59-05   44      30            73                       62   LH Shank3 KO P88   M</span></span>
-<span><span class="co">## 2025-06-03_13-59-05.4  2025-06-03_13-59-05   43      28            83                       66   LH Shank3 KO P88   M</span></span>
-<span><span class="co">## 2025-06-03_13-59-05.5  2025-06-03_13-59-05   41      24           268                      169   LH Shank3 KO P88   M</span></span>
-<span><span class="co">## 2025-06-03_13-59-05.6  2025-06-03_13-59-05   42      26           115                       94   LH Shank3 KO P88   M</span></span>
-<span><span class="co">## 2025-06-03_13-59-05.7  2025-06-03_13-59-05   45      31           420                      197   LH Shank3 KO P88   M</span></span>
-<span><span class="co">## 2025-06-03_13-59-05.8  2025-06-03_13-59-05   39      11           208                       99   LH Shank3 KO P88   M</span></span>
-<span><span class="co">## 2025-06-03_13-59-05.9  2025-06-03_13-59-05   40      21            82                       69   LH Shank3 KO P88   M</span></span>
-<span><span class="co">## 2025-06-03_13-59-05.10 2025-06-03_13-59-05   48      41            80                       67   LH Shank3 KO P88   M</span></span>
-<span><span class="co">## 2025-06-06_14-52-03    2025-06-06_14-52-03   49       6          1334                      297   LH Shank3 KO P90   F</span></span>
-<span><span class="co">## 2025-06-12_16-11-15    2025-06-12_16-11-15   50      28            26                       17   LH Shank3 KO P75   M</span></span>
-<span><span class="co">## 2025-06-12_16-11-15.1  2025-06-12_16-11-15   51      55           365                      195   LH Shank3 KO P75   M</span></span>
-<span><span class="co">## 2025-07-09_14-56-27    2025-07-09_14-56-27   52       3          2587                      449   LH       C57 P79   F</span></span></code></pre>
+<span><span class="co">## 2025-02-06_15-53-03    2025-02-06_15-53-03   11      40           276                       28   RH       C57 P79   F</span></span>
+<span><span class="co">## 2025-02-06_15-53-03.1  2025-02-06_15-53-03   24      66           102                       26   RH       C57 P79   F</span></span>
+<span><span class="co">## 2025-02-06_15-53-03.2  2025-02-06_15-53-03    8      37           130                       24   RH       C57 P79   F</span></span>
+<span><span class="co">## 2025-02-06_15-53-03.3  2025-02-06_15-53-03    2      26           207                       28   RH       C57 P79   F</span></span>
+<span><span class="co">## 2025-02-06_15-53-03.4  2025-02-06_15-53-03    7      33           311                       28   RH       C57 P79   F</span></span>
+<span><span class="co">## 2025-02-06_15-53-03.5  2025-02-06_15-53-03   10      39           585                       28   RH       C57 P79   F</span></span>
+<span><span class="co">## 2025-02-06_15-53-03.6  2025-02-06_15-53-03   12      42           298                       28   RH       C57 P79   F</span></span>
+<span><span class="co">## 2025-02-06_15-53-03.7  2025-02-06_15-53-03   13      45           250                       27   RH       C57 P79   F</span></span>
+<span><span class="co">## 2025-02-06_15-53-03.8  2025-02-06_15-53-03   15      47           214                       28   RH       C57 P79   F</span></span>
+<span><span class="co">## 2025-02-06_15-53-03.9  2025-02-06_15-53-03    9      38           148                       28   RH       C57 P79   F</span></span>
+<span><span class="co">## 2025-02-06_15-53-03.10 2025-02-06_15-53-03   25      74           151                       28   RH       C57 P79   F</span></span>
+<span><span class="co">## 2025-02-06_15-53-03.11 2025-02-06_15-53-03   26      75            72                       27   RH       C57 P79   F</span></span>
+<span><span class="co">## 2025-02-06_15-53-03.12 2025-02-06_15-53-03   14      46           136                       27   RH       C57 P79   F</span></span>
+<span><span class="co">## 2025-02-06_15-53-03.13 2025-02-06_15-53-03   22      62           160                       28   RH       C57 P79   F</span></span>
+<span><span class="co">## 2025-02-06_15-53-03.14 2025-02-06_15-53-03   20      55           124                       27   RH       C57 P79   F</span></span>
+<span><span class="co">## 2025-02-06_15-53-03.15 2025-02-06_15-53-03   19      52           536                       28   RH       C57 P79   F</span></span>
+<span><span class="co">## 2025-02-06_15-53-03.16 2025-02-06_15-53-03    3      28            25                       13   RH       C57 P79   F</span></span>
+<span><span class="co">## 2025-02-06_15-53-03.17 2025-02-06_15-53-03   23      64           112                       17   RH       C57 P79   F</span></span>
+<span><span class="co">## 2025-02-06_15-53-03.18 2025-02-06_15-53-03   27      77           192                       27   RH       C57 P79   F</span></span>
+<span><span class="co">## 2025-02-06_15-53-03.19 2025-02-06_15-53-03    5      30            67                       14   RH       C57 P79   F</span></span>
+<span><span class="co">## 2025-02-06_15-53-03.20 2025-02-06_15-53-03   17      49           159                       24   RH       C57 P79   F</span></span>
+<span><span class="co">## 2025-02-06_15-53-03.21 2025-02-06_15-53-03   21      58            38                       20   RH       C57 P79   F</span></span>
+<span><span class="co">## 2025-02-06_15-53-03.22 2025-02-06_15-53-03   16      48            44                       22   RH       C57 P79   F</span></span>
+<span><span class="co">## 2025-02-06_15-53-03.23 2025-02-06_15-53-03   18      51            11                        7   RH       C57 P79   F</span></span>
+<span><span class="co">## 2025-02-06_15-53-03.24 2025-02-06_15-53-03    4      29            88                       18   RH       C57 P79   F</span></span>
+<span><span class="co">## 2025-02-06_15-53-03.25 2025-02-06_15-53-03    6      32            45                       15   RH       C57 P79   F</span></span>
+<span><span class="co">## 2025-02-06_15-53-03.26 2025-02-06_15-53-03    1      25            49                       15   RH       C57 P79   F</span></span>
+<span><span class="co">## 2025-04-03_11-18-50    2025-04-03_11-18-50  107     103         29627                      412   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-18-50.1  2025-04-03_11-18-50   80      66         23091                      412   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-18-50.2  2025-04-03_11-18-50   77      62         30997                      412   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-18-50.3  2025-04-03_11-18-50  108     104         34072                      412   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-18-50.4  2025-04-03_11-18-50   52      30          1263                      390   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-18-50.5  2025-04-03_11-18-50   35      10          2406                      390   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-18-50.6  2025-04-03_11-18-50   29       1          2804                      411   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-18-50.7  2025-04-03_11-18-50   57      35          3565                      409   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-18-50.8  2025-04-03_11-18-50   36      11          1197                      286   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-18-50.9  2025-04-03_11-18-50   41      16          1136                      338   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-18-50.10 2025-04-03_11-18-50  101      94          4516                      412   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-18-50.11 2025-04-03_11-18-50   79      65          1407                      337   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-18-50.12 2025-04-03_11-18-50   48      24          2276                      396   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-18-50.13 2025-04-03_11-18-50   31       5          4161                      411   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-18-50.14 2025-04-03_11-18-50   28       0          1649                      369   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-18-50.15 2025-04-03_11-18-50   47      23          3102                      405   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-18-50.16 2025-04-03_11-18-50   54      32          1475                      335   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-18-50.17 2025-04-03_11-18-50   58      38          1209                      292   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-18-50.18 2025-04-03_11-18-50   38      13          1112                      280   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-18-50.19 2025-04-03_11-18-50   78      63          1158                      353   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-18-50.20 2025-04-03_11-18-50   56      34          6975                      412   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-18-50.21 2025-04-03_11-18-50   63      46          1000                      373   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-18-50.22 2025-04-03_11-18-50   66      50          1670                      323   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-18-50.23 2025-04-03_11-18-50   60      43          1744                      374   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-18-50.24 2025-04-03_11-18-50   45      21          1477                      383   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-18-50.25 2025-04-03_11-18-50   84      73          1871                      342   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-18-50.26 2025-04-03_11-18-50  103      96          2416                      394   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-18-50.27 2025-04-03_11-18-50   75      60           436                      188   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-18-50.28 2025-04-03_11-18-50   42      18          2373                      406   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-18-50.29 2025-04-03_11-18-50   33       8           649                      243   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-18-50.30 2025-04-03_11-18-50   90      79          1530                      351   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-18-50.31 2025-04-03_11-18-50   82      68          1674                      341   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-18-50.32 2025-04-03_11-18-50   69      53           917                      283   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-18-50.33 2025-04-03_11-18-50   65      49          1012                      246   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-18-50.34 2025-04-03_11-18-50   37      12           617                      299   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-18-50.35 2025-04-03_11-18-50   96      88           308                      189   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-18-50.36 2025-04-03_11-18-50   51      29           398                      245   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-18-50.37 2025-04-03_11-18-50   85      74           224                      119   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-18-50.38 2025-04-03_11-18-50   50      28           835                      278   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-18-50.39 2025-04-03_11-18-50   73      57          1200                      285   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-18-50.40 2025-04-03_11-18-50   32       6           832                      312   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-18-50.41 2025-04-03_11-18-50   89      78          1331                      330   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-18-50.42 2025-04-03_11-18-50   30       4          1714                      377   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-18-50.43 2025-04-03_11-18-50   94      86           897                      307   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-18-50.44 2025-04-03_11-18-50   98      91           534                      257   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-18-50.45 2025-04-03_11-18-50   39      14           431                      241   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-18-50.46 2025-04-03_11-18-50   61      44           408                      245   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-18-50.47 2025-04-03_11-18-50  100      93          1104                      312   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-18-50.48 2025-04-03_11-18-50   59      42          1324                      363   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-18-50.49 2025-04-03_11-18-50   43      19           278                      173   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-18-50.50 2025-04-03_11-18-50  106     100           851                      323   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-18-50.51 2025-04-03_11-18-50   92      82           186                      117   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-18-50.52 2025-04-03_11-18-50  105      99           201                      161   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-18-50.53 2025-04-03_11-18-50   67      51           812                      280   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-18-50.54 2025-04-03_11-18-50   34       9          1061                      285   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-18-50.55 2025-04-03_11-18-50  104      98           385                      227   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-18-50.56 2025-04-03_11-18-50   97      90           500                      207   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-18-50.57 2025-04-03_11-18-50   74      59           291                      146   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-18-50.58 2025-04-03_11-18-50   91      80          1117                      336   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-18-50.59 2025-04-03_11-18-50   99      92           740                      277   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-18-50.60 2025-04-03_11-18-50   88      77           977                      328   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-18-50.61 2025-04-03_11-18-50   95      87           593                      286   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-18-50.62 2025-04-03_11-18-50   68      52           281                      182   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-18-50.63 2025-04-03_11-18-50   46      22           680                      271   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-18-50.64 2025-04-03_11-18-50   40      15          1477                      329   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-18-50.65 2025-04-03_11-18-50   71      55           276                      155   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-18-50.66 2025-04-03_11-18-50   62      45          1988                      377   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-18-50.67 2025-04-03_11-18-50   53      31           605                      249   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-18-50.68 2025-04-03_11-18-50   81      67           148                       80   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-18-50.69 2025-04-03_11-18-50   86      75           499                      177   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-18-50.70 2025-04-03_11-18-50  102      95           200                      148   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-18-50.71 2025-04-03_11-18-50   87      76           599                      217   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-18-50.72 2025-04-03_11-18-50   49      27           277                      169   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-18-50.73 2025-04-03_11-18-50   55      33           264                      149   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-18-50.74 2025-04-03_11-18-50   64      47           300                      135   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-18-50.75 2025-04-03_11-18-50  109     107           571                      285   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-18-50.76 2025-04-03_11-18-50   72      56           583                      227   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-18-50.77 2025-04-03_11-18-50   70      54            97                       58   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-18-50.78 2025-04-03_11-18-50   93      84           252                      127   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-18-50.79 2025-04-03_11-18-50   83      72           305                      140   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-18-50.80 2025-04-03_11-18-50   76      61            87                       63   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-18-50.81 2025-04-03_11-18-50   44      20           232                      117   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-38-39    2025-04-03_11-38-39  126      17          1130                      331   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-38-39.1  2025-04-03_11-38-39  162      61         30569                      410   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-38-39.2  2025-04-03_11-38-39  187      89          3903                      409   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-38-39.3  2025-04-03_11-38-39  200     108         33261                      410   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-38-39.4  2025-04-03_11-38-39  137      29           591                      249   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-38-39.5  2025-04-03_11-38-39  199     106         31345                      410   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-38-39.6  2025-04-03_11-38-39  166      66         22843                      410   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-38-39.7  2025-04-03_11-38-39  136      28          3059                      403   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-38-39.8  2025-04-03_11-38-39  143      36          6931                      410   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-38-39.9  2025-04-03_11-38-39  157      53          1380                      325   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-38-39.10 2025-04-03_11-38-39  202     110          2002                      397   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-38-39.11 2025-04-03_11-38-39  195      99          4487                      410   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-38-39.12 2025-04-03_11-38-39  171      72          1869                      341   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-38-39.13 2025-04-03_11-38-39  179      80           733                      299   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-38-39.14 2025-04-03_11-38-39  113       3          2671                      405   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-38-39.15 2025-04-03_11-38-39  114       5          1177                      369   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-38-39.16 2025-04-03_11-38-39  197     103           416                      242   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-38-39.17 2025-04-03_11-38-39  141      34          2705                      404   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-38-39.18 2025-04-03_11-38-39  151      47          2072                      375   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-38-39.19 2025-04-03_11-38-39  115       6          4123                      408   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-38-39.20 2025-04-03_11-38-39  128      19           750                      285   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-38-39.21 2025-04-03_11-38-39  135      27          1541                      329   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-38-39.22 2025-04-03_11-38-39  149      45           535                      291   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-38-39.23 2025-04-03_11-38-39  185      87           875                      293   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-38-39.24 2025-04-03_11-38-39  120      11          1030                      285   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-38-39.25 2025-04-03_11-38-39  145      41          3572                      408   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-38-39.26 2025-04-03_11-38-39  129      20          1436                      386   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-38-39.27 2025-04-03_11-38-39  161      60          1003                      331   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-38-39.28 2025-04-03_11-38-39  168      69           614                      215   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-38-39.29 2025-04-03_11-38-39  125      16          1115                      279   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-38-39.30 2025-04-03_11-38-39  133      25           640                      268   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-38-39.31 2025-04-03_11-38-39  154      50          1019                      238   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-38-39.32 2025-04-03_11-38-39  164      64           444                      181   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-38-39.33 2025-04-03_11-38-39  198     104           552                      263   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-38-39.34 2025-04-03_11-38-39  147      43          1235                      385   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-38-39.35 2025-04-03_11-38-39  119      10          1285                      369   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-38-39.36 2025-04-03_11-38-39  118       9          1066                      336   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-38-39.37 2025-04-03_11-38-39  148      44          1200                      347   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-38-39.38 2025-04-03_11-38-39  158      56           682                      240   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-38-39.39 2025-04-03_11-38-39  111       1          1656                      362   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-38-39.40 2025-04-03_11-38-39  130      21           661                      281   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-38-39.41 2025-04-03_11-38-39  132      23          1333                      358   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-38-39.42 2025-04-03_11-38-39  121      12          2486                      393   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-38-39.43 2025-04-03_11-38-39  138      30           876                      283   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-38-39.44 2025-04-03_11-38-39  182      84          1536                      352   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-38-39.45 2025-04-03_11-38-39  183      85          1288                      339   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-38-39.46 2025-04-03_11-38-39  191      95           591                      293   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-38-39.47 2025-04-03_11-38-39  142      35          1310                      366   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-38-39.48 2025-04-03_11-38-39  122      13          1187                      282   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-38-39.49 2025-04-03_11-38-39  194      98          1506                      365   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-38-39.50 2025-04-03_11-38-39  140      33          2197                      380   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-38-39.51 2025-04-03_11-38-39  160      59          1121                      285   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-38-39.52 2025-04-03_11-38-39  155      51          1666                      321   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-38-39.53 2025-04-03_11-38-39  150      46           809                      245   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-38-39.54 2025-04-03_11-38-39  117       8          1699                      376   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-38-39.55 2025-04-03_11-38-39  189      91           160                      100   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-38-39.56 2025-04-03_11-38-39  159      57           856                      262   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-38-39.57 2025-04-03_11-38-39  192      96           520                      252   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-38-39.58 2025-04-03_11-38-39  134      26           407                      240   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-38-39.59 2025-04-03_11-38-39  139      32           438                      249   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-38-39.60 2025-04-03_11-38-39  124      15           264                      155   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-38-39.61 2025-04-03_11-38-39  184      86           671                      296   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-38-39.62 2025-04-03_11-38-39  131      22           311                      191   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-38-39.63 2025-04-03_11-38-39  188      90           174                      139   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-38-39.64 2025-04-03_11-38-39  156      52           270                      178   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-38-39.65 2025-04-03_11-38-39  174      75          1753                      339   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-38-39.66 2025-04-03_11-38-39  146      42          1466                      349   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-38-39.67 2025-04-03_11-38-39  127      18           270                      129   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-38-39.68 2025-04-03_11-38-39  177      78           131                       72   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-38-39.69 2025-04-03_11-38-39  181      82           825                      235   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-38-39.70 2025-04-03_11-38-39  196     100           152                      113   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-38-39.71 2025-04-03_11-38-39  193      97           514                      209   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-38-39.72 2025-04-03_11-38-39  144      37          1288                      303   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-38-39.73 2025-04-03_11-38-39  180      81           492                      181   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-38-39.74 2025-04-03_11-38-39  190      94           749                      282   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-38-39.75 2025-04-03_11-38-39  201     109           653                      304   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-38-39.76 2025-04-03_11-38-39  170      71           506                      197   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-38-39.77 2025-04-03_11-38-39  186      88           251                      136   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-38-39.78 2025-04-03_11-38-39  175      76           401                      228   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-38-39.79 2025-04-03_11-38-39  110       0           305                      213   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-38-39.80 2025-04-03_11-38-39  116       7           373                      134   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-38-39.81 2025-04-03_11-38-39  173      74           398                      241   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-38-39.82 2025-04-03_11-38-39  163      63           103                       61   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-38-39.83 2025-04-03_11-38-39  153      49           202                      106   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-38-39.84 2025-04-03_11-38-39  167      67           281                      144   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-38-39.85 2025-04-03_11-38-39  178      79           201                      113   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-38-39.86 2025-04-03_11-38-39  203     112           141                      110   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-38-39.87 2025-04-03_11-38-39  169      70           136                       98   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-38-39.88 2025-04-03_11-38-39  152      48           275                      134   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-38-39.89 2025-04-03_11-38-39  176      77           235                      119   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-38-39.90 2025-04-03_11-38-39  165      65            93                       69   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-38-39.91 2025-04-03_11-38-39  123      14           292                      136   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-38-39.92 2025-04-03_11-38-39  112       2            92                       50   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-03_11-38-39.93 2025-04-03_11-38-39  172      73            83                       47   RH       C57 P41   F</span></span>
+<span><span class="co">## 2025-04-05_11-50-43    2025-04-05_11-50-43  209      17          1869                      337   RH Mecp2 HET P64   F</span></span>
+<span><span class="co">## 2025-04-05_11-50-43.1  2025-04-05_11-50-43  212      34          1457                      271   RH Mecp2 HET P64   F</span></span>
+<span><span class="co">## 2025-04-05_11-50-43.2  2025-04-05_11-50-43  220      82          2321                      325   RH Mecp2 HET P64   F</span></span>
+<span><span class="co">## 2025-04-05_11-50-43.3  2025-04-05_11-50-43  204       1          2461                      396   RH Mecp2 HET P64   F</span></span>
+<span><span class="co">## 2025-04-05_11-50-43.4  2025-04-05_11-50-43  207      12          4153                      355   RH Mecp2 HET P64   F</span></span>
+<span><span class="co">## 2025-04-05_11-50-43.5  2025-04-05_11-50-43  221      95          2263                      360   RH Mecp2 HET P64   F</span></span>
+<span><span class="co">## 2025-04-05_11-50-43.6  2025-04-05_11-50-43  206      11          1386                      344   RH Mecp2 HET P64   F</span></span>
+<span><span class="co">## 2025-04-05_11-50-43.7  2025-04-05_11-50-43  205       6           788                      273   RH Mecp2 HET P64   F</span></span>
+<span><span class="co">## 2025-04-05_11-50-43.8  2025-04-05_11-50-43  211      22           780                      305   RH Mecp2 HET P64   F</span></span>
+<span><span class="co">## 2025-04-05_11-50-43.9  2025-04-05_11-50-43  215      51          1226                      247   RH Mecp2 HET P64   F</span></span>
+<span><span class="co">## 2025-04-05_11-50-43.10 2025-04-05_11-50-43  223      98          2033                      328   RH Mecp2 HET P64   F</span></span>
+<span><span class="co">## 2025-04-05_11-50-43.11 2025-04-05_11-50-43  222      96          1004                      304   RH Mecp2 HET P64   F</span></span>
+<span><span class="co">## 2025-04-05_11-50-43.12 2025-04-05_11-50-43  216      62           396                      149   RH Mecp2 HET P64   F</span></span>
+<span><span class="co">## 2025-04-05_11-50-43.13 2025-04-05_11-50-43  219      80          1900                      304   RH Mecp2 HET P64   F</span></span>
+<span><span class="co">## 2025-04-05_11-50-43.14 2025-04-05_11-50-43  208      16          1686                      395   RH Mecp2 HET P64   F</span></span>
+<span><span class="co">## 2025-04-05_11-50-43.15 2025-04-05_11-50-43  210      19          1049                      297   RH Mecp2 HET P64   F</span></span>
+<span><span class="co">## 2025-04-05_11-50-43.16 2025-04-05_11-50-43  214      41          1104                      294   RH Mecp2 HET P64   F</span></span>
+<span><span class="co">## 2025-04-05_11-50-43.17 2025-04-05_11-50-43  217      67           396                      227   RH Mecp2 HET P64   F</span></span>
+<span><span class="co">## 2025-04-05_11-50-43.18 2025-04-05_11-50-43  213      35           259                      138   RH Mecp2 HET P64   F</span></span>
+<span><span class="co">## 2025-04-05_11-50-43.19 2025-04-05_11-50-43  218      69            51                       45   RH Mecp2 HET P64   F</span></span>
+<span><span class="co">## 2025-04-06_13-51-14    2025-04-06_13-51-14  224      25          2344                      455   RH Mecp2 HET P65   F</span></span>
+<span><span class="co">## 2025-04-06_13-51-14.1  2025-04-06_13-51-14  228      51          8081                      401   RH Mecp2 HET P65   F</span></span>
+<span><span class="co">## 2025-04-06_13-51-14.2  2025-04-06_13-51-14  226      42          3123                      449   RH Mecp2 HET P65   F</span></span>
+<span><span class="co">## 2025-04-06_13-51-14.3  2025-04-06_13-51-14  227      43          2433                      449   RH Mecp2 HET P65   F</span></span>
+<span><span class="co">## 2025-04-06_13-51-14.4  2025-04-06_13-51-14  225      29          2436                      457   RH Mecp2 HET P65   F</span></span>
+<span><span class="co">## 2025-04-06_13-51-14.5  2025-04-06_13-51-14  229      61          1929                      428   RH Mecp2 HET P65   F</span></span>
+<span><span class="co">## 2025-04-11_18-09-55    2025-04-11_18-09-55  231      22          2289                      259   RH Mecp2 HET P59   F</span></span>
+<span><span class="co">## 2025-04-11_18-09-55.1  2025-04-11_18-09-55  233      89          1785                      287   RH Mecp2 HET P59   F</span></span>
+<span><span class="co">## 2025-04-11_18-09-55.2  2025-04-11_18-09-55  230       3           542                      124   RH Mecp2 HET P59   F</span></span>
+<span><span class="co">## 2025-04-11_18-09-55.3  2025-04-11_18-09-55  232      76           502                      180   RH Mecp2 HET P59   F</span></span>
+<span><span class="co">## 2025-04-25_12-42-03    2025-04-25_12-42-03  240      50         52259                      456   RH Shank3 KO P54   M</span></span>
+<span><span class="co">## 2025-04-25_12-42-03.1  2025-04-25_12-42-03  234      14         68952                      456   RH Shank3 KO P54   M</span></span>
+<span><span class="co">## 2025-04-25_12-42-03.2  2025-04-25_12-42-03  239      46         28069                      456   RH Shank3 KO P54   M</span></span>
+<span><span class="co">## 2025-04-25_12-42-03.3  2025-04-25_12-42-03  235      17          6942                      456   RH Shank3 KO P54   M</span></span>
+<span><span class="co">## 2025-04-25_12-42-03.4  2025-04-25_12-42-03  236      28            14                        5   RH Shank3 KO P54   M</span></span>
+<span><span class="co">## 2025-04-25_12-42-03.5  2025-04-25_12-42-03  237      33             7                        7   RH Shank3 KO P54   M</span></span>
+<span><span class="co">## 2025-04-25_12-42-03.6  2025-04-25_12-42-03  238      34             5                        4   RH Shank3 KO P54   M</span></span>
+<span><span class="co">## 2025-06-02_15-13-06    2025-06-02_15-13-06  243       8           624                      171   LH Shank3 KO P87   M</span></span>
+<span><span class="co">## 2025-06-02_15-13-06.1  2025-06-02_15-13-06  244      13          3276                      220   LH Shank3 KO P87   M</span></span>
+<span><span class="co">## 2025-06-02_15-13-06.2  2025-06-02_15-13-06  245      31           364                      133   LH Shank3 KO P87   M</span></span>
+<span><span class="co">## 2025-06-02_15-13-06.3  2025-06-02_15-13-06  242       4            75                       54   LH Shank3 KO P87   M</span></span>
+<span><span class="co">## 2025-06-02_15-13-06.4  2025-06-02_15-13-06  241       1           364                      150   LH Shank3 KO P87   M</span></span>
+<span><span class="co">## 2025-06-02_15-13-06.5  2025-06-02_15-13-06  246      33             2                        2   LH Shank3 KO P87   M</span></span>
+<span><span class="co">## 2025-06-03_13-59-05    2025-06-03_13-59-05  250      15          5629                      274   LH Shank3 KO P88   M</span></span>
+<span><span class="co">## 2025-06-03_13-59-05.1  2025-06-03_13-59-05  248      10           285                      155   LH Shank3 KO P88   M</span></span>
+<span><span class="co">## 2025-06-03_13-59-05.2  2025-06-03_13-59-05  258      32           586                      167   LH Shank3 KO P88   M</span></span>
+<span><span class="co">## 2025-06-03_13-59-05.3  2025-06-03_13-59-05  247       0          1133                      274   LH Shank3 KO P88   M</span></span>
+<span><span class="co">## 2025-06-03_13-59-05.4  2025-06-03_13-59-05  259      34            58                       48   LH Shank3 KO P88   M</span></span>
+<span><span class="co">## 2025-06-03_13-59-05.5  2025-06-03_13-59-05  256      30            73                       62   LH Shank3 KO P88   M</span></span>
+<span><span class="co">## 2025-06-03_13-59-05.6  2025-06-03_13-59-05  255      28            83                       66   LH Shank3 KO P88   M</span></span>
+<span><span class="co">## 2025-06-03_13-59-05.7  2025-06-03_13-59-05  253      24           268                      169   LH Shank3 KO P88   M</span></span>
+<span><span class="co">## 2025-06-03_13-59-05.8  2025-06-03_13-59-05  254      26           115                       94   LH Shank3 KO P88   M</span></span>
+<span><span class="co">## 2025-06-03_13-59-05.9  2025-06-03_13-59-05  257      31           420                      197   LH Shank3 KO P88   M</span></span>
+<span><span class="co">## 2025-06-03_13-59-05.10 2025-06-03_13-59-05  252      22           103                       66   LH Shank3 KO P88   M</span></span>
+<span><span class="co">## 2025-06-03_13-59-05.11 2025-06-03_13-59-05  249      11           208                       99   LH Shank3 KO P88   M</span></span>
+<span><span class="co">## 2025-06-03_13-59-05.12 2025-06-03_13-59-05  251      21            82                       69   LH Shank3 KO P88   M</span></span>
+<span><span class="co">## 2025-06-03_13-59-05.13 2025-06-03_13-59-05  260      41            80                       67   LH Shank3 KO P88   M</span></span>
+<span><span class="co">## 2025-06-06_14-52-03    2025-06-06_14-52-03  262       6          1334                      297   LH Shank3 KO P90   F</span></span>
+<span><span class="co">## 2025-06-06_14-52-03.1  2025-06-06_14-52-03  261       5           299                      174   LH Shank3 KO P90   F</span></span>
+<span><span class="co">## 2025-06-06_14-52-03.2  2025-06-06_14-52-03  263      21            10                        8   LH Shank3 KO P90   F</span></span>
+<span><span class="co">## 2025-06-12_16-11-15    2025-06-12_16-11-15  267      28            26                       17   LH Shank3 KO P75   M</span></span>
+<span><span class="co">## 2025-06-12_16-11-15.1  2025-06-12_16-11-15  272      55           365                      195   LH Shank3 KO P75   M</span></span>
+<span><span class="co">## 2025-06-12_16-11-15.2  2025-06-12_16-11-15  264       1             4                        1   LH Shank3 KO P75   M</span></span>
+<span><span class="co">## 2025-06-12_16-11-15.3  2025-06-12_16-11-15  266      27           203                       83   LH Shank3 KO P75   M</span></span>
+<span><span class="co">## 2025-06-12_16-11-15.4  2025-06-12_16-11-15  271      54           707                      184   LH Shank3 KO P75   M</span></span>
+<span><span class="co">## 2025-06-12_16-11-15.5  2025-06-12_16-11-15  269      37            28                       26   LH Shank3 KO P75   M</span></span>
+<span><span class="co">## 2025-06-12_16-11-15.6  2025-06-12_16-11-15  265      15            78                       47   LH Shank3 KO P75   M</span></span>
+<span><span class="co">## 2025-06-12_16-11-15.7  2025-06-12_16-11-15  270      46           819                      233   LH Shank3 KO P75   M</span></span>
+<span><span class="co">## 2025-06-12_16-11-15.8  2025-06-12_16-11-15  268      29            50                       31   LH Shank3 KO P75   M</span></span>
+<span><span class="co">## 2025-06-20_14-29-41    2025-06-20_14-29-41  274       2           514                      160   LH Shank3 KO P83   F</span></span>
+<span><span class="co">## 2025-06-20_14-29-41.1  2025-06-20_14-29-41  281      23           381                      178   LH Shank3 KO P83   F</span></span>
+<span><span class="co">## 2025-06-20_14-29-41.2  2025-06-20_14-29-41  282      32           288                      135   LH Shank3 KO P83   F</span></span>
+<span><span class="co">## 2025-06-20_14-29-41.3  2025-06-20_14-29-41  275       3           763                      206   LH Shank3 KO P83   F</span></span>
+<span><span class="co">## 2025-06-20_14-29-41.4  2025-06-20_14-29-41  284      36           149                      102   LH Shank3 KO P83   F</span></span>
+<span><span class="co">## 2025-06-20_14-29-41.5  2025-06-20_14-29-41  278      15           104                       83   LH Shank3 KO P83   F</span></span>
+<span><span class="co">## 2025-06-20_14-29-41.6  2025-06-20_14-29-41  283      35           179                      121   LH Shank3 KO P83   F</span></span>
+<span><span class="co">## 2025-06-20_14-29-41.7  2025-06-20_14-29-41  280      19           444                      175   LH Shank3 KO P83   F</span></span>
+<span><span class="co">## 2025-06-20_14-29-41.8  2025-06-20_14-29-41  276       6           644                      200   LH Shank3 KO P83   F</span></span>
+<span><span class="co">## 2025-06-20_14-29-41.9  2025-06-20_14-29-41  273       1            86                       69   LH Shank3 KO P83   F</span></span>
+<span><span class="co">## 2025-06-20_14-29-41.10 2025-06-20_14-29-41  279      16            99                       79   LH Shank3 KO P83   F</span></span>
+<span><span class="co">## 2025-06-20_14-29-41.11 2025-06-20_14-29-41  277      13            44                       37   LH Shank3 KO P83   F</span></span>
+<span><span class="co">## 2025-06-25_12-33-31    2025-06-25_12-33-31  288      16           803                      238   LH       C57 P65   F</span></span>
+<span><span class="co">## 2025-06-25_12-33-31.1  2025-06-25_12-33-31  289      19           537                      213   LH       C57 P65   F</span></span>
+<span><span class="co">## 2025-06-25_12-33-31.2  2025-06-25_12-33-31  285       4           294                      195   LH       C57 P65   F</span></span>
+<span><span class="co">## 2025-06-25_12-33-31.3  2025-06-25_12-33-31  290      31           273                      183   LH       C57 P65   F</span></span>
+<span><span class="co">## 2025-06-25_12-33-31.4  2025-06-25_12-33-31  287      11            39                        8   LH       C57 P65   F</span></span>
+<span><span class="co">## 2025-06-25_12-33-31.5  2025-06-25_12-33-31  286       9           132                        8   LH       C57 P65   F</span></span>
+<span><span class="co">## 2025-07-09_14-56-27    2025-07-09_14-56-27  291       3          2587                      449   LH       C57 P79   F</span></span>
+<span><span class="co">## 2025-07-09_14-56-27.1  2025-07-09_14-56-27  292      13            26                       21   LH       C57 P79   F</span></span>
+<span><span class="co">## 2025-07-24_12-48-13    2025-07-24_12-48-13  295      14          5865                      232   LH       C57 P68   M</span></span>
+<span><span class="co">## 2025-07-24_12-48-13.1  2025-07-24_12-48-13  293       4           699                      226   LH       C57 P68   M</span></span>
+<span><span class="co">## 2025-07-24_12-48-13.2  2025-07-24_12-48-13  296      15           286                      153   LH       C57 P68   M</span></span>
+<span><span class="co">## 2025-07-24_12-48-13.3  2025-07-24_12-48-13  294       9             1                        1   LH       C57 P68   M</span></span></code></pre>
 <p>With the kilosort4 data preprocessed into spike rasters, the next
 step is to convert them into a special class of object from the neuron
 package, <strong>neuron</strong>.</p>
-<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">neurons.kilo4</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/load.rasters.as.neurons.html">load.rasters.as.neurons</a></span><span class="op">(</span><span class="va">spike.rasters.kilo4</span><span class="op">$</span><span class="va">spikes</span>, sample_rt <span class="op">=</span> <span class="fl">1e3</span><span class="op">)</span></span></code></pre></div>
 <p>We want to load the spike rasters as <strong>neuron</strong>s because
 <strong>neurons</strong>s come with built-in methods for estimating
 autocorrelation parameters with dichotomized Gaussian simulations.</p>
-<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># ... set number of sims to run per neuron</span></span>
 <span><span class="va">n_sims</span> <span class="op">&lt;-</span> <span class="fl">1000</span></span>
 <span><span class="co"># ... set number of trials to simulate per neuron</span></span>
@@ -402,7 +695,7 @@ autocorrelation parameters with dichotomized Gaussian simulations.</p>
 <span>  verbose <span class="op">=</span> <span class="cn">FALSE</span></span>
 <span>  <span class="op">)</span></span></code></pre></div>
 <p>Run analysis:</p>
-<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">autocorr_results</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/analyze.autocorr.html">analyze.autocorr</a></span><span class="op">(</span></span>
 <span>  <span class="va">autocor.ests.kilo4</span>,</span>
 <span>  covariate <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"hemi"</span>,<span class="st">"genotype"</span><span class="op">)</span>,</span>

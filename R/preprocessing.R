@@ -260,6 +260,7 @@ import.kilo4 <- function(
 #' @param meta_data Data frame with metadata for each recording (e.g., genotype, hemisphere), one recording per row; row names should match recording names and all columns should be covariates for later analysis
 #' @param pure_trials_only Keep only trials with no overlap?
 #' @param good_cells_only Keep only cells marked as "good" in the cluster_group.tsv file?
+#' @param stim_responsive_only Keep only cells marked as stimulus-responsive in the cluster_group.tsv file?
 #' @param verbose Print report on imported data?
 #' @returns A list with three elements: 
 #'  \describe{
@@ -274,6 +275,7 @@ preprocess.kilo4 <- function(
     meta_data = NULL,
     pure_trials_only = TRUE,
     good_cells_only = TRUE,
+    stim_responsive_only = TRUE,
     verbose = TRUE
   ) {
     
@@ -339,11 +341,10 @@ preprocess.kilo4 <- function(
     
     # Define mask for good cells 
     good_mua <- function(df) {
-      if (good_cells_only) {
-        return(df$cluster_group == "good" & df$stim_responsive == 1) 
-      } else {
-        return(df$stim_responsive == 1)
-      }
+      out <- TRUE
+      if (good_cells_only) out <- out & df$cluster_group == "good"
+      if (stim_responsive_only) out <- out & df$stim_responsive == 1
+      return(out)
     }
     ## Uncomment if using kilosort1 data
     ## good_mua <- function(df) df$stim_responsive == 1

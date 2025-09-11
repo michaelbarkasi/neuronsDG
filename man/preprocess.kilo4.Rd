@@ -11,6 +11,7 @@ preprocess.kilo4(
   meta_data = NULL,
   pure_trials_only = TRUE,
   good_cells_only = TRUE,
+  stim_responsive_only = TRUE,
   verbose = TRUE
 )
 }
@@ -26,6 +27,8 @@ preprocess.kilo4(
 \item{pure_trials_only}{Keep only trials with no overlap?}
 
 \item{good_cells_only}{Keep only cells marked as "good" in the cluster_group.tsv file?}
+
+\item{stim_responsive_only}{Keep only cells marked as stimulus-responsive in the cluster_group.tsv file?}
 
 \item{verbose}{Print report on imported data?}
 }
