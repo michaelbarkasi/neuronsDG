@@ -206,11 +206,11 @@ import.kilo4 <- function(
       # Mark trial as good 
       stim_data$trial_status[i] <- 0
       
-      # Grab indexes for trialing and leading trials 
-      trialing_trials <- 1:(i-1)
+      # Grab indexes for trailing and leading trials 
+      trailing_trials <- 1:(i-1)
       
-      # All trialing trials must have ended before the current trial started
-      if (any(stim_data$trial_end[trialing_trials] >= stim_data$trial_start[i])) {
+      # All trailing trials must have ended before the current trial started
+      if (any(stim_data$trial_end[trailing_trials] >= stim_data$trial_start[i])) {
         stim_data$trial_status[i] <- 1
       }
       
@@ -258,6 +258,9 @@ import.kilo4 <- function(
 #' @param trial_time_end Time to end trial (ms), relative to stimulus onset
 #' @param recording.folder List of paths to the kilosort4 output folders
 #' @param meta_data Data frame with metadata for each recording (e.g., genotype, hemisphere), one recording per row; row names should match recording names and all columns should be covariates for later analysis
+#' @param max_spikes Maximum number of total spikes for a cell to be kept
+#' @param min_spikes Minimum number of total spikes for a cell to be kept
+#' @param min_trials Minimum number of trials for a cell to be kept
 #' @param pure_trials_only Keep only trials with no overlap?
 #' @param good_cells_only Keep only cells marked as "good" in the cluster_group.tsv file?
 #' @param stim_responsive_only Keep only cells marked as stimulus-responsive in the cluster_group.tsv file?
@@ -273,6 +276,9 @@ preprocess.kilo4 <- function(
     trial_time_end = 2020,
     recording.folder = "data",
     meta_data = NULL,
+    max_spikes = Inf,
+    min_spikes = 0,
+    min_trials = 0,
     pure_trials_only = TRUE,
     good_cells_only = TRUE,
     stim_responsive_only = TRUE,
@@ -389,7 +395,7 @@ preprocess.kilo4 <- function(
       # Grab spike data
       kilosort_data <- kilosort.data[[rf]]$spikes
       
-      # Take only multi-unit clusters which plausibly represent a single neuron that's responsive to the stimulus
+      # Take only good multi-unit clusters which plausibly represent a single neuron
       single_cells_mask <- good_mua(kilosort_data)
       cell_numbers <- sort(unique(kilosort_data$spike_clusters[single_cells_mask]))
       
@@ -441,18 +447,25 @@ preprocess.kilo4 <- function(
       }
     }
     
-    # Make cluster key 
+    # Make cluster key and check for low-spike or low-trial cells
     cell_nums <- unique(kilosort_data_parsed_spikes$cell)
     recording_name_col <- c()
     cell_col <- c()
     cluster_col <- c()
     num_of_spikes_col <- c()
     num_of_trials_col <- c()
+    low_mask <- FALSE
+    names(cell_numbers_good) <- NULL
+    new_cell_counter <- 0
+    saved_masks <- list()
     for (c in cell_nums) {
+      # Make mask for this cell
       mask <- kilosort_data_parsed_spikes$cell == c
+      # Grab recording name
       recording_name <- unique(kilosort_data_parsed_spikes$recording_name[mask])
-      cell_col <- c(cell_col, c)
+      # Grab cluster number
       cluster <- unique(kilosort_data_parsed_spikes$cluster[mask])
+      # Run checks
       if (length(recording_name) != 1) stop("Recording name not unique")
       if (length(cluster) != 1) stop("Cluster not unique")
       if (!is.null(meta_data)) {
@@ -461,12 +474,25 @@ preprocess.kilo4 <- function(
           if (length(this_covariate) != 1) stop(paste0(covariate, " not unique"))
         }
       }
-      recording_name_col <- c(recording_name_col, recording_name)
-      cluster_col <- c(cluster_col, cluster)
+      # Check number of spikes and number of trials
       num_of_spikes <- sum(mask)
       num_of_trials <- length(unique(kilosort_data_parsed_spikes$trial[mask]))
-      num_of_spikes_col <- c(num_of_spikes_col, num_of_spikes)
-      num_of_trials_col <- c(num_of_trials_col, num_of_trials)
+      if (num_of_spikes >= min_spikes && num_of_trials >= min_trials && num_of_spikes <= max_spikes) {
+        # Set new cell number 
+        new_cell_counter <- new_cell_counter + 1
+        # Extend columns 
+        recording_name_col <- c(recording_name_col, recording_name)
+        cell_col <- c(cell_col, new_cell_counter)
+        cluster_col <- c(cluster_col, cluster)
+        num_of_spikes_col <- c(num_of_spikes_col, num_of_spikes)
+        num_of_trials_col <- c(num_of_trials_col, num_of_trials)
+        # Save mask to update cell numbers in the spike data
+        saved_masks[[as.character(new_cell_counter)]] <- mask
+      } else {
+        # Add to low mask
+        low_mask <- low_mask | mask
+      }
+      
     }
     cluster_key <- data.frame(
       recording.name = recording_name_col,
@@ -476,6 +502,15 @@ preprocess.kilo4 <- function(
       num.of.responsive.trials = num_of_trials_col
     )
     cluster_key <- cbind(cluster_key, meta_data[as.character(recording_name_col), ])
+    
+    # Update cell numbers in the spike data
+    for (c in 1:new_cell_counter) {
+      mask <- saved_masks[[as.character(c)]]
+      if (is.null(mask)) stop("Saved mask not found")
+      kilosort_data_parsed_spikes$cell[mask] <- c
+    }
+    # Remove low-spike or low-trial cells from the spike data
+    kilosort_data_parsed_spikes <- kilosort_data_parsed_spikes[!low_mask, ]
     
     return(
       list(

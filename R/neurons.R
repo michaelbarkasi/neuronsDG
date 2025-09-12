@@ -53,6 +53,7 @@ runparallel <- function(
 #' @param unit_sample_rate Unit of sample rate for spike raster or other recording data, e.g. "Hz", "kHz", etc. (default: "Hz").
 #' @param unit_data Unit of data for spike raster or other recording data, e.g. "mV", "spike", etc. (default: "mV").
 #' @param t_per_bin Time (in above units) per bin, e.g., 1 ms per bin (default: 1.0).
+#' @param sample_rate Sample rate (in above units), e.g., 1e4 Hz (default: 1e4).
 #' @return A new neuron object.
 #' @export
 new_neuron <- function(
@@ -228,26 +229,26 @@ plot.autocorrelation <- function(
     # Fetch estimated and fitted autocorrelation 
     autocorr <- nrn$fetch_autocorr_R()
     autocorr_edf <- nrn$fetch_autocorr_edf_R()
-    
+   
     # Make data frame for plotting 
     df_temp <- data.frame(
       autocorrelation = autocorr[2:length(autocorr)],
       autocorrelation_fitted = autocorr_edf[2:length(autocorr_edf)],
-      bin = seq(1, length(autocorr) - 1, 1)
+      bin = seq(from = 1, to = length(autocorr) - 1, by = 1)
     )
     df_temp <- df_temp[df_temp$bin <= plot_time_cutoff,]
     
     # Make plot
-    plt <- ggplot::ggplot(df_temp) +
-      ggplot::geom_line(aes(x = bin, y = autocorrelation), color = "blue") +  
-      ggplot::geom_line(aes(x = bin, y = autocorrelation_fitted), color = "red") +  
-      ggplot::geom_hline(yintercept = bias_term, linewidth = 2, linetype = "dotted", color = "darkgray") +
-      ggplot::labs(
+    plt <- ggplot2::ggplot(df_temp) +
+      ggplot2::geom_line(ggplot2::aes(x = bin, y = autocorrelation), color = "blue") +  
+      ggplot2::geom_line(ggplot2::aes(x = bin, y = autocorrelation_fitted), color = "red") +  
+      ggplot2::geom_hline(yintercept = bias_term, linewidth = 2, linetype = "dotted", color = "darkgray") +
+      ggplot2::labs(
         title = plot_title,
         x = "Lag (bins)",
         y = "Autocorrelation"
       ) + 
-      ggplot::theme_minimal()
+      ggplot2::theme_minimal()
     return(plt)
     
   }
@@ -276,20 +277,20 @@ plot.raster <- function(
     dx <- total_time * 0.0025
     
     # Make plot
-    plt <- ggplot::ggplot(spike.raster) +
-      ggplot::geom_segment(
-        aes(x = time - dx, xend = time + dx, y = trial, yend = trial), 
+    plt <- ggplot2::ggplot(spike.raster) +
+      ggplot2::geom_segment(
+        ggplot2::aes(x = time - dx, xend = time + dx, y = trial, yend = trial), 
         color = "black",
         linewidth = 0.5
       ) +
-      ggplot::labs(
+      ggplot2::labs(
         title = make.plot.title(nrn, plot_title),
         x = "Time (ms)",
         y = "Trial"
       ) + 
-      ggplot::theme_minimal()
+      ggplot2::theme_minimal()
     if (zero_as_onset && min(spike.raster$time) <= 0) plt <- plt + 
-      ggplot::geom_vline(xintercept = 0, linetype = "solid", linewidth = 1, color = "darkblue") 
+      ggplot2::geom_vline(xintercept = 0, linetype = "solid", linewidth = 1, color = "darkblue") 
     
     return(plt)
     
@@ -535,14 +536,12 @@ estimate.autocorr.params <- function(
 #' @param ests Output from \code{estimate.autocorr.params}, or a list of such outputs.
 #' @param covariate Character string or vector of character strings specifying the covariate(s) to analyze (e.g., "hemi").
 #' @param n_bs Number of bootstrap resamples to perform (default: 1e4).
-#' @param bins_per_sec Number of bins per second used when computing autocorrelation (default: 50, corresponding to 20 ms bins).
 #' @return A data frame with bootstrap resamples of the mean tau for each combination of covariate levels.
 #' @export
 analyze.autocorr <- function(
     ests,
     covariate,
-    n_bs = 1e4,
-    bins_per_sec = 50
+    n_bs = 1e4
   ) {
     
     # Check input types
@@ -611,18 +610,14 @@ analyze.autocorr <- function(
       }
       
       if (any(lvl_mask)) {
-        lvl_lambda_Hz <- ests_all[lvl_mask, "lambda_bin"] * bins_per_sec 
-        lvl_tau_ests <- ests_all[lvl_mask, "tau"]
-        
         n_cells <- length(unique(ests_all$id_num))
-        
         for (j in 1:n_bs) {
           # Net effect is to resample from each neuron's estimates in a way that 
           #   accounts for the uncertainty estimated by the DG. E.g., if there are n neurons, 
           #   each resample has a 1/n chance of drawing from a given neuron N; but, as N
           #   is represented by n_sims values from the DG simulations, the probability of a given value
           #   being drawn to represent N is determined by the simulations. 
-          resamples[j,i] <- mean(sample(lvl_tau_ests, n_cells, replace = TRUE))
+          resamples[j,i] <- mean(sample(ests_all[lvl_mask, "tau"], n_cells, replace = TRUE))
         }
       }
       

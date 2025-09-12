@@ -47,6 +47,8 @@ new_neuron(
 \item{unit_data}{Unit of data for spike raster or other recording data, e.g. "mV", "spike", etc. (default: "mV").}
 
 \item{t_per_bin}{Time (in above units) per bin, e.g., 1 ms per bin (default: 1.0).}
+
+\item{sample_rate}{Sample rate (in above units), e.g., 1e4 Hz (default: 1e4).}
 }
 \value{
 A new neuron object.

@@ -909,7 +909,7 @@ NumericMatrix neuron::estimate_autocorr_params(
         my_sim.lambda, 
         my_sim.lambda_bin, 
         my_sim.A, 
-        my_sim.tau, 
+        my_sim.tau, // why is this not *t_per_bin?
         my_sim.bias_term,
         my_sim.autocorr_edf[0],
         max(autocorr_edf_tail),
