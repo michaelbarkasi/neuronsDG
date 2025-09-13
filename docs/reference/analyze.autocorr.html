@@ -25,6 +25,7 @@
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Tutorials</h6></li>
     <li><a class="dropdown-item" href="../articles/tutorial_DG_analysis_of_kilosort.html">Dichotomized Gaussian analysis of KiloSort4 data</a></li>
+    <li><a class="dropdown-item" href="../articles/tutorial_DG_analysis_of_patch_clamp.html">Dichotomized Gaussian analysis of KiloSort4 data</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Legal</h6></li>
     <li><a class="dropdown-item" href="../articles/license.html">Dependency licenses</a></li>
@@ -52,7 +53,7 @@
 
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">analyze.autocorr</span><span class="op">(</span><span class="va">ests</span>, <span class="va">covariate</span>, n_bs <span class="op">=</span> <span class="fl">10000</span>, bins_per_sec <span class="op">=</span> <span class="fl">50</span><span class="op">)</span></span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">analyze.autocorr</span><span class="op">(</span><span class="va">ests</span>, <span class="va">covariate</span>, n_bs <span class="op">=</span> <span class="fl">10000</span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -69,10 +70,6 @@
 
 <dt id="arg-n-bs">n_bs<a class="anchor" aria-label="anchor" href="#arg-n-bs"></a></dt>
 <dd><p>Number of bootstrap resamples to perform (default: 1e4).</p></dd>
-
-
-<dt id="arg-bins-per-sec">bins_per_sec<a class="anchor" aria-label="anchor" href="#arg-bins-per-sec"></a></dt>
-<dd><p>Number of bins per second used when computing autocorrelation (default: 50, corresponding to 20 ms bins).</p></dd>
 
 </dl></div>
     <div class="section level2">

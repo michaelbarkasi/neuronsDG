@@ -25,6 +25,7 @@
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Tutorials</h6></li>
     <li><a class="dropdown-item" href="../articles/tutorial_DG_analysis_of_kilosort.html">Dichotomized Gaussian analysis of KiloSort4 data</a></li>
+    <li><a class="dropdown-item" href="../articles/tutorial_DG_analysis_of_patch_clamp.html">Dichotomized Gaussian analysis of KiloSort4 data</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Legal</h6></li>
     <li><a class="dropdown-item" href="../articles/license.html">Dependency licenses</a></li>
@@ -57,6 +58,7 @@
 <span>  trial_time_end <span class="op">=</span> <span class="fl">2020</span>,</span>
 <span>  recording.folder <span class="op">=</span> <span class="st">"data"</span>,</span>
 <span>  meta_data <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  max_spikes <span class="op">=</span> <span class="cn">Inf</span>,</span>
 <span>  min_spikes <span class="op">=</span> <span class="fl">0</span>,</span>
 <span>  min_trials <span class="op">=</span> <span class="fl">0</span>,</span>
 <span>  pure_trials_only <span class="op">=</span> <span class="cn">TRUE</span>,</span>
@@ -84,6 +86,10 @@
 
 <dt id="arg-meta-data">meta_data<a class="anchor" aria-label="anchor" href="#arg-meta-data"></a></dt>
 <dd><p>Data frame with metadata for each recording (e.g., genotype, hemisphere), one recording per row; row names should match recording names and all columns should be covariates for later analysis</p></dd>
+
+
+<dt id="arg-max-spikes">max_spikes<a class="anchor" aria-label="anchor" href="#arg-max-spikes"></a></dt>
+<dd><p>Maximum number of total spikes for a cell to be kept</p></dd>
 
 
 <dt id="arg-min-spikes">min_spikes<a class="anchor" aria-label="anchor" href="#arg-min-spikes"></a></dt>

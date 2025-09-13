@@ -145,11 +145,11 @@ double norm_cdf(
     const bool& inverse
   ) {
     double xc = x;
-    if (xc < 1e-10) {xc = 1e-10;}
-    if (xc > 1 - 1e-10) {xc = 1.0 - 1e-10;}
     using boost::math::normal; 
     normal standard_normal(mu, sd);
     if (inverse) {
+      if (xc < 1e-10) {xc = 1e-10;}
+      if (xc > 1 - 1e-10) {xc = 1.0 - 1e-10;}
       return boost::math::quantile(standard_normal, xc);
     } else {
       return boost::math::cdf(standard_normal, xc);

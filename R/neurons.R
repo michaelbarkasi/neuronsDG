@@ -605,8 +605,13 @@ analyze.autocorr <- function(
       lvl <- cov_X[i,]
       interX_names <- c(interX_names, paste0(lvl, collapse = "_"))
       lvl_mask <- rep(TRUE, n_est)
-      for (c in c(covariate)) {
-        lvl_mask <- lvl_mask & ests_all[,c] == lvl[[c]]
+      
+      if (length(lvl) == 1) {
+        lvl_mask <- lvl_mask & ests_all[,c] == lvl
+      } else {
+        for (c in c(covariate)) {
+          lvl_mask <- lvl_mask & ests_all[,c] == lvl[[c]]
+        }
       }
       
       if (any(lvl_mask)) {
