@@ -517,7 +517,7 @@ void neuron::infer_trial() {
     
     // Find needed dimensions
     int num_trials = static_cast<int>(spike_raster.col(1).maxCoeff());
-    int max_time = static_cast<int>(spike_raster.col(0).maxCoeff());
+    int max_time = static_cast<int>(spike_raster.col(0).maxCoeff() - spike_raster.col(0).minCoeff());
     max_time = ((max_time + 9) / 10) * 10; // round up to nearest 10
     
     // Resize trial_data and set to zero
@@ -735,6 +735,7 @@ void neuron::fit_autocorrelation() {
     penalty_multiple = (mse0 * penalty_weight)/(1.0/(A0 * A0) + 1.0/(tau0 * tau0));
     
     // Set up NLopt optimizer
+    nlopt::srand(static_cast<unsigned long>(bias_term*1e6));
     nlopt::opt opt(nlopt::LD_LBFGS, n); 
     opt.set_min_objective(neuron::bounded_MSE_EDF_autocorr, this);
     opt.set_ftol_rel(ctol);       // stop when iteration changes objective fn value by less than this fraction 

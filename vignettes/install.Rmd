@@ -13,3 +13,5 @@ rm -rf neurons.Rcheck
 rm -f neurons_*.tar.gz
 ./build_install.sh
 ```
+
+To build pkgdown site: pkgdown::build_site()

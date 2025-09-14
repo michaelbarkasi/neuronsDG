@@ -502,6 +502,7 @@ preprocess.kilo4 <- function(
       num.of.responsive.trials = num_of_trials_col
     )
     cluster_key <- cbind(cluster_key, meta_data[as.character(recording_name_col), ])
+    rownames(cluster_key) <- NULL
     
     # Update cell numbers in the spike data
     for (c in 1:new_cell_counter) {

@@ -24,8 +24,8 @@
     <li><a class="dropdown-item" href="../articles/install.html">Installation instructions</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Tutorials</h6></li>
-    <li><a class="dropdown-item" href="../articles/tutorial_DG_analysis_of_kilosort.html">Dichotomized Gaussian analysis of KiloSort4 data</a></li>
-    <li><a class="dropdown-item" href="../articles/tutorial_DG_analysis_of_patch_clamp.html">Dichotomized Gaussian analysis of KiloSort4 data</a></li>
+    <li><a class="dropdown-item" href="../articles/tutorial_tau_est_DG.html">Estimating network time constants using dichotomized Gaussians</a></li>
+    <li><a class="dropdown-item" href="../articles/tutorial_tau_est_kilosort.html">Estimating network time constants from KiloSort4 data</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Legal</h6></li>
     <li><a class="dropdown-item" href="../articles/license.html">Dependency licenses</a></li>
@@ -74,8 +74,14 @@
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
-    <p>A data frame with bootstrap resamples of the mean tau for each combination of covariate levels.</p>
-    </div>
+    <p>A list with two elements:</p><dl><dt>resamples</dt>
+<dd><p>data frame with bootstrap resamples of the mean tau for each combination of covariate levels</p></dd>
+
+   <dt>distribution_plot</dt>
+<dd><p>ggplot object showing the distribution of mean tau for each combination of covariate levels</p></dd>
+
+
+</dl></div>
 
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside></div>

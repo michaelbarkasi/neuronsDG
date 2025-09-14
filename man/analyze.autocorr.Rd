@@ -14,7 +14,11 @@ analyze.autocorr(ests, covariate, n_bs = 10000)
 \item{n_bs}{Number of bootstrap resamples to perform (default: 1e4).}
 }
 \value{
-A data frame with bootstrap resamples of the mean tau for each combination of covariate levels.
+A list with two elements: 
+ \describe{
+   \item{resamples}{data frame with bootstrap resamples of the mean tau for each combination of covariate levels}
+   \item{distribution_plot}{ggplot object showing the distribution of mean tau for each combination of covariate levels}
+ }
 }
 \description{
 This function takes the output from \code{estimate.autocorr.params} and performs a bootstrap analysis to estimate the distribution of the mean time constant (tau) for different levels of specified covariates.

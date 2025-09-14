@@ -116,7 +116,7 @@ load.rasters.as.neurons <- function(
       colnames(raster) <- c("time", "trial")
       raster <- raster[raster$time <= time_cutoff,]
       
-      # Extract recording name and hemisphere
+      # Extract meta data
       recording_name <- "not_provided"
       if ("recording_name" %in% colnames(raster_df)) {
         recording_name <- unique(raster_df$recording_name[c_mask])
@@ -195,9 +195,14 @@ make.plot.title <- function(
     # Make plot title 
     plot_title <- paste0(
       plot_title,
-      ", neuron ", recording_name, ", #", id_num, 
-      ", ", genotype, ", ", sex, ", ", hemi, " hemi, ", region, ", ", age
+      ", neuron ", recording_name, ", #", id_num
     )
+    # Add covariates
+    for (var in c(genotype, sex, hemi, region, age)) {
+      if (var != "not provided" && var != "not_provided") {
+        plot_title <- paste0(plot_title, ", ", var)
+      }
+    }
     
     return(plot_title)
     
@@ -248,7 +253,11 @@ plot.autocorrelation <- function(
         x = "Lag (bins)",
         y = "Autocorrelation"
       ) + 
-      ggplot2::theme_minimal()
+      ggplot2::theme_minimal() + 
+      ggplot2::theme(
+        panel.background = ggplot2::element_rect(fill = "white", colour = NA),
+        plot.background  = ggplot2::element_rect(fill = "white", colour = NA)
+      )
     return(plt)
     
   }
@@ -291,6 +300,11 @@ plot.raster <- function(
       ggplot2::theme_minimal()
     if (zero_as_onset && min(spike.raster$time) <= 0) plt <- plt + 
       ggplot2::geom_vline(xintercept = 0, linetype = "solid", linewidth = 1, color = "darkblue") 
+    plt <- plt + 
+      ggplot2::theme(
+        panel.background = ggplot2::element_rect(fill = "white", colour = NA),
+        plot.background  = ggplot2::element_rect(fill = "white", colour = NA)
+      )
     
     return(plt)
     
@@ -355,13 +369,13 @@ process.autocorr <- function(
     plot_time_cutoff = Inf
   ) {
     
-    # Output: Dataframe with one row per neuron
-    
     # Array to hold results
     autocor_results <- c()
     
     # Loop through neurons in the list
-    for (nrn in neuron_list) {
+    for (i in seq_along(neuron_list)) {
+      
+      nrn <- neuron_list[[i]]
       
       # Set exponential decay function (EDF) parameters 
       nrn$set_edf_initials(A0, tau0)
@@ -416,7 +430,11 @@ process.autocorr <- function(
       
     }
     
+    autocor_results <- data.frame(names(neuron_list), autocor_results)
+    
+    rownames(autocor_results) <- NULL
     colnames(autocor_results) <- c(
+      "cell",
       "lambda_ms",
       "lambda_bin",
       "A", 
@@ -430,10 +448,10 @@ process.autocorr <- function(
     
     # Convert to data frame 
     if (check_autofiring_ratio) {
-      test.sigma.assumption(as.data.frame(autocor_results))
+      test.sigma.assumption(autocor_results)
     }
     
-    return(as.data.frame(autocor_results))
+    return(autocor_results)
     
   }
 
@@ -536,8 +554,11 @@ estimate.autocorr.params <- function(
 #' @param ests Output from \code{estimate.autocorr.params}, or a list of such outputs.
 #' @param covariate Character string or vector of character strings specifying the covariate(s) to analyze (e.g., "hemi").
 #' @param n_bs Number of bootstrap resamples to perform (default: 1e4).
-#' @return A data frame with bootstrap resamples of the mean tau for each combination of covariate levels.
-#' @export
+#' @return A list with two elements: 
+#'  \describe{
+#'    \item{resamples}{data frame with bootstrap resamples of the mean tau for each combination of covariate levels}
+#'    \item{distribution_plot}{ggplot object showing the distribution of mean tau for each combination of covariate levels}
+#'  }
 analyze.autocorr <- function(
     ests,
     covariate,
@@ -632,6 +653,38 @@ analyze.autocorr <- function(
     
     resamples <- resamples[, colSums(!is.na(resamples)) > 0]
     
-    return(resamples)
+    # Plot
+    df <- data.frame(
+      value = unlist(resamples, use.names = FALSE),
+      group = rep(names(resamples), each = nrow(resamples))
+    )
+    
+    # Plot
+    title_size <- 20 
+    axis_size <- 12 
+    legend_size <- 10
+    distribution_plot <- ggplot2::ggplot(df, ggplot2::aes(x = value, fill = group)) +
+      ggplot2::geom_density(alpha = 0.6) +
+      #scale_y_continuous(transform = "log1p") +
+      ggplot2::labs(title = "Expected Time Constant", x = "ms", y = "Density") +
+      ggplot2::theme_minimal() + 
+      ggplot2::theme(
+        plot.title = ggplot2::element_text(hjust = 0.5, size = title_size),
+        axis.title = ggplot2::element_text(size = axis_size),
+        axis.text = ggplot2::element_text(size = axis_size),
+        legend.title = ggplot2::element_text(size = legend_size),
+        legend.text = ggplot2::element_text(size = legend_size),
+        legend.position = "bottom"
+      ) + ggplot2::theme(
+        panel.background = ggplot2::element_rect(fill = "white", colour = NA),
+        plot.background  = ggplot2::element_rect(fill = "white", colour = NA)
+      )
+    
+    return(
+      list(
+        resamples = resamples,
+        distribution_plot = distribution_plot
+      )
+    )
     
   }
