@@ -523,3 +523,51 @@ preprocess.kilo4 <- function(
     
   }
 
+#' Summarize cluster key by covariates
+#' 
+#' Function to summarize the \code{cluster.key} output of \code{preprocess.kilo4} by covariates.
+#' 
+#' @param key The \code{cluster.key} data frame output of \code{preprocess.kilo4}
+#' @param covariate_list List of covariates to summarize
+#' @returns A data frame with one row per combination of covariates, and columns giving the number of cells, mean number of spikes, and mean number of trials for that combination
+summarize.cluster.key <- function(
+    key,
+    covariate_list
+  ) {
+    
+    # Get all combinations of covariates
+    unique_covariates <- list()
+    for (covariate in covariate_list) {
+      unique_covariates[[covariate]] <- unique(key[[covariate]])
+    }
+    covariate_combos <- expand.grid(unique_covariates)
+    
+    # Initialize variables to hold summary stats
+    n_cells <- rep(NA, nrow(covariate_combos))
+    mean_spikes <- rep(NA, nrow(covariate_combos))
+    mean_trials <- rep(NA, nrow(covariate_combos))
+    
+    # Loop through combinations and get summary stats
+    for (cv in 1:nrow(covariate_combos)) {
+      # Get combination of covariates
+      combo <- covariate_combos[cv, ]
+      
+      # Subset cluster.key for this combination
+      mask <- TRUE
+      for (covariate in covariate_list) {
+        mask <- mask & key[[covariate]] == combo[[covariate]]
+      }
+      subset_key <- key[mask, ]
+      
+      # If any cells in this combination, compute and save stats
+      if (nrow(subset_key) > 0) {
+        n_cells[cv] <- nrow(subset_key)
+        mean_spikes[cv] <- round(mean(subset_key$num.of.spikes),1)
+        mean_trials[cv] <- round(mean(subset_key$num.of.responsive.trials),1)
+      }
+    }
+    
+    # Return results 
+    return(data.frame(covariate_combos, n_cells, mean_spikes, mean_trials))
+    
+  }

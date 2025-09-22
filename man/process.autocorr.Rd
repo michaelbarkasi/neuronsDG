@@ -13,7 +13,8 @@ process.autocorr(
   max_evals = 500,
   check_autofiring_ratio = FALSE,
   print_plots = FALSE,
-  plot_time_cutoff = Inf
+  plot_time_cutoff = Inf,
+  use_raw = TRUE
 )
 }
 \arguments{
@@ -34,6 +35,8 @@ process.autocorr(
 \item{print_plots}{Logical indicating whether to print autocorrelation plots for each neuron (default: FALSE).}
 
 \item{plot_time_cutoff}{Maximum lag (in bins) to display on the x-axis of plots (default: Inf).}
+
+\item{use_raw}{Logical indicating whether to use raw autocorrelation (true) or standard centered and normalized correlation (false) (default: TRUE).}
 }
 \value{
 A data frame with one row per neuron and columns for lambda (mean spike rate per ms and per bin), amplitude (A), time constant (tau), bias term, first autocorrelation value, maximum autocorrelation value, mean autocorrelation value, and minimum autocorrelation value.

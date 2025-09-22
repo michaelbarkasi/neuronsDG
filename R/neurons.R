@@ -52,7 +52,7 @@ runparallel <- function(
 #' @param unit_time Unit of time for spike raster or other recording data, e.g. "ms", "s", etc. (default: "ms").
 #' @param unit_sample_rate Unit of sample rate for spike raster or other recording data, e.g. "Hz", "kHz", etc. (default: "Hz").
 #' @param unit_data Unit of data for spike raster or other recording data, e.g. "mV", "spike", etc. (default: "mV").
-#' @param t_per_bin Time (in above units) per bin, e.g., 1 ms per bin (default: 1.0).
+#' @param t_per_bin Time (in above units) per bin, e.g., 1 ms per bin (default: 10.0).
 #' @param sample_rate Sample rate (in above units), e.g., 1e4 Hz (default: 1e4).
 #' @return A new neuron object.
 #' @export
@@ -69,7 +69,7 @@ new_neuron <- function(
     unit_time = "ms", 
     unit_sample_rate = "Hz", 
     unit_data = "mV", 
-    t_per_bin = 1.0, 
+    t_per_bin = 10.0, 
     sample_rate = 1e4
   ) {
     neuron <- new(
@@ -84,14 +84,14 @@ new_neuron <- function(
 #' This function loads spike raster data from a data frame or CSV file and converts each unique cell into a neuron object. The raster data frame must contain columns for cell identifier, spike time in milliseconds, and trial number. Optional metadata columns can also be included.
 #' 
 #' @param raster_df Data frame (or file name to csv importable as such), each row a spike; must have columns: cell, time_in_ms, trial; optional columns: recording_name, hemisphere, genotype, sex, region, age.
-#' @param bin_size Size of time bins in milliseconds (default: 20).
+#' @param bin_size Size of time bins in milliseconds (default: 10).
 #' @param sample_rt Sample rate in the default unit for neuron objects, Hz (default: 1e4).
 #' @param time_cutoff Maximum time (in ms) to include spikes; spikes occurring after this time will be excluded (default: Inf).
 #' @return A list of neuron objects, one per unique cell in the raster data.
 #' @export
 load.rasters.as.neurons <- function(
     raster_df,
-    bin_size = 20, 
+    bin_size = 10.0, 
     sample_rt = 1e4,
     time_cutoff = Inf
   ) {
@@ -217,15 +217,17 @@ make.plot.title <- function(
 #' @usage plot.autocorrelation(nrn, plot_title = "Est. autocorr", bias_term = 0, plot_time_cutoff = Inf)
 #' @param nrn Neuron object for which to plot autocorrelation.
 #' @param plot_title Title for the plot (default: "Est. autocorr").
-#' @param bias_term Bias term to plot as a horizontal line (default: 0).
+#' @param bias_term Bias term to plot as a horizontal line (default: NULL).
 #' @param plot_time_cutoff Maximum lag (in bins) to display on the x-axis (default: Inf).
+#' @param return_plot Logical indicating whether to return the ggplot object (TRUE) or print it (FALSE) (default: FALSE).
 #' @return A ggplot object showing the estimated and fitted autocorrelation.
 #' @export
 plot.autocorrelation <- function(
     nrn,
     plot_title = "Est. autocorr",
-    bias_term = 0,
-    plot_time_cutoff = Inf
+    bias_term = NULL,
+    plot_time_cutoff = Inf,
+    return_plot = FALSE
   ) {
     
     # Make title
@@ -234,20 +236,20 @@ plot.autocorrelation <- function(
     # Fetch estimated and fitted autocorrelation 
     autocorr <- nrn$fetch_autocorr_R()
     autocorr_edf <- nrn$fetch_autocorr_edf_R()
-   
+    
     # Make data frame for plotting 
     df_temp <- data.frame(
       autocorrelation = autocorr[2:length(autocorr)],
-      autocorrelation_fitted = autocorr_edf[2:length(autocorr_edf)],
       bin = seq(from = 1, to = length(autocorr) - 1, by = 1)
     )
+    if (length(autocorr_edf) > 1) {
+      df_temp$autocorrelation_fitted <- autocorr_edf[2:length(autocorr_edf)]
+    }
     df_temp <- df_temp[df_temp$bin <= plot_time_cutoff,]
     
     # Make plot
     plt <- ggplot2::ggplot(df_temp) +
-      ggplot2::geom_line(ggplot2::aes(x = bin, y = autocorrelation), color = "blue") +  
-      ggplot2::geom_line(ggplot2::aes(x = bin, y = autocorrelation_fitted), color = "red") +  
-      ggplot2::geom_hline(yintercept = bias_term, linewidth = 2, linetype = "dotted", color = "darkgray") +
+      ggplot2::geom_line(ggplot2::aes(x = bin, y = autocorrelation), color = "blue") + 
       ggplot2::labs(
         title = plot_title,
         x = "Lag (bins)",
@@ -258,7 +260,18 @@ plot.autocorrelation <- function(
         panel.background = ggplot2::element_rect(fill = "white", colour = NA),
         plot.background  = ggplot2::element_rect(fill = "white", colour = NA)
       )
-    return(plt)
+    if (!is.null(bias_term)) {
+      plt <- plt + ggplot2::geom_hline(yintercept = bias_term, linewidth = 2, linetype = "dotted", color = "darkgray")
+    }
+    if (length(autocorr_edf) > 1) {
+      plt <- plt + ggplot2::geom_line(ggplot2::aes(x = bin, y = autocorrelation_fitted), color = "red")
+    }
+    if (return_plot) {
+      return(plt)
+    } else {
+      print(plt)
+      return(invisible(NULL))
+    }
     
   }
 
@@ -272,12 +285,14 @@ plot.autocorrelation <- function(
 #' @param nrn Neuron object for which to plot spike raster.
 #' @param plot_title Title for the plot (default: "Spike raster").
 #' @param zero_as_onset Logical indicating whether to plot a vertical line at time zero to indicate stimulus onset (default: TRUE).
+#' @param return_plot Logical indicating whether to return the ggplot object (TRUE) or print it (FALSE) (default: FALSE).
 #' @return A ggplot object showing the spike raster.
 #' @export
 plot.raster <- function(
     nrn,  
     plot_title = "Spike raster",
-    zero_as_onset = TRUE
+    zero_as_onset = TRUE,
+    return_plot = FALSE
   ) {
     
     # Grab raster and time bounds
@@ -306,7 +321,12 @@ plot.raster <- function(
         plot.background  = ggplot2::element_rect(fill = "white", colour = NA)
       )
     
-    return(plt)
+    if (return_plot) {
+      return(plt)
+    } else {
+      print(plt)
+      return(invisible(NULL))
+    }
     
   }
 
@@ -355,6 +375,7 @@ test.sigma.assumption <- function(
 #' @param check_autofiring_ratio Logical indicating whether to check the assumption that autocorrelation values are below the mean firing rate with \code{test.sigma.assumption} function (default: FALSE).
 #' @param print_plots Logical indicating whether to print autocorrelation plots for each neuron (default: FALSE).
 #' @param plot_time_cutoff Maximum lag (in bins) to display on the x-axis of plots (default: Inf).
+#' @param use_raw Logical indicating whether to use raw autocorrelation (true) or standard centered and normalized correlation (false) (default: TRUE).
 #' @return A data frame with one row per neuron and columns for lambda (mean spike rate per ms and per bin), amplitude (A), time constant (tau), bias term, first autocorrelation value, maximum autocorrelation value, mean autocorrelation value, and minimum autocorrelation value.
 #' @export
 process.autocorr <- function(
@@ -366,7 +387,8 @@ process.autocorr <- function(
     max_evals = 500,
     check_autofiring_ratio = FALSE,
     print_plots = FALSE,
-    plot_time_cutoff = Inf
+    plot_time_cutoff = Inf,
+    use_raw = TRUE
   ) {
     
     # Array to hold results
@@ -382,7 +404,7 @@ process.autocorr <- function(
       nrn$set_edf_termination(ctol, max_evals)
       
       # Compute autocorrelation
-      nrn$compute_autocorrelation(bin_count_action)
+      nrn$compute_autocorrelation(bin_count_action, use_raw)
       
       # Fit autocorrelation 
       nrn$fit_autocorrelation()
@@ -424,7 +446,7 @@ process.autocorr <- function(
         sim <- id_data$sim
         if (sim) recording_name <- paste(recording_name, "(sim)")
         
-        plot(plot.autocorrelation(nrn, "Est. autocorr", bias_term, plot_time_cutoff))
+        print(plot.autocorrelation(nrn, "Est. autocorr", bias_term, plot_time_cutoff))
         
       }
       
@@ -467,7 +489,7 @@ process.autocorr <- function(
 #' @param tau0 Initial guess for time constant parameter of exponential decay function (default: 1.0).
 #' @param ctol Convergence tolerance for fitting exponential decay function (default: 1e-8).
 #' @param max_evals Maximum number of evaluations for fitting exponential decay function (default: 500).
-#' @param verbose Logical indicating whether to print progress messages (default: FALSE).
+#' @param use_raw Logical indicating whether to use raw autocorrelation (true) or standard centered and normalized correlation (false) (default: TRUE).
 #' @return A list containing a data frame of autocorrelation parameter estimates (one row per simulation), a data frame of neuron identifiers (one row per neuron), and the number of simulations run per neuron.
 #' @export
 estimate.autocorr.params <- function(
@@ -479,7 +501,7 @@ estimate.autocorr.params <- function(
     tau0 = 1.0,
     ctol = 1e-8,
     max_evals = 500,
-    verbose = FALSE
+    use_raw = TRUE
   ) {
     
     # Pre-allocate matrix 
@@ -501,7 +523,8 @@ estimate.autocorr.params <- function(
         tau0,
         ctol,
         max_evals,
-        verbose
+        use_raw,
+        FALSE
       )
       return(dg_estimates_nrn)
     }
@@ -600,10 +623,10 @@ analyze.autocorr <- function(
       est$neuron_id <- est$neuron_id[rep(1:nrow(est$neuron_id), each = est$n_sims_per_neurons), ]
       
       # Combine with estimates 
-      est$estimates <- cbind(est$estimates, est$neuron_id)
+      estimates_id <- cbind(est$estimates, est$neuron_id)
       
       # Add to big data frame
-      ests_all <- rbind(ests_all, est$estimates)
+      ests_all <- rbind(ests_all, estimates_id)
       
     }
     
@@ -631,7 +654,7 @@ analyze.autocorr <- function(
         lvl_mask <- lvl_mask & ests_all[,c] == lvl
       } else {
         for (c in c(covariate)) {
-          lvl_mask <- lvl_mask & ests_all[,c] == lvl[[c]]
+          lvl_mask <- lvl_mask & ests_all[,c] == cov_X[i,c]
         }
       }
       
@@ -643,7 +666,8 @@ analyze.autocorr <- function(
           #   each resample has a 1/n chance of drawing from a given neuron N; but, as N
           #   is represented by n_sims values from the DG simulations, the probability of a given value
           #   being drawn to represent N is determined by the simulations. 
-          resamples[j,i] <- mean(sample(ests_all[lvl_mask, "tau"], n_cells, replace = TRUE))
+          these_samples <- sample(ests_all[lvl_mask, "tau"], n_cells, replace = TRUE)
+          resamples[j,i] <- mean(these_samples)
         }
       }
       
@@ -688,3 +712,44 @@ analyze.autocorr <- function(
     )
     
   }
+
+#' Compute autocorrelation of single neuron object
+#' 
+#' This function computes the autocorrelation of a single neuron object using specified parameters. It's a wrapper around the \code{compute_autocorrelation} method of the neuron class.
+#' 
+#' @param nrn Neuron object for which to compute autocorrelation.
+#' @param bin_count_action Method for counting spikes in each bin when computing autocorrelation; one of "boolean", "mean", or "sum" (default: "sum").
+#' @param use_raw Logical indicating whether to use raw autocorrelation (true) or standard centered and normalized correlation (false) (default: TRUE).
+#' @return None. Modifies neuron in place.
+#' @export
+compute.autocorr <- function(
+    nrn,
+    bin_count_action = "sum",
+    use_raw = TRUE
+  ) {
+    nrn <- nrn$compute_autocorrelation(bin_count_action, use_raw)
+  }
+
+#' Fit exponential decay function to autocorrelation of single neuron object
+#' 
+#' This function fits an exponential decay function to the autocorrelation of a single neuron object using specified parameters. It's a wrapper around the \code{fit_autocorrelation} method of the neuron class.
+#'
+#' @param nrn Neuron object for which to fit autocorrelation.
+#' @param A0 Initial guess for amplitude parameter of exponential decay function (default: 0.001).
+#' @param tau0 Initial guess for time constant parameter of exponential decay function (default: 1.0).
+#' @param ctol Convergence tolerance for fitting exponential decay function (default: 1e-8).
+#' @param max_evals Maximum number of evaluations for fitting exponential decay function (default: 500).
+#' @return None. Modifies neuron in place.
+#' @export
+fit.edf.autocorr <- function(
+    nrn,
+    A0 = 0.001,
+    tau0 = 1.0,
+    ctol = 1e-8,
+    max_evals = 500
+  ) {
+    nrn$set_edf_initials(A0, tau0)
+    nrn$set_edf_termination(ctol, max_evals)
+    nrn <- nrn$fit_autocorrelation()
+  }
+

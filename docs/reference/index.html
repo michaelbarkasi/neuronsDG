@@ -24,8 +24,9 @@
     <li><a class="dropdown-item" href="../articles/install.html">Installation instructions</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Tutorials</h6></li>
-    <li><a class="dropdown-item" href="../articles/tutorial_tau_est_DG.html">Estimating network time constants using dichotomized Gaussians</a></li>
-    <li><a class="dropdown-item" href="../articles/tutorial_tau_est_kilosort.html">Estimating network time constants from KiloSort4 data</a></li>
+    <li><a class="dropdown-item" href="../articles/tutorial_synchrony_crosscorr.html">Spike synchrony via cross-correlation</a></li>
+    <li><a class="dropdown-item" href="../articles/tutorial_tau_est_DG.html">Network time constants via dichotomized Gaussians</a></li>
+    <li><a class="dropdown-item" href="../articles/tutorial_tau_est_kilosort.html">Network time constants from KiloSort4 data</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Legal</h6></li>
     <li><a class="dropdown-item" href="../articles/license.html">Dependency licenses</a></li>
@@ -64,10 +65,22 @@
         <dd>Function to analyze autocorrelation estimates with bootstrapping</dd>
       </dl><dl><dt>
 
+          <code><a href="compute.autocorr.html">compute.autocorr()</a></code>
+
+        </dt>
+        <dd>Compute autocorrelation of single neuron object</dd>
+      </dl><dl><dt>
+
           <code><a href="estimate.autocorr.params.html">estimate.autocorr.params()</a></code>
 
         </dt>
         <dd>Function to estimate autocorrelation parameters using dichotomized Gaussian simulations</dd>
+      </dl><dl><dt>
+
+          <code><a href="fit.edf.autocorr.html">fit.edf.autocorr()</a></code>
+
+        </dt>
+        <dd>Fit exponential decay function to autocorrelation of single neuron object</dd>
       </dl><dl><dt>
 
           <code><a href="import.kilo4.html">import.kilo4()</a></code>
@@ -110,6 +123,12 @@
 
         </dt>
         <dd>Function to process autocorrelation of neuron list</dd>
+      </dl><dl><dt>
+
+          <code><a href="summarize.cluster.key.html">summarize.cluster.key()</a></code>
+
+        </dt>
+        <dd>Summarize cluster key by covariates</dd>
       </dl><dl><dt>
 
           <code><a href="test.sigma.assumption.html">test.sigma.assumption()</a></code>

@@ -12,6 +12,8 @@ plot.raster(nrn, plot_title = "Spike raster", zero_as_onset = TRUE)
 \item{plot_title}{Title for the plot (default: "Spike raster").}
 
 \item{zero_as_onset}{Logical indicating whether to plot a vertical line at time zero to indicate stimulus onset (default: TRUE).}
+
+\item{return_plot}{Logical indicating whether to return the ggplot object (TRUE) or print it (FALSE) (default: FALSE).}
 }
 \value{
 A ggplot object showing the spike raster.

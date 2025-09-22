@@ -3,12 +3,15 @@
 <url><loc>https://michaelbarkasi.github.io/neurons/articles/index.html</loc></url>
 <url><loc>https://michaelbarkasi.github.io/neurons/articles/install.html</loc></url>
 <url><loc>https://michaelbarkasi.github.io/neurons/articles/license.html</loc></url>
+<url><loc>https://michaelbarkasi.github.io/neurons/articles/tutorial_synchrony_crosscorr.html</loc></url>
 <url><loc>https://michaelbarkasi.github.io/neurons/articles/tutorial_tau_est_DG.html</loc></url>
 <url><loc>https://michaelbarkasi.github.io/neurons/articles/tutorial_tau_est_kilosort.html</loc></url>
 <url><loc>https://michaelbarkasi.github.io/neurons/authors.html</loc></url>
 <url><loc>https://michaelbarkasi.github.io/neurons/index.html</loc></url>
 <url><loc>https://michaelbarkasi.github.io/neurons/reference/analyze.autocorr.html</loc></url>
+<url><loc>https://michaelbarkasi.github.io/neurons/reference/compute.autocorr.html</loc></url>
 <url><loc>https://michaelbarkasi.github.io/neurons/reference/estimate.autocorr.params.html</loc></url>
+<url><loc>https://michaelbarkasi.github.io/neurons/reference/fit.edf.autocorr.html</loc></url>
 <url><loc>https://michaelbarkasi.github.io/neurons/reference/import.kilo4.html</loc></url>
 <url><loc>https://michaelbarkasi.github.io/neurons/reference/index.html</loc></url>
 <url><loc>https://michaelbarkasi.github.io/neurons/reference/load.rasters.as.neurons.html</loc></url>
@@ -19,6 +22,7 @@
 <url><loc>https://michaelbarkasi.github.io/neurons/reference/plot.raster.html</loc></url>
 <url><loc>https://michaelbarkasi.github.io/neurons/reference/preprocess.kilo4.html</loc></url>
 <url><loc>https://michaelbarkasi.github.io/neurons/reference/process.autocorr.html</loc></url>
+<url><loc>https://michaelbarkasi.github.io/neurons/reference/summarize.cluster.key.html</loc></url>
 <url><loc>https://michaelbarkasi.github.io/neurons/reference/test.sigma.assumption.html</loc></url>
 </urlset>
 

@@ -17,7 +17,7 @@ new_neuron(
   unit_time = "ms",
   unit_sample_rate = "Hz",
   unit_data = "mV",
-  t_per_bin = 1,
+  t_per_bin = 10,
   sample_rate = 10000
 )
 }
@@ -46,7 +46,7 @@ new_neuron(
 
 \item{unit_data}{Unit of data for spike raster or other recording data, e.g. "mV", "spike", etc. (default: "mV").}
 
-\item{t_per_bin}{Time (in above units) per bin, e.g., 1 ms per bin (default: 1.0).}
+\item{t_per_bin}{Time (in above units) per bin, e.g., 1 ms per bin (default: 10.0).}
 
 \item{sample_rate}{Sample rate (in above units), e.g., 1e4 Hz (default: 1e4).}
 }

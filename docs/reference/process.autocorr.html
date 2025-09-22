@@ -24,8 +24,9 @@
     <li><a class="dropdown-item" href="../articles/install.html">Installation instructions</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Tutorials</h6></li>
-    <li><a class="dropdown-item" href="../articles/tutorial_tau_est_DG.html">Estimating network time constants using dichotomized Gaussians</a></li>
-    <li><a class="dropdown-item" href="../articles/tutorial_tau_est_kilosort.html">Estimating network time constants from KiloSort4 data</a></li>
+    <li><a class="dropdown-item" href="../articles/tutorial_synchrony_crosscorr.html">Spike synchrony via cross-correlation</a></li>
+    <li><a class="dropdown-item" href="../articles/tutorial_tau_est_DG.html">Network time constants via dichotomized Gaussians</a></li>
+    <li><a class="dropdown-item" href="../articles/tutorial_tau_est_kilosort.html">Network time constants from KiloSort4 data</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Legal</h6></li>
     <li><a class="dropdown-item" href="../articles/license.html">Dependency licenses</a></li>
@@ -62,7 +63,8 @@
 <span>  max_evals <span class="op">=</span> <span class="fl">500</span>,</span>
 <span>  check_autofiring_ratio <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  print_plots <span class="op">=</span> <span class="cn">FALSE</span>,</span>
-<span>  plot_time_cutoff <span class="op">=</span> <span class="cn">Inf</span></span>
+<span>  plot_time_cutoff <span class="op">=</span> <span class="cn">Inf</span>,</span>
+<span>  use_raw <span class="op">=</span> <span class="cn">TRUE</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -104,6 +106,10 @@
 
 <dt id="arg-plot-time-cutoff">plot_time_cutoff<a class="anchor" aria-label="anchor" href="#arg-plot-time-cutoff"></a></dt>
 <dd><p>Maximum lag (in bins) to display on the x-axis of plots (default: Inf).</p></dd>
+
+
+<dt id="arg-use-raw">use_raw<a class="anchor" aria-label="anchor" href="#arg-use-raw"></a></dt>
+<dd><p>Logical indicating whether to use raw autocorrelation (true) or standard centered and normalized correlation (false) (default: TRUE).</p></dd>
 
 </dl></div>
     <div class="section level2">

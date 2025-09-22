@@ -11,9 +11,11 @@ plot.autocorrelation(nrn, plot_title = "Est. autocorr", bias_term = 0, plot_time
 
 \item{plot_title}{Title for the plot (default: "Est. autocorr").}
 
-\item{bias_term}{Bias term to plot as a horizontal line (default: 0).}
+\item{bias_term}{Bias term to plot as a horizontal line (default: NULL).}
 
 \item{plot_time_cutoff}{Maximum lag (in bins) to display on the x-axis (default: Inf).}
+
+\item{return_plot}{Logical indicating whether to return the ggplot object (TRUE) or print it (FALSE) (default: FALSE).}
 }
 \value{
 A ggplot object showing the estimated and fitted autocorrelation.

@@ -6,7 +6,7 @@
 \usage{
 load.rasters.as.neurons(
   raster_df,
-  bin_size = 20,
+  bin_size = 10,
   sample_rt = 10000,
   time_cutoff = Inf
 )
@@ -14,7 +14,7 @@ load.rasters.as.neurons(
 \arguments{
 \item{raster_df}{Data frame (or file name to csv importable as such), each row a spike; must have columns: cell, time_in_ms, trial; optional columns: recording_name, hemisphere, genotype, sex, region, age.}
 
-\item{bin_size}{Size of time bins in milliseconds (default: 20).}
+\item{bin_size}{Size of time bins in milliseconds (default: 10).}
 
 \item{sample_rt}{Sample rate in the default unit for neuron objects, Hz (default: 1e4).}
 

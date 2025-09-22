@@ -24,8 +24,9 @@
     <li><a class="dropdown-item" href="../articles/install.html">Installation instructions</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Tutorials</h6></li>
-    <li><a class="dropdown-item" href="../articles/tutorial_tau_est_DG.html">Estimating network time constants using dichotomized Gaussians</a></li>
-    <li><a class="dropdown-item" href="../articles/tutorial_tau_est_kilosort.html">Estimating network time constants from KiloSort4 data</a></li>
+    <li><a class="dropdown-item" href="../articles/tutorial_synchrony_crosscorr.html">Spike synchrony via cross-correlation</a></li>
+    <li><a class="dropdown-item" href="../articles/tutorial_tau_est_DG.html">Network time constants via dichotomized Gaussians</a></li>
+    <li><a class="dropdown-item" href="../articles/tutorial_tau_est_kilosort.html">Network time constants from KiloSort4 data</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Legal</h6></li>
     <li><a class="dropdown-item" href="../articles/license.html">Dependency licenses</a></li>
@@ -66,7 +67,7 @@
 <span>  unit_time <span class="op">=</span> <span class="st">"ms"</span>,</span>
 <span>  unit_sample_rate <span class="op">=</span> <span class="st">"Hz"</span>,</span>
 <span>  unit_data <span class="op">=</span> <span class="st">"mV"</span>,</span>
-<span>  t_per_bin <span class="op">=</span> <span class="fl">1</span>,</span>
+<span>  t_per_bin <span class="op">=</span> <span class="fl">10</span>,</span>
 <span>  sample_rate <span class="op">=</span> <span class="fl">10000</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
@@ -124,7 +125,7 @@
 
 
 <dt id="arg-t-per-bin">t_per_bin<a class="anchor" aria-label="anchor" href="#arg-t-per-bin"></a></dt>
-<dd><p>Time (in above units) per bin, e.g., 1 ms per bin (default: 1.0).</p></dd>
+<dd><p>Time (in above units) per bin, e.g., 1 ms per bin (default: 10.0).</p></dd>
 
 
 <dt id="arg-sample-rate">sample_rate<a class="anchor" aria-label="anchor" href="#arg-sample-rate"></a></dt>

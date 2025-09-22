@@ -5,13 +5,13 @@
 <meta charset="utf-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-<title>Estimating network time constants from KiloSort4 data • neurons</title>
+<title>Network time constants from KiloSort4 data • neurons</title>
 <script src="../lightswitch.js"></script><script src="../deps/jquery-3.6.0/jquery-3.6.0.min.js"></script><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 <link href="../deps/bootstrap-5.3.1/bootstrap.min.css" rel="stylesheet">
 <script src="../deps/bootstrap-5.3.1/bootstrap.bundle.min.js"></script><link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
 <script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><link href="../extra.css" rel="stylesheet">
-<meta property="og:title" content="Estimating network time constants from KiloSort4 data">
+<meta property="og:title" content="Network time constants from KiloSort4 data">
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -40,8 +40,9 @@
     <li><a class="dropdown-item" href="../articles/install.html">Installation instructions</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Tutorials</h6></li>
-    <li><a class="dropdown-item" href="../articles/tutorial_tau_est_DG.html">Estimating network time constants using dichotomized Gaussians</a></li>
-    <li><a class="dropdown-item" href="../articles/tutorial_tau_est_kilosort.html">Estimating network time constants from KiloSort4 data</a></li>
+    <li><a class="dropdown-item" href="../articles/tutorial_synchrony_crosscorr.html">Spike synchrony via cross-correlation</a></li>
+    <li><a class="dropdown-item" href="../articles/tutorial_tau_est_DG.html">Network time constants via dichotomized Gaussians</a></li>
+    <li><a class="dropdown-item" href="../articles/tutorial_tau_est_kilosort.html">Network time constants from KiloSort4 data</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Legal</h6></li>
     <li><a class="dropdown-item" href="../articles/license.html">Dependency licenses</a></li>
@@ -67,7 +68,7 @@
 <div class="row">
   <main id="main" class="col-md-9"><div class="page-header">
 
-      <h1>Estimating network time constants from KiloSort4 data</h1>
+      <h1>Network time constants from KiloSort4 data</h1>
             
       
 
@@ -77,8 +78,10 @@
     
     
 <p>The neurons package provides functions to use <a href="tutorial_tau_est_DG.html">dichotomized Gaussians to estimate
-network time constants</a> on different kinds of spike data, including
-KiloSort4 output. Kilosort4 is a Python package for extracting spike
+network time constants</a> on different kinds of spike data (<a href="https://doi.org/10.1162/neco.2008.02-08-713" class="external-link">Macke et
+al. 2009</a>, <a href="https://doi.org/10.1371/journal.pbio.3001803" class="external-link">Neophytou et
+al. 2022</a>), including kilosort4 output. <a href="https://doi.org/10.1038/s41592-024-02232-7" class="external-link">KiloSort4</a> is a <a href="https://github.com/MouseLand/Kilosort" class="external-link">Python package</a>,
+completely distinct from the neurons package, for extracting spike
 clusters (a proxy for individual neurons) from multi-channel probe
 recordings. Network time constants provide an estimate of recurrence by
 quantifying decay in spiking autocorrelation as a function of lag time.
@@ -114,7 +117,7 @@ made while auditory stimuli were played at regular intervals.</p>
 <span>    <span class="st">"extdata"</span>, </span>
 <span>    <span class="st">"kilo4demo"</span>, </span>
 <span>    package <span class="op">=</span> <span class="st">"neurons"</span></span>
-<span>    <span class="op">)</span></span></code></pre></div>
+<span>  <span class="op">)</span></span></code></pre></div>
 <p>The function used to process kilosort4 output is <a href="../reference/preprocess.kilo4.html">preprocess.kilo4</a>. This
 function expects its argument <strong>data_path</strong> to point to a
 folder the subfolders of which each contain a single kilosort4 output.
@@ -156,10 +159,10 @@ supply covariates.</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Load </span></span>
 <span><span class="va">kilo4_metadata</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/utils/read.table.html" class="external-link">read.csv</a></span><span class="op">(</span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span></span>
-<span>    <span class="st">"extdata"</span>, </span>
-<span>    <span class="st">"meta_data_kilo4demo.csv"</span>, </span>
-<span>    package <span class="op">=</span> <span class="st">"neurons"</span></span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span></span>
+<span>      <span class="st">"extdata"</span>, </span>
+<span>      <span class="st">"meta_data_kilo4demo.csv"</span>, </span>
+<span>      package <span class="op">=</span> <span class="st">"neurons"</span></span>
 <span>    <span class="op">)</span></span>
 <span>  <span class="op">)</span></span>
 <span></span>
@@ -182,9 +185,9 @@ data.</p>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Format and apply recording names to metadata as row names</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">rownames</a></span><span class="op">(</span><span class="va">kilo4_metadata</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span></span>
-<span>  <span class="va">kilo4_metadata</span><span class="op">$</span><span class="va">DAY</span>, </span>
-<span>  <span class="st">"_"</span>,</span>
-<span>  <span class="va">kilo4_metadata</span><span class="op">$</span><span class="va">Neuralynx_ID</span></span>
+<span>    <span class="va">kilo4_metadata</span><span class="op">$</span><span class="va">DAY</span>, </span>
+<span>    <span class="st">"_"</span>,</span>
+<span>    <span class="va">kilo4_metadata</span><span class="op">$</span><span class="va">Neuralynx_ID</span></span>
 <span>  <span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Keep only the relevant columns (covariates of interest)</span></span>
@@ -203,11 +206,11 @@ data.</p>
 <span><span class="co">## 2025-02-20_16-19-12   RH Mecp2 HET P79   F</span></span>
 <span><span class="co">## 2025-02-20_17-04-02   RH Mecp2 HET P79   F</span></span></code></pre>
 <h2>
-Preprocess data into spike rasters
+Preprocessing kilosort4 data into spike rasters
 </h2>
 <p>The function <a href="../reference/preprocess.kilo4.html">preprocess.kilo4</a> converts
-cluster spike times into spike rasters of the standardized format
-expected by the neurons package.</p>
+cluster spike times into spike rasters of the format expected by the
+neurons package.</p>
 <h3>
 Parsing trials and quality control
 </h3>
@@ -222,24 +225,24 @@ stimulus which should be analyzed. In this case, the start time should
 be some time after the stimulus (to allow for settling) and the end time
 some time later.</p>
 <div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">spike.rasters.kilo4</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/preprocess.kilo4.html">preprocess.kilo4</a></span><span class="op">(</span></span>
-<span>  trial_time_start <span class="op">=</span> <span class="fl">500</span>,      <span class="co"># ms</span></span>
-<span>  trial_time_end <span class="op">=</span> <span class="fl">500</span> <span class="op">+</span> <span class="fl">1520</span>, <span class="co"># ms</span></span>
-<span>  recording.folder <span class="op">=</span> <span class="va">demo_data</span>,</span>
-<span>  meta_data <span class="op">=</span> <span class="va">kilo4_metadata</span>, </span>
-<span>  max_spikes <span class="op">=</span> <span class="fl">1e4</span>,</span>
-<span>  min_spikes <span class="op">=</span> <span class="fl">1e2</span>,</span>
-<span>  min_trials <span class="op">=</span> <span class="fl">1e2</span>,</span>
-<span>  pure_trials_only <span class="op">=</span> <span class="cn">TRUE</span>, </span>
-<span>  good_cells_only <span class="op">=</span> <span class="cn">TRUE</span>,</span>
-<span>  stim_responsive_only <span class="op">=</span> <span class="cn">TRUE</span>,</span>
-<span>  verbose <span class="op">=</span> <span class="cn">FALSE</span></span>
-<span><span class="op">)</span> </span></code></pre></div>
-<p>A path (such as <strong>demo_data</strong>) for the actual data must
-be passed to <a href="../reference/preprocess.kilo4.html">preprocess.kilo4</a>. Metadata
-(such as <strong>kilo4_metadata</strong>) will usually be provided, but
-is not necessary for the function to run. If left out, the preprocessed
-output will simply lack information about covariates.</p>
+<code class="sourceCode R"><span><span class="va">spike.rasters</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/preprocess.kilo4.html">preprocess.kilo4</a></span><span class="op">(</span></span>
+<span>    trial_time_start <span class="op">=</span> <span class="fl">500</span>,      <span class="co"># ms</span></span>
+<span>    trial_time_end <span class="op">=</span> <span class="fl">500</span> <span class="op">+</span> <span class="fl">1520</span>, <span class="co"># ms</span></span>
+<span>    recording.folder <span class="op">=</span> <span class="va">demo_data</span>,</span>
+<span>    meta_data <span class="op">=</span> <span class="va">kilo4_metadata</span>, </span>
+<span>    max_spikes <span class="op">=</span> <span class="fl">1e4</span>,</span>
+<span>    min_spikes <span class="op">=</span> <span class="fl">1e2</span>,</span>
+<span>    min_trials <span class="op">=</span> <span class="fl">1e2</span>,</span>
+<span>    pure_trials_only <span class="op">=</span> <span class="cn">TRUE</span>, </span>
+<span>    good_cells_only <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>    stim_responsive_only <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>    verbose <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span>  <span class="op">)</span> </span></code></pre></div>
+<p>A path (such as <strong>demo_data</strong>) for the data must be
+passed to <a href="../reference/preprocess.kilo4.html">preprocess.kilo4</a>. Metadata
+(such as <strong>kilo4_metadata</strong>) is not necessary for the
+function to run. If left out, the preprocessed output will lack
+information about covariates.</p>
 <p>In addition to the start and stop times and pointers to the data, <a href="../reference/preprocess.kilo4.html">preprocess.kilo4</a> has three
 Boolean variables controlling the quality of clusters extracted for
 further analysis:</p>
@@ -275,15 +278,15 @@ parsing.</p>
 Raster format
 </h3>
 <p>The output of <a href="../reference/preprocess.kilo4.html">preprocess.kilo4</a>, in this
-case <strong>spike.rasters.kilo4</strong>, is a list with three
-elements: <strong>spikes</strong>, <strong>timeXtrial</strong>, and
+case <strong>spike.rasters</strong>, is a list with three elements:
+<strong>spikes</strong>, <strong>timeXtrial</strong>, and
 <strong>cluster.key</strong>. The first element,
-<strong>spikes</strong>, is a single dataframe giving a sparse
-representation of the spike rasters (plus covariates) from all
-recordings. Each row is a spike, with columns giving information such as
-cell number, time, and genotype.</p>
+<strong>spikes</strong>, is a single dataframe giving a compact
+spike-indexed representation of the spike rasters (plus covariates) from
+all recordings. Each row is a spike, with columns giving information
+such as cell number, time, and genotype.</p>
 <div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">spike.rasters.kilo4</span><span class="op">$</span><span class="va">spikes</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">spike.rasters</span><span class="op">$</span><span class="va">spikes</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">##      trial   sample cell time_in_ms      recording_name cluster hemi  genotype age sex</span></span>
 <span><span class="co">## 3767     1 6881.530    1   503.2369 2025-04-05_11-50-43      17   RH Mecp2 HET P64   F</span></span>
 <span><span class="co">## 3768     1 6884.632    2   506.3389 2025-04-05_11-50-43      34   RH Mecp2 HET P64   F</span></span>
@@ -295,12 +298,13 @@ cell number, time, and genotype.</p>
 matrices, one per cell, with rows corresponding to time bins and columns
 to trials. Each entry is a binary indicator of whether the cell fired in
 that time bin during that trial. Thus, <strong>timeXtrial</strong>
-contains the rasters of <strong>spikes</strong> in a verbose format.</p>
+contains the rasters of <strong>spikes</strong> in a verbose
+time-indexed format.</p>
 <p>The third element, <strong>cluster.key</strong>, is a dataframe with
 rows representing clusters (i.e., “cells”) and columns giving
 information such as cell number, genotype, and number of spikes.</p>
 <div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">spike.rasters.kilo4</span><span class="op">$</span><span class="va">cluster.key</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">spike.rasters</span><span class="op">$</span><span class="va">cluster.key</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">##        recording.name cell cluster num.of.spikes num.of.responsive.trials hemi  genotype age sex</span></span>
 <span><span class="co">## 1 2025-04-05_11-50-43    1      17          1869                      337   RH Mecp2 HET P64   F</span></span>
 <span><span class="co">## 2 2025-04-05_11-50-43    2      34          1457                      271   RH Mecp2 HET P64   F</span></span>
@@ -315,46 +319,19 @@ Cluster summary
 <strong>cluster.key</strong>. For example, how many cells were included
 in the output?</p>
 <div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">n_cells</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">spike.rasters.kilo4</span><span class="op">$</span><span class="va">cluster.key</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="va">n_cells</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">spike.rasters</span><span class="op">$</span><span class="va">cluster.key</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Number of cells included:"</span>, <span class="va">n_cells</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## Number of cells included: 37</span></span></code></pre>
 <p>The number of cells and summary statistics, such as mean spike and
-trial count, can be pulled for each covariate combination as well:</p>
+trial count, can be pulled for each covariate combination with the
+function <a href="../reference/summarize.cluster.key.html">summarize.cluster.key</a>.</p>
 <div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Get all combinations of covariates</span></span>
-<span><span class="va">covariate_combos</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/expand.grid.html" class="external-link">expand.grid</a></span><span class="op">(</span></span>
-<span>  genotype <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/unique.html" class="external-link">unique</a></span><span class="op">(</span><span class="va">spike.rasters.kilo4</span><span class="op">$</span><span class="va">cluster.key</span><span class="op">$</span><span class="va">genotype</span><span class="op">)</span>,</span>
-<span>  hemi <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/unique.html" class="external-link">unique</a></span><span class="op">(</span><span class="va">spike.rasters.kilo4</span><span class="op">$</span><span class="va">cluster.key</span><span class="op">$</span><span class="va">hemi</span><span class="op">)</span>,</span>
-<span>  sex <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/unique.html" class="external-link">unique</a></span><span class="op">(</span><span class="va">spike.rasters.kilo4</span><span class="op">$</span><span class="va">cluster.key</span><span class="op">$</span><span class="va">sex</span><span class="op">)</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Initialize variables to hold summary stats</span></span>
-<span><span class="va">n_cells</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="cn">NA</span>, <span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">covariate_combos</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="va">mean_spikes</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="cn">NA</span>, <span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">covariate_combos</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="va">mean_trials</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="cn">NA</span>, <span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">covariate_combos</span><span class="op">)</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Loop through combinations and get summary stats</span></span>
-<span><span class="kw">for</span> <span class="op">(</span><span class="va">cv</span> <span class="kw">in</span> <span class="fl">1</span><span class="op">:</span><span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">covariate_combos</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
-<span>  <span class="co"># Get combination of covariates</span></span>
-<span>  <span class="va">combo</span> <span class="op">&lt;-</span> <span class="va">covariate_combos</span><span class="op">[</span><span class="va">cv</span>, <span class="op">]</span></span>
-<span>  </span>
-<span>  <span class="co"># Subset cluster.key for this combination</span></span>
-<span>  <span class="va">subset_key</span> <span class="op">&lt;-</span> <span class="va">spike.rasters.kilo4</span><span class="op">$</span><span class="va">cluster.key</span><span class="op">[</span></span>
-<span>    <span class="va">spike.rasters.kilo4</span><span class="op">$</span><span class="va">cluster.key</span><span class="op">$</span><span class="va">genotype</span> <span class="op">==</span> <span class="va">combo</span><span class="op">$</span><span class="va">genotype</span> <span class="op">&amp;</span></span>
-<span>    <span class="va">spike.rasters.kilo4</span><span class="op">$</span><span class="va">cluster.key</span><span class="op">$</span><span class="va">hemi</span> <span class="op">==</span> <span class="va">combo</span><span class="op">$</span><span class="va">hemi</span> <span class="op">&amp;</span></span>
-<span>    <span class="va">spike.rasters.kilo4</span><span class="op">$</span><span class="va">cluster.key</span><span class="op">$</span><span class="va">sex</span> <span class="op">==</span> <span class="va">combo</span><span class="op">$</span><span class="va">sex</span>, </span>
-<span>  <span class="op">]</span></span>
-<span>  </span>
-<span>  <span class="co"># If any cells in this combination, compute and save stats</span></span>
-<span>  <span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">subset_key</span><span class="op">)</span> <span class="op">&gt;</span> <span class="fl">0</span><span class="op">)</span> <span class="op">{</span></span>
-<span>    <span class="va">n_cells</span><span class="op">[</span><span class="va">cv</span><span class="op">]</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">subset_key</span><span class="op">)</span></span>
-<span>    <span class="va">mean_spikes</span><span class="op">[</span><span class="va">cv</span><span class="op">]</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/mean.html" class="external-link">mean</a></span><span class="op">(</span><span class="va">subset_key</span><span class="op">$</span><span class="va">num.of.spikes</span><span class="op">)</span>,<span class="fl">1</span><span class="op">)</span></span>
-<span>    <span class="va">mean_trials</span><span class="op">[</span><span class="va">cv</span><span class="op">]</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/mean.html" class="external-link">mean</a></span><span class="op">(</span><span class="va">subset_key</span><span class="op">$</span><span class="va">num.of.responsive.trials</span><span class="op">)</span>,<span class="fl">1</span><span class="op">)</span></span>
-<span>  <span class="op">}</span></span>
-<span><span class="op">}</span></span>
-<span></span>
-<span><span class="co"># Print results </span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span><span class="va">covariate_combos</span>, <span class="va">n_cells</span>, <span class="va">mean_spikes</span>, <span class="va">mean_trials</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="co"># Print results </span></span>
+<span><span class="va">covariate_summary</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/summarize.cluster.key.html">summarize.cluster.key</a></span><span class="op">(</span></span>
+<span>    key <span class="op">=</span> <span class="va">spike.rasters</span><span class="op">$</span><span class="va">cluster.key</span>, </span>
+<span>    covariate_list <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"genotype"</span>, <span class="st">"hemi"</span>, <span class="st">"sex"</span><span class="op">)</span></span>
+<span>  <span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">covariate_summary</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">##     genotype hemi sex n_cells mean_spikes mean_trials</span></span>
 <span><span class="co">## 1  Mecp2 HET   RH   F      26      1946.9       324.2</span></span>
 <span><span class="co">## 2  Shank3 KO   RH   F      NA          NA          NA</span></span>
@@ -372,7 +349,7 @@ trial count, can be pulled for each covariate combination as well:</p>
 females passed the quality control, with none from males or the left
 hemisphere. For Shank3 KO mice, 9 clusters passed from the left
 hemisphere of males and 1 from the left hemisphere of females, with none
-from the right hemisphere. For C57 (wild-type) mice, 1 cluster passed
+from the right hemisphere. For C57 (wildtype) mice, 1 cluster passed
 from the left hemisphere of females, with none from males or the right
 hemisphere.</p>
 <h2>
@@ -385,236 +362,222 @@ package, <strong>neuron</strong>. This function will convert all
 clusters appearing in the raster into individual <strong>neuron</strong>
 objects and return them in a list.</p>
 <div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">neurons.kilo4</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/load.rasters.as.neurons.html">load.rasters.as.neurons</a></span><span class="op">(</span></span>
-<span>  <span class="va">spike.rasters.kilo4</span><span class="op">$</span><span class="va">spikes</span>, </span>
-<span>  sample_rt <span class="op">=</span> <span class="fl">1e3</span></span>
+<code class="sourceCode R"><span><span class="va">neurons</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/load.rasters.as.neurons.html">load.rasters.as.neurons</a></span><span class="op">(</span></span>
+<span>    <span class="va">spike.rasters</span><span class="op">$</span><span class="va">spikes</span>, </span>
+<span>    bin_size <span class="op">=</span> <span class="fl">10.0</span>,</span>
+<span>    sample_rt <span class="op">=</span> <span class="fl">1e3</span></span>
 <span>  <span class="op">)</span></span></code></pre></div>
-<p>Class <strong>neuron</strong> comes with built-in methods for
-plotting rasters, plotting autocorrelation, and estimating
-autocorrelation parameters with dichotomized Gaussian simulations.</p>
+<p>The <strong>neuron</strong> object class is native to C++ and
+integrated into neurons (an R package) via Rcpp. It comes with built-in
+methods for many tasks, such as estimating autocorrelation parameters
+with dichotomized Gaussian simulations. Some of these methods can be
+accessed through R, but neurons provides R-native wrappers for the most
+useful ones. The neurons package also provides native R functions for
+plotting.</p>
 <h3>
 Visualizing autocorrelation
 </h3>
-<p>For example, here is the raster from one cell:</p>
+<p>For example, here is the raster from one cell, plotted with the <a href="../reference/plot.raster.html">plot.raster</a> function:</p>
 <div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">example_cell_high_autocor</span> <span class="op">&lt;-</span> <span class="fl">25</span></span>
-<span><span class="va">example_raster_high_autocor</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/plot-raster.html">plot.raster</a></span><span class="op">(</span><span class="va">neurons.kilo4</span><span class="op">[[</span><span class="va">example_cell_high_autocor</span><span class="op">]</span><span class="op">]</span><span class="op">)</span> </span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">example_raster_high_autocor</span><span class="op">)</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="va">cell_high</span> <span class="op">&lt;-</span> <span class="fl">25</span></span>
+<span><span class="fu"><a href="../reference/plot-raster.html">plot.raster</a></span><span class="op">(</span><span class="va">neurons</span><span class="op">[[</span><span class="va">cell_high</span><span class="op">]</span><span class="op">]</span><span class="op">)</span> </span></code></pre></div>
 <p><img src="tutorial_tau_est_kilosort_files/figure-html/plot_raster_high_autocor-1.png" width="700"></p>
 <p>This cell exhibits high autocorrelation, as can be seen by the long
-horizontal bursts or “streaks” of spikes. Contrast this raster with one
-from a cell with low autocorrelation:</p>
+horizontal streaks of spikes. Contrast this raster with one from a cell
+with low autocorrelation:</p>
 <div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">example_cell_low_autocor</span> <span class="op">&lt;-</span> <span class="fl">17</span></span>
-<span><span class="va">example_raster_low_autocor</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/plot-raster.html">plot.raster</a></span><span class="op">(</span><span class="va">neurons.kilo4</span><span class="op">[[</span><span class="va">example_cell_low_autocor</span><span class="op">]</span><span class="op">]</span><span class="op">)</span> </span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">example_raster_low_autocor</span><span class="op">)</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="va">cell_low</span> <span class="op">&lt;-</span> <span class="fl">13</span></span>
+<span><span class="fu"><a href="../reference/plot-raster.html">plot.raster</a></span><span class="op">(</span><span class="va">neurons</span><span class="op">[[</span><span class="va">cell_low</span><span class="op">]</span><span class="op">]</span><span class="op">)</span> </span></code></pre></div>
 <p><img src="tutorial_tau_est_kilosort_files/figure-html/plot_raster_low_autocor-1.png" width="700"></p>
 <p>Notice how the raster for this cell shows more randomly scattered
-spikes, with fewer (almost no) long streaks. The “streaks” absent here,
+spikes, with fewer (almost no) long streaks. The streaks absent here,
 but present in the previous raster, are a manifestation of
 autocorrelation, i.e., the tendency of a spike now to increase the
 probability of a spike later.</p>
 <h3>
-Quantifying autocorrelation
+Empirical autocorrelation and exponential decay fits
 </h3>
 <p>Beyond visualizing it as streaks in a raster, autocorrelation can be
-quantified both by computing the correlation between spikes separated by
-different lag times, and by fitting an exponential decay model to those
-spike correlations. Methods for class <strong>neuron</strong> can be
-used to <a href="tutorial_tau_est_DG.html">compute autocorrelation and
-fit the exponential decay model</a>. Here, for example, these methods
-are used to quantify autocorrelation for the high and
-low-autocorrelation example cells above:</p>
+quantified both by using the raster data to compute the empirical
+correlation between spikes separated by different lag times (empirical
+autocorrelation), and by fitting an exponential decay model to those
+empirically estimated spike correlations. The empirical autocorrelation
+can be computed with centering-and-normalization (i.e., Pearson
+correlation), or without (i.e., raw correlation). The <a href="tutorial_tau_est_DG.html">tutorial on estimating network time
+constants</a> provides a comparison between empirical vs population
+autocorrelation, and Pearson vs raw autocorrelation. The class
+<strong>neuron</strong> provides a method for computing both versions of
+empirical autocorrelation, and the neurons package provides a wrapper <a href="../reference/compute.autocorr.html">compute.autocorr</a> with
+default parameters to access it. Similarly, there is a method and
+corresponding wrapper <a href="../reference/fit.edf.autocorr.html">fit.edf.autocorr</a> for
+fitting a decay model to the empirical estimate. Here, for example,
+these wrappers applied to the above cells:</p>
 <div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Compute autocorrelation for example cell, high autocorrelation</span></span>
-<span><span class="va">neurons.kilo4</span><span class="op">[[</span><span class="va">example_cell_high_autocor</span><span class="op">]</span><span class="op">]</span><span class="op">$</span><span class="fu">compute_autocorrelation</span><span class="op">(</span><span class="st">"sum"</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="co"># High autocorrelation cell</span></span>
+<span><span class="fu"><a href="../reference/compute.autocorr.html">compute.autocorr</a></span><span class="op">(</span><span class="va">neurons</span><span class="op">[[</span><span class="va">cell_high</span><span class="op">]</span><span class="op">]</span><span class="op">)</span></span>
+<span><span class="fu"><a href="../reference/fit.edf.autocorr.html">fit.edf.autocorr</a></span><span class="op">(</span><span class="va">neurons</span><span class="op">[[</span><span class="va">cell_high</span><span class="op">]</span><span class="op">]</span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Fit exponential decay model to autocorrelation to estimate the network time constant (tau)</span></span>
-<span><span class="va">neurons.kilo4</span><span class="op">[[</span><span class="va">example_cell_high_autocor</span><span class="op">]</span><span class="op">]</span><span class="op">$</span><span class="fu">set_edf_initials</span><span class="op">(</span><span class="fl">0.001</span>, <span class="fl">1.0</span><span class="op">)</span></span>
-<span><span class="va">neurons.kilo4</span><span class="op">[[</span><span class="va">example_cell_high_autocor</span><span class="op">]</span><span class="op">]</span><span class="op">$</span><span class="fu">set_edf_termination</span><span class="op">(</span><span class="fl">1e-8</span>, <span class="fl">1000</span><span class="op">)</span></span>
-<span><span class="va">neurons.kilo4</span><span class="op">[[</span><span class="va">example_cell_high_autocor</span><span class="op">]</span><span class="op">]</span><span class="op">$</span><span class="fu">fit_autocorrelation</span><span class="op">(</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Compute autocorrelation for example cell, low autocorrelation</span></span>
-<span><span class="va">neurons.kilo4</span><span class="op">[[</span><span class="va">example_cell_low_autocor</span><span class="op">]</span><span class="op">]</span><span class="op">$</span><span class="fu">compute_autocorrelation</span><span class="op">(</span><span class="st">"sum"</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Fit exponential decay model to autocorrelation to estimate the network time constant (tau)</span></span>
-<span><span class="va">neurons.kilo4</span><span class="op">[[</span><span class="va">example_cell_low_autocor</span><span class="op">]</span><span class="op">]</span><span class="op">$</span><span class="fu">set_edf_initials</span><span class="op">(</span><span class="fl">0.001</span>, <span class="fl">1.0</span><span class="op">)</span></span>
-<span><span class="va">neurons.kilo4</span><span class="op">[[</span><span class="va">example_cell_low_autocor</span><span class="op">]</span><span class="op">]</span><span class="op">$</span><span class="fu">set_edf_termination</span><span class="op">(</span><span class="fl">1e-8</span>, <span class="fl">1000</span><span class="op">)</span></span>
-<span><span class="va">neurons.kilo4</span><span class="op">[[</span><span class="va">example_cell_low_autocor</span><span class="op">]</span><span class="op">]</span><span class="op">$</span><span class="fu">fit_autocorrelation</span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
-<p>The results can be visualized by plotting both the computed
-autocorrelation and fitted exponential decay in autocorrelation. Here is
-the high-autocorrelation cell:</p>
+<span><span class="co"># Low autocorrelation cell</span></span>
+<span><span class="fu"><a href="../reference/compute.autocorr.html">compute.autocorr</a></span><span class="op">(</span><span class="va">neurons</span><span class="op">[[</span><span class="va">cell_low</span><span class="op">]</span><span class="op">]</span><span class="op">)</span></span>
+<span><span class="fu"><a href="../reference/fit.edf.autocorr.html">fit.edf.autocorr</a></span><span class="op">(</span><span class="va">neurons</span><span class="op">[[</span><span class="va">cell_low</span><span class="op">]</span><span class="op">]</span><span class="op">)</span></span></code></pre></div>
+<p>The results can be visualized by using the <a href="../reference/plot.autocorrelation.html">plot.autocorrelation</a>
+function to plot both the computed empirical autocorrelation and fitted
+exponential decay in empirical autocorrelation. Here is the
+high-autocorrelation cell:</p>
 <div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Plot computed autocorrelation and fitted exponential decay</span></span>
-<span><span class="va">example_autocor_high_autocor</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/plot-autocorrelation.html">plot.autocorrelation</a></span><span class="op">(</span><span class="va">neurons.kilo4</span><span class="op">[[</span><span class="va">example_cell_high_autocor</span><span class="op">]</span><span class="op">]</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">example_autocor_high_autocor</span><span class="op">)</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/plot-autocorrelation.html">plot.autocorrelation</a></span><span class="op">(</span><span class="va">neurons</span><span class="op">[[</span><span class="va">cell_high</span><span class="op">]</span><span class="op">]</span><span class="op">)</span></span></code></pre></div>
 <p><img src="tutorial_tau_est_kilosort_files/figure-html/plot_autocor_high-1.png" width="700"></p>
 <p>Here is the plot for the low-autocorrelation cell:</p>
 <div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Plot computed autocorrelation and fitted exponential decay</span></span>
-<span><span class="va">example_autocor_low_autocor</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/plot-autocorrelation.html">plot.autocorrelation</a></span><span class="op">(</span><span class="va">neurons.kilo4</span><span class="op">[[</span><span class="va">example_cell_low_autocor</span><span class="op">]</span><span class="op">]</span><span class="op">)</span> </span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">example_autocor_low_autocor</span><span class="op">)</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/plot-autocorrelation.html">plot.autocorrelation</a></span><span class="op">(</span><span class="va">neurons</span><span class="op">[[</span><span class="va">cell_low</span><span class="op">]</span><span class="op">]</span><span class="op">)</span> </span></code></pre></div>
 <p><img src="tutorial_tau_est_kilosort_files/figure-html/plot_autocor_low-1.png" width="700"></p>
-<p>The parameters of the exponential decay fit provide succinct
-quantification of the autocorrelation.</p>
+<p>The parameters of the exponential decay fit can be fetched directly
+with a neuron method and provide succinct quantification of the
+empirical autocorrelation.</p>
 <div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Fetch and print estimated exponential decay parameters</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">neurons.kilo4</span><span class="op">[[</span><span class="va">example_cell_high_autocor</span><span class="op">]</span><span class="op">]</span><span class="op">$</span><span class="fu">fetch_EDF_parameters</span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="co"># Fetch and print exponential decay parameters</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">neurons</span><span class="op">[[</span><span class="va">cell_high</span><span class="op">]</span><span class="op">]</span><span class="op">$</span><span class="fu">fetch_EDF_parameters</span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">##            A          tau    bias_term </span></span>
-<span><span class="co">## 6.805267e-02 1.286405e+02 4.928898e-03</span></span></code></pre>
+<span><span class="co">## 2.964153e-02 1.158360e+02 1.232224e-03</span></span></code></pre>
 <div class="sourceCode" id="cb24"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Fetch and print estimated exponential decay parameters</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">neurons.kilo4</span><span class="op">[[</span><span class="va">example_cell_low_autocor</span><span class="op">]</span><span class="op">]</span><span class="op">$</span><span class="fu">fetch_EDF_parameters</span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="co"># Fetch and print exponential decay parameters</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">neurons</span><span class="op">[[</span><span class="va">cell_low</span><span class="op">]</span><span class="op">]</span><span class="op">$</span><span class="fu">fetch_EDF_parameters</span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">##            A          tau    bias_term </span></span>
-<span><span class="co">## 1.746771e-03 1.999999e+01 1.083694e-04</span></span></code></pre>
-<p>The amplitude, <b>A</b>, gives the autocorrelation at lag time 1
-(minus the bias), while the time constant,
+<span><span class="co">## 3.905183e-03 4.372462e+01 2.723004e-05</span></span></code></pre>
+<p>The amplitude,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>A</mi><annotation encoding="application/x-tex">A</annotation></semantics></math>,
+gives the autocorrelation at lag time 1 (minus the bias), while the time
+constant,
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>τ</mi><annotation encoding="application/x-tex">\tau</annotation></semantics></math>
 (tau), gives the rate of decay in autocorrelation as lag time increases.
-Notice how the high-autocorrelation cell has a time constant of 129ms
-and an amplitude of 0.068, while the low-autocorrelation cell has a time
-constant of only 20ms and an amplitude of 0.0017.</p>
+Notice how the high-autocorrelation cell has a time constant of 115.8ms
+and an amplitude of 0.03, while the low-autocorrelation cell has a time
+constant of only 43.7ms and an amplitude of 0.004.</p>
 <p>In practice, the individual steps shown above do not need to be run
 with separate method calls. The neurons package provides a function, <a href="../reference/process.autocorr.html">process.autocorr</a>, which
-does all of these steps in one call for a list of neurons.</p>
+does all of these steps in one call for a list of neurons. Here is the
+function run on the current set of neurons, with full print out of
+results:</p>
 <div class="sourceCode" id="cb26"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">autocor.results.batch</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/process.autocorr.html">process.autocorr</a></span><span class="op">(</span><span class="va">neurons.kilo4</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">autocor.results.batch</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">##       cell   lambda_ms lambda_bin           A      tau   bias_term   autocorr1 max_autocorr mean_autocorr min_autocorr</span></span>
-<span><span class="co">## 1 neuron_1 0.002458518 0.04917037 0.009997882 174.7406 0.002417725 0.012415607  0.011334353   0.003516828  0.002419595</span></span>
-<span><span class="co">## 2 neuron_2 0.001918199 0.03836398 0.004511493 922.3873 0.001471795 0.005983288  0.005886519   0.003676336  0.002359082</span></span>
-<span><span class="co">## 3 neuron_3 0.003054323 0.06108645 0.018586266 196.5760 0.003731555 0.022317820  0.020519836   0.006044366  0.003740575</span></span>
-<span><span class="co">## 4 neuron_4 0.003245878 0.06491756 0.012340709 235.3328 0.004214290 0.016554999  0.015549541   0.006066136  0.004235336</span></span>
-<span><span class="co">## 5 neuron_5 0.005471888 0.10943775 0.052871964 146.0485 0.011976621 0.064848585  0.058082129   0.016779932  0.011978453</span></span>
-<span><span class="co">## 6 neuron_6 0.002979021 0.05958043 0.012647728 167.1534 0.003549827 0.016197555  0.014771276   0.004876429  0.003551430</span></span></code></pre>
+<code class="sourceCode R"><span><span class="va">autocor.results.batch</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/process.autocorr.html">process.autocorr</a></span><span class="op">(</span><span class="va">neurons</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">autocor.results.batch</span><span class="op">)</span></span></code></pre></div>
+<pre><code><span><span class="co">##         cell    lambda_ms  lambda_bin           A       tau    bias_term   autocorr1 max_autocorr mean_autocorr min_autocorr</span></span>
+<span><span class="co">## 1   neuron_1 0.0024585183 0.024585183 0.012067056  71.37481 6.044312e-04 0.012671487  0.011093920  1.135793e-03 6.044312e-04</span></span>
+<span><span class="co">## 2   neuron_2 0.0019181991 0.019181991 0.009126643  71.81541 3.679488e-04 0.009494591  0.008308256  7.724912e-04 3.679488e-04</span></span>
+<span><span class="co">## 3   neuron_3 0.0030543226 0.030543226 0.017661381  82.14318 9.328886e-04 0.018594270  0.016569917  1.836363e-03 9.328888e-04</span></span>
+<span><span class="co">## 4   neuron_4 0.0032458782 0.032458782 0.014882406  78.08601 1.053573e-03 0.015935978  0.014147071  1.774952e-03 1.053573e-03</span></span>
+<span><span class="co">## 5   neuron_5 0.0054718876 0.054718876 0.051488330  70.30392 2.994155e-03 0.054482485  0.047655824  5.224944e-03 2.994155e-03</span></span>
+<span><span class="co">## 6   neuron_6 0.0029790213 0.029790213 0.016326248  67.27314 8.874568e-04 0.017213705  0.014958604  1.562098e-03 8.874568e-04</span></span>
+<span><span class="co">## 7   neuron_7 0.0018270450 0.018270450 0.009625929  54.83363 3.338094e-04 0.009959738  0.008355030  6.524564e-04 3.338094e-04</span></span>
+<span><span class="co">## 8   neuron_8 0.0010396851 0.010396851 0.005687176  52.10008 1.080945e-04 0.005795270  0.004802049  2.860916e-04 1.080945e-04</span></span>
+<span><span class="co">## 9   neuron_9 0.0010211900 0.010211900 0.005913492  41.77791 1.042829e-04 0.006017775  0.004758974  2.490937e-04 1.042829e-04</span></span>
+<span><span class="co">## 10 neuron_10 0.0016103889 0.016103889 0.014570541  62.30812 2.593352e-04 0.014829876  0.012669415  8.136122e-04 2.593352e-04</span></span>
+<span><span class="co">## 11 neuron_11 0.0026712112 0.026712112 0.021281033  63.47338 7.135369e-04 0.021994570  0.018892587  1.539475e-03 7.135369e-04</span></span>
+<span><span class="co">## 12 neuron_12 0.0013210738 0.013210738 0.007725894  50.53494 1.745236e-04 0.007900418  0.006513357  4.083457e-04 1.745236e-04</span></span>
+<span><span class="co">## 13 neuron_13 0.0005218241 0.005218241 0.003895074  43.85586 2.723004e-05 0.003922304  0.003128132  1.279492e-04 2.723004e-05</span></span>
+<span><span class="co">## 14 neuron_14 0.0024981505 0.024981505 0.014975372  73.06438 6.240756e-04 0.015599447  0.013683909  1.300233e-03 6.240756e-04</span></span>
+<span><span class="co">## 15 neuron_15 0.0022260093 0.022260093 0.012395822  51.39499 4.955117e-04 0.012891334  0.010699595  8.777055e-04 4.955117e-04</span></span>
+<span><span class="co">## 16 neuron_16 0.0014452547 0.014452547 0.007919662  65.81665 2.088761e-04 0.008128538  0.007012199  5.285116e-04 2.088761e-04</span></span>
+<span><span class="co">## 17 neuron_17 0.0005205031 0.005205031 0.003349648  38.79900 2.709234e-05 0.003376740  0.002615691  1.025449e-04 2.709234e-05</span></span>
+<span><span class="co">## 18 neuron_18 0.0003428466 0.003428466 0.002381807  46.68868 1.175438e-05 0.002393561  0.001934347  7.779356e-05 1.175438e-05</span></span>
+<span><span class="co">## 19 neuron_19 0.0028243686 0.028243686 0.015334620  54.90906 7.977058e-04 0.016132326  0.013579141  1.306092e-03 7.977058e-04</span></span>
+<span><span class="co">## 20 neuron_20 0.0097370831 0.097370831 0.183868550  67.43091 9.481079e-03 0.193349629  0.168007480  1.709816e-02 9.481079e-03</span></span>
+<span><span class="co">## 21 neuron_21 0.0037618084 0.037618084 0.019044673  65.60016 1.415120e-03 0.020459793  0.017767096  2.181033e-03 1.415120e-03</span></span>
+<span><span class="co">## 22 neuron_22 0.0029291980 0.029291980 0.016251169  55.81145 8.580201e-04 0.017109189  0.014443345  1.406477e-03 8.580201e-04</span></span>
+<span><span class="co">## 23 neuron_23 0.0029316079 0.029316079 0.015822961  53.68204 8.594325e-04 0.016682393  0.013993114  1.371187e-03 8.594325e-04</span></span>
+<span><span class="co">## 24 neuron_24 0.0023243204 0.023243204 0.012832226  50.58105 5.402465e-04 0.013372472  0.011070550  9.290009e-04 5.402465e-04</span></span>
+<span><span class="co">## 25 neuron_25 0.0035103055 0.035103055 0.029635859 115.86011 1.232224e-03 0.030868083  0.028417462  3.409416e-03 1.232289e-03</span></span>
+<span><span class="co">## 26 neuron_26 0.0007680539 0.007680539 0.005998158  47.10189 5.899067e-05 0.006057149  0.004909805  2.269338e-04 5.899067e-05</span></span>
+<span><span class="co">## 27 neuron_27 0.0011435273 0.011435273 0.007461278  42.19250 1.307655e-04 0.007592044  0.006017596  3.155177e-04 1.307655e-04</span></span>
+<span><span class="co">## 28 neuron_28 0.0073308271 0.073308271 0.059564650  58.66356 5.374103e-03 0.064938752  0.055603412  7.496559e-03 5.374103e-03</span></span>
+<span><span class="co">## 29 neuron_29 0.0006677551 0.006677551 0.004077727  44.61683 4.458969e-05 0.004122316  0.003303552  1.527947e-04 4.458969e-05</span></span>
+<span><span class="co">## 30 neuron_30 0.0008235027 0.008235027 0.005074560  40.20276 6.781567e-05 0.005142376  0.004024873  1.868152e-04 6.781567e-05</span></span>
+<span><span class="co">## 31 neuron_31 0.0006843066 0.006843066 0.004334425  39.62114 4.682755e-05 0.004381253  0.003414421  1.468099e-04 4.682755e-05</span></span>
+<span><span class="co">## 32 neuron_32 0.0014070303 0.014070303 0.008488876  54.52572 1.979734e-04 0.008686849  0.007264414  4.772545e-04 1.979734e-04</span></span>
+<span><span class="co">## 33 neuron_33 0.0006434355 0.006434355 0.004149423  35.74107 4.140093e-05 0.004190824  0.003178125  1.265161e-04 4.140093e-05</span></span>
+<span><span class="co">## 34 neuron_34 0.0010196155 0.010196155 0.006513936  41.99332 1.039616e-04 0.006617898  0.005237581  2.644010e-04 1.039616e-04</span></span>
+<span><span class="co">## 35 neuron_35 0.0019766477 0.019766477 0.015101218  69.92589 3.907136e-04 0.015491932  0.013479644  1.041216e-03 3.907136e-04</span></span>
+<span><span class="co">## 36 neuron_36 0.0006286167 0.006286167 0.004018344  44.35807 3.951590e-05 0.004057860  0.003246823  1.447533e-04 3.951590e-05</span></span>
+<span><span class="co">## 37 neuron_37 0.0037323984 0.037323984 0.020823406  42.25347 1.393080e-03 0.022216486  0.017828038  1.909535e-03 1.393080e-03</span></span></code></pre>
+<p>As the last neuron, number 37, is the only C57 sample, it should be
+removed before making any comparisons between genotypes.</p>
+<div class="sourceCode" id="cb28"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">neurons</span> <span class="op">&lt;-</span> <span class="va">neurons</span><span class="op">[</span><span class="op">-</span><span class="fl">37</span><span class="op">]</span></span></code></pre></div>
 <h2>
-Estimating autocorrelation
+Estimating population autocorrelation
 </h2>
 <p>Recall that the aim is to estimate the network time constant for
 covariates of interest, e.g.,
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>τ</mi><annotation encoding="application/x-tex">\tau</annotation></semantics></math>
-in the right vs left hemisphere of C57 (wild-type) mice, or
+in the right vs left hemisphere of C57 (wildtype) mice, or
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>τ</mi><annotation encoding="application/x-tex">\tau</annotation></semantics></math>
-in the right hemisphere of C57 vs Shank3 KO mice. At first glance, the
-output of <a href="../reference/process.autocorr.html">process.autocorr</a> appears
-to provide all that’s needed for this statistical analysis. Why not
-simply take the
+in the right hemisphere of C57 vs Shank3 KO mice. That is, the aim is
+not only to compute the empirical autocorrelation of a finite sample,
+but to estimate population values. At first glance, the output of <a href="../reference/process.autocorr.html">process.autocorr</a> appears
+to provide all that’s needed for this estimation. Why not simply take
+the covariate means of the
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>τ</mi><annotation encoding="application/x-tex">\tau</annotation></semantics></math>
-estimates listed in the output of <a href="../reference/process.autocorr.html">process.autocorr</a> and run
-an ANOVA?</p>
-<h3>
-The problem
-</h3>
-<p>The problem is that recurrence is very noisy, the amount of data
-available from which to extract a signal through all that noise is
-relatively low, and
+values listed in the output of <a href="../reference/process.autocorr.html">process.autocorr</a>? The
+problem is that recurrence is very noisy, the amount of data available
+from which to extract a signal through all that noise is low, and
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>τ</mi><annotation encoding="application/x-tex">\tau</annotation></semantics></math>
-itself is an imperfect measure of the network time constant. To see the
-problem, consider the lone cluster from a C57 mouse in the demo data.
-Obviously a single data point is not enough to estimate the true value
-of a variable, but even this single data point is a highly unreliable
-estimate of the true network time constant of this one individual cell.
-Consider what happens when slightly different initial conditions are
-used in the fit of the exponential decay model. First, set the initial
-amplitude to 0.001 (the default value in neurons):</p>
-<div class="sourceCode" id="cb28"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Set cell number</span></span>
-<span><span class="va">C57_cell_num</span> <span class="op">&lt;-</span> <span class="fl">37</span></span>
-<span></span>
-<span><span class="co"># Fit exponential decay model to autocorrelation to estimate the network time constant (tau)</span></span>
-<span><span class="va">neurons.kilo4</span><span class="op">[[</span><span class="va">C57_cell_num</span><span class="op">]</span><span class="op">]</span><span class="op">$</span><span class="fu">set_edf_initials</span><span class="op">(</span><span class="fl">0.001</span>, <span class="fl">1.0</span><span class="op">)</span></span>
-<span><span class="va">neurons.kilo4</span><span class="op">[[</span><span class="va">C57_cell_num</span><span class="op">]</span><span class="op">]</span><span class="op">$</span><span class="fu">set_edf_termination</span><span class="op">(</span><span class="fl">1e-8</span>, <span class="fl">1000</span><span class="op">)</span></span>
-<span><span class="va">neurons.kilo4</span><span class="op">[[</span><span class="va">C57_cell_num</span><span class="op">]</span><span class="op">]</span><span class="op">$</span><span class="fu">fit_autocorrelation</span><span class="op">(</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Fetch and print estimated exponential decay parameters</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">neurons.kilo4</span><span class="op">[[</span><span class="va">C57_cell_num</span><span class="op">]</span><span class="op">]</span><span class="op">$</span><span class="fu">fetch_EDF_parameters</span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">##            A          tau    bias_term </span></span>
-<span><span class="co">## 3.440350e-03 2.832891e+02 5.572319e-03</span></span></code></pre>
-<p>With this initial condition,
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>τ</mi><annotation encoding="application/x-tex">\tau</annotation></semantics></math>
-is 283 ms. Now, set the initial amplitude to 0.01:</p>
-<div class="sourceCode" id="cb30"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Fit exponential decay model to autocorrelation to estimate the network time constant (tau)</span></span>
-<span><span class="va">neurons.kilo4</span><span class="op">[[</span><span class="va">C57_cell_num</span><span class="op">]</span><span class="op">]</span><span class="op">$</span><span class="fu">set_edf_initials</span><span class="op">(</span><span class="fl">0.01</span>, <span class="fl">1.0</span><span class="op">)</span></span>
-<span><span class="va">neurons.kilo4</span><span class="op">[[</span><span class="va">C57_cell_num</span><span class="op">]</span><span class="op">]</span><span class="op">$</span><span class="fu">set_edf_termination</span><span class="op">(</span><span class="fl">1e-8</span>, <span class="fl">1000</span><span class="op">)</span></span>
-<span><span class="va">neurons.kilo4</span><span class="op">[[</span><span class="va">C57_cell_num</span><span class="op">]</span><span class="op">]</span><span class="op">$</span><span class="fu">fit_autocorrelation</span><span class="op">(</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Fetch and print estimated exponential decay parameters</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">neurons.kilo4</span><span class="op">[[</span><span class="va">C57_cell_num</span><span class="op">]</span><span class="op">]</span><span class="op">$</span><span class="fu">fetch_EDF_parameters</span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">##           A         tau   bias_term </span></span>
-<span><span class="co">## 0.217103647 2.436476887 0.005572319</span></span></code></pre>
-<p>With this initial condition,
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>τ</mi><annotation encoding="application/x-tex">\tau</annotation></semantics></math>
-is now 2 ms. What’s happening?</p>
-<p>To get a grip on what drives these varying different estimates,
-consider the autocorrelation plot resulting from the second fit with a
-high initial amplitude and low
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>τ</mi><annotation encoding="application/x-tex">\tau</annotation></semantics></math>:</p>
-<div class="sourceCode" id="cb32"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">example_autocor_C57_low</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/plot-autocorrelation.html">plot.autocorrelation</a></span><span class="op">(</span><span class="va">neurons.kilo4</span><span class="op">[[</span><span class="va">C57_cell_num</span><span class="op">]</span><span class="op">]</span><span class="op">)</span> </span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">example_autocor_C57_low</span><span class="op">)</span></span></code></pre></div>
-<p><img src="tutorial_tau_est_kilosort_files/figure-html/fit_variability2_plot-1.png" width="700"></p>
-<p>Notice the blue line, which gives the computed autocorrelation as a
-function of lag. The exponential component of the blue line is clearly
-small, with its initial peak amplitude
+itself is an imperfect measure of the network time constant. For
+example, a relatively flat empirical autocorrelation curve is ambiguous
+between high
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>A</mi><annotation encoding="application/x-tex">A</annotation></semantics></math>
-only slightly larger than its baseline bias. Given the exponential decay
-model (the red line):</p>
-<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>y</mi><mo>=</mo><mi>A</mi><mo>*</mo><mo>exp</mo><mrow><mo stretchy="true" form="prefix">(</mo><mi>−</mi><mtext mathvariant="normal">lag</mtext><mi>/</mi><mi>τ</mi><mo stretchy="true" form="postfix">)</mo></mrow><mo>+</mo><mtext mathvariant="normal">bias</mtext></mrow><annotation encoding="application/x-tex">y = A * \exp(-\text{lag}/\tau) + \text{bias}</annotation></semantics></math></p>
-<p>this behavior can be accomodated in two ways: either neuron 37 has a
-low baseline autocorrelation that decays slowly (low
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>A</mi><annotation encoding="application/x-tex">A</annotation></semantics></math>,
-high
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>τ</mi><annotation encoding="application/x-tex">\tau</annotation></semantics></math>),
-or it has a high baseline autocorrelation that decays quickly (high
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>A</mi><annotation encoding="application/x-tex">A</annotation></semantics></math>,
-low
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>τ</mi><annotation encoding="application/x-tex">\tau</annotation></semantics></math>).
-These are the two solutions the optimization algorithm finds, depending
-on the initial conditions. The upshot is that the data is simply too
-noisy to decide between them. More generally, unless <em>both</em>
-autocorrelation and the network time constant are relatively high (e.g.,
-as with neuron 25 with
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>τ</mi><mo>=</mo><mn>129</mn></mrow><annotation encoding="application/x-tex">\tau=129</annotation></semantics></math>
-and
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>A</mi><mo>=</mo><mn>0.07</mn></mrow><annotation encoding="application/x-tex">A=0.07</annotation></semantics></math>),
-noise will quickly dominate and the estimated
+with low
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>τ</mi><annotation encoding="application/x-tex">\tau</annotation></semantics></math>
-will depend on initial conditions.</p>
+and low
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>A</mi><annotation encoding="application/x-tex">A</annotation></semantics></math>
+with high
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>τ</mi><annotation encoding="application/x-tex">\tau</annotation></semantics></math>.
+Similarly, empirical autocorrelation values are highly sensitive to
+relatively arbitrary choices in data processing, as discussed in the <a href="tutorial_tau_est_DG.html">tutorial on estimating network time
+constants</a>.</p>
 <h3>
 Dichotomized Gaussians
 </h3>
-<p>Thus, exponential decay fits to computed autocorrelation are often
-not reliable estimates of the network time constant, even for individual
-neurons. Any statistical method for estimating the group network time
-constant for a covariate of interest based on these unreliable
-individual estimates (e.g., bootstrapping) will only amplify the noise.
-The solution is to estimate the network time constant from simulations,
-not the observed data itself. Specifically, <a href="tutorial_tau_est_DG.html">Dichotomized Gaussians</a> can be used
-to generate simulated spike trains consistent with the observed data.
-The exponential decay model can be fit to each simulation, yielding a
-distribution of possible
+<p>Thus, exponential decay fits to computed empirical autocorrelation
+are often not reliable estimates of the network time constant, even for
+individual neurons. Any statistical method for estimating the population
+network time constant for a covariate of interest based on these
+unreliable individual estimates (e.g., bootstrapping) will only amplify
+the noise. The solution is to estimate the network time constant from
+simulations, not the observed data itself. Specifically, <a href="tutorial_tau_est_DG.html">dichotomized Gaussians</a> can be used
+to simulate spike trains consistent with the observed data. The function
+<a href="../reference/estimate.autocorr.params.html">estimate.autocorr.params</a>
+takes a list of neurons and:</p>
+<ol style="list-style-type: decimal">
+<li>Computes the empirical autocorrelation of each neuron.</li>
+<li>Fits an exponential decay model to that empirical
+autocorrelation.</li>
+<li>Generates many simulated spike trains (dichotomized Gaussians) based
+on the values predicted by the model of the empirical autocorrelation
+and the observed firing rate of the neuron.</li>
+<li>Computes the empirical autocorrelation of each simulated spike
+train.</li>
+<li>Fits an exponential decay model to the empirical autocorrelation of
+each simulated spike train.</li>
+</ol>
+<p>This procedure yields a distribution of possible
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>τ</mi><annotation encoding="application/x-tex">\tau</annotation></semantics></math>
 values for each neuron. For the purpose of speed, this tutorial runs
 only 100 simulations per neuron, but in practice, 1000 or more
 simulations should be run.</p>
-<div class="sourceCode" id="cb33"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># ... set number of sims to run per neuron</span></span>
-<span><span class="va">n_sims</span> <span class="op">&lt;-</span> <span class="fl">100</span></span>
-<span><span class="co"># ... set number of trials to simulate per neuron</span></span>
-<span><span class="va">n_trials</span> <span class="op">&lt;-</span> <span class="fl">500</span></span>
-<span><span class="co"># ... run estimates on data</span></span>
-<span><span class="va">autocor.ests.kilo4</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/estimate.autocorr.params.html">estimate.autocorr.params</a></span><span class="op">(</span></span>
-<span>  neuron_list <span class="op">=</span> <span class="va">neurons.kilo4</span>,</span>
-<span>  n_trials_per_sim <span class="op">=</span> <span class="va">n_trials</span>, </span>
-<span>  n_sims_per_neurons <span class="op">=</span> <span class="va">n_sims</span>, </span>
-<span>  bin_count_action <span class="op">=</span> <span class="st">"sum"</span>,</span>
-<span>  A0 <span class="op">=</span> <span class="fl">0.001</span>,</span>
-<span>  tau0 <span class="op">=</span> <span class="fl">1.0</span>,</span>
-<span>  ctol <span class="op">=</span> <span class="fl">1e-8</span>,</span>
-<span>  max_evals <span class="op">=</span> <span class="fl">500</span>,</span>
-<span>  verbose <span class="op">=</span> <span class="cn">FALSE</span></span>
-<span>  <span class="op">)</span></span></code></pre></div>
+<div class="sourceCode" id="cb29"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">autocor.ests</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/estimate.autocorr.params.html">estimate.autocorr.params</a></span><span class="op">(</span></span>
+<span>    neuron_list <span class="op">=</span> <span class="va">neurons</span>,</span>
+<span>    n_trials_per_sim <span class="op">=</span> <span class="fl">500</span>, </span>
+<span>    n_sims_per_neurons <span class="op">=</span> <span class="fl">100</span></span>
+<span>  <span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">autocor.ests</span><span class="op">$</span><span class="va">estimates</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<pre><code><span><span class="co">##    lambda_ms lambda_bin          A      tau    bias_term  autocorr1 max_autocorr mean_autocorr min_autocorr</span></span>
+<span><span class="co">## 1 0.01948684  0.1948684 0.01486577 58.24632 0.0003797370 0.01524550   0.01290035  0.0009053484 0.0003797370</span></span>
+<span><span class="co">## 2 0.02139474  0.2139474 0.01657849 62.59910 0.0004577348 0.01703623   0.01458857  0.0010915839 0.0004577348</span></span>
+<span><span class="co">## 3 0.01825000  0.1825000 0.01434228 58.70580 0.0003330625 0.01467534   0.01242901  0.0008445185 0.0003330625</span></span>
+<span><span class="co">## 4 0.01688158  0.1688158 0.01214002 68.21286 0.0002849877 0.01242500   0.01076958  0.0007941849 0.0002849877</span></span>
+<span><span class="co">## 5 0.01650000  0.1650000 0.01271856 59.68026 0.0002722500 0.01299081   0.01102867  0.0007339912 0.0002722500</span></span>
+<span><span class="co">## 6 0.01740789  0.1740789 0.01304315 54.17459 0.0003030348 0.01334619   0.01114772  0.0007291255 0.0003030348</span></span></code></pre>
 <p>With the simulations run, the final step is to estimate the network
 time constant for covariates of interest. The function <a href="../reference/analyze.autocorr.html">analyze.autocorr</a> does this
 by bootstrapping over the tau values obtained from the simulations. If
@@ -626,38 +589,40 @@ simulations have been run per neuron, then each bootstrap resample
 consists of the mean of
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>n</mi><annotation encoding="application/x-tex">n</annotation></semantics></math>
 draws with replacement from the pool of
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi><mi>m</mi></mrow><annotation encoding="application/x-tex">nm</annotation></semantics></math><math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>τ</mi><annotation encoding="application/x-tex">\tau</annotation></semantics></math>
-values. For this tutorial, 10k bootstrap resamples are used.</p>
-<div class="sourceCode" id="cb34"><pre class="downlit sourceCode r">
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi><mi>m</mi></mrow><annotation encoding="application/x-tex">nm</annotation></semantics></math>
+values for
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>τ</mi><annotation encoding="application/x-tex">\tau</annotation></semantics></math>.
+For this tutorial, 10k bootstrap resamples are used.</p>
+<div class="sourceCode" id="cb31"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Run analysis</span></span>
-<span><span class="va">autocorr_results</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/analyze.autocorr.html">analyze.autocorr</a></span><span class="op">(</span></span>
-<span>  <span class="va">autocor.ests.kilo4</span>,</span>
+<span><span class="va">autocor.results.bootstraps</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/analyze.autocorr.html">analyze.autocorr</a></span><span class="op">(</span></span>
+<span>  <span class="va">autocor.ests</span>,</span>
 <span>  covariate <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"hemi"</span>,<span class="st">"genotype"</span><span class="op">)</span>,</span>
 <span>  n_bs <span class="op">=</span> <span class="fl">1e4</span></span>
 <span><span class="op">)</span></span></code></pre></div>
 <p>The function <a href="../reference/analyze.autocorr.html">analyze.autocorr</a> returns a
-list with two objects. The first is <strong>resamples</strong>, a data
-frame holding the tau values for each covariate from each
+list with two objects. The first is <strong>resamples</strong>, a
+dataframe holding the tau values for each covariate from each
 simulation.</p>
-<div class="sourceCode" id="cb35"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">autocorr_results</span><span class="op">$</span><span class="va">resamples</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">##   RH_Mecp2 HET LH_Shank3 KO   LH_C57</span></span>
-<span><span class="co">## 1     25.04794    10.177543 117.9560</span></span>
-<span><span class="co">## 2     28.86232    16.646262 120.2335</span></span>
-<span><span class="co">## 3     30.15775     9.044957 123.9136</span></span>
-<span><span class="co">## 4     41.75591    17.323629 116.3069</span></span>
-<span><span class="co">## 5     33.58242    10.964003 115.5834</span></span>
-<span><span class="co">## 6     27.92527    10.291043 114.1699</span></span></code></pre>
+<div class="sourceCode" id="cb32"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">autocor.results.bootstraps</span><span class="op">$</span><span class="va">resamples</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<pre><code><span><span class="co">##   RH_Mecp2 HET LH_Shank3 KO</span></span>
+<span><span class="co">## 1     61.33279     60.74396</span></span>
+<span><span class="co">## 2     64.65464     60.19603</span></span>
+<span><span class="co">## 3     60.08000     60.14660</span></span>
+<span><span class="co">## 4     67.13821     60.24043</span></span>
+<span><span class="co">## 5     61.03050     62.86448</span></span>
+<span><span class="co">## 6     59.48968     63.56738</span></span></code></pre>
 <p>The second is <strong>distribution_plot</strong>, a ggplot2 object
 visualizing the bootstrap distributions of tau for each covariate.</p>
-<div class="sourceCode" id="cb37"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">autocorr_results</span><span class="op">$</span><span class="va">distribution_plot</span><span class="op">)</span></span></code></pre></div>
+<div class="sourceCode" id="cb34"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">autocor.results.bootstraps</span><span class="op">$</span><span class="va">distribution_plot</span><span class="op">)</span></span></code></pre></div>
 <p><img src="tutorial_tau_est_kilosort_files/figure-html/plot_distribution-1.png" width="700"></p>
 <h2>
 Code summary
 </h2>
 <p>The essential steps to run this analysis are as follows:</p>
-<div class="sourceCode" id="cb38"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb35"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Setup</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/rm.html" class="external-link">rm</a></span><span class="op">(</span>list <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/ls.html" class="external-link">ls</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">12345</span><span class="op">)</span> </span>
@@ -680,7 +645,7 @@ Code summary
 <span><span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">colnames</a></span><span class="op">(</span><span class="va">kilo4_metadata</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"hemi"</span>, <span class="st">"genotype"</span>, <span class="st">"age"</span>, <span class="st">"sex"</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Load data spike and stimulus data</span></span>
-<span><span class="va">spike.rasters.kilo4</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/preprocess.kilo4.html">preprocess.kilo4</a></span><span class="op">(</span></span>
+<span><span class="va">spike.rasters</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/preprocess.kilo4.html">preprocess.kilo4</a></span><span class="op">(</span></span>
 <span>  trial_time_start <span class="op">=</span> <span class="fl">500</span>,      <span class="co"># ms</span></span>
 <span>  trial_time_end <span class="op">=</span> <span class="fl">500</span> <span class="op">+</span> <span class="fl">1520</span>, <span class="co"># ms</span></span>
 <span>  recording.folder <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span></span>
@@ -699,31 +664,21 @@ Code summary
 <span><span class="op">)</span> </span>
 <span></span>
 <span><span class="co"># Make neurons</span></span>
-<span><span class="va">neurons.kilo4</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/load.rasters.as.neurons.html">load.rasters.as.neurons</a></span><span class="op">(</span></span>
-<span>  <span class="va">spike.rasters.kilo4</span><span class="op">$</span><span class="va">spikes</span>, </span>
+<span><span class="va">neurons</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/load.rasters.as.neurons.html">load.rasters.as.neurons</a></span><span class="op">(</span></span>
+<span>  <span class="va">spike.rasters</span><span class="op">$</span><span class="va">spikes</span>, </span>
 <span>  sample_rt <span class="op">=</span> <span class="fl">1e3</span></span>
 <span>  <span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Set number of sims to run per neuron</span></span>
-<span><span class="va">n_sims</span> <span class="op">&lt;-</span> <span class="fl">100</span></span>
-<span><span class="co"># Set number of trials to simulate per neuron</span></span>
-<span><span class="va">n_trials</span> <span class="op">&lt;-</span> <span class="fl">500</span></span>
-<span><span class="co"># Run estimates on data</span></span>
-<span><span class="va">autocor.ests.kilo4</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/estimate.autocorr.params.html">estimate.autocorr.params</a></span><span class="op">(</span></span>
-<span>  neuron_list <span class="op">=</span> <span class="va">neurons.kilo4</span>,</span>
-<span>  n_trials_per_sim <span class="op">=</span> <span class="va">n_trials</span>, </span>
-<span>  n_sims_per_neurons <span class="op">=</span> <span class="va">n_sims</span>, </span>
-<span>  bin_count_action <span class="op">=</span> <span class="st">"sum"</span>,</span>
-<span>  A0 <span class="op">=</span> <span class="fl">0.001</span>,</span>
-<span>  tau0 <span class="op">=</span> <span class="fl">1.0</span>,</span>
-<span>  ctol <span class="op">=</span> <span class="fl">1e-8</span>,</span>
-<span>  max_evals <span class="op">=</span> <span class="fl">500</span>,</span>
-<span>  verbose <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span><span class="co"># Run simulations</span></span>
+<span><span class="va">autocor.ests</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/estimate.autocorr.params.html">estimate.autocorr.params</a></span><span class="op">(</span></span>
+<span>  neuron_list <span class="op">=</span> <span class="va">neurons</span>,</span>
+<span>  n_trials_per_sim <span class="op">=</span> <span class="fl">500</span>, </span>
+<span>  n_sims_per_neurons <span class="op">=</span> <span class="fl">100</span></span>
 <span>  <span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Run analysis</span></span>
-<span><span class="va">autocorr_results</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/analyze.autocorr.html">analyze.autocorr</a></span><span class="op">(</span></span>
-<span>  <span class="va">autocor.ests.kilo4</span>,</span>
+<span><span class="va">autocor.results.bootstraps</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/analyze.autocorr.html">analyze.autocorr</a></span><span class="op">(</span></span>
+<span>  <span class="va">autocor.ests</span>,</span>
 <span>  covariate <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"hemi"</span>,<span class="st">"genotype"</span><span class="op">)</span>,</span>
 <span>  n_bs <span class="op">=</span> <span class="fl">1e4</span></span>
 <span><span class="op">)</span></span></code></pre></div>

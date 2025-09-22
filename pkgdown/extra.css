@@ -38,3 +38,6 @@
   color: #555;
   margin-top: 0.5em;
 }
+math[display="block"] {
+  margin: 1em 0;
+}

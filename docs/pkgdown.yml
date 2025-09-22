@@ -4,9 +4,10 @@ pkgdown_sha: ~
 articles:
   install: install.html
   license: license.html
+  tutorial_synchrony_crosscorr: tutorial_synchrony_crosscorr.html
   tutorial_tau_est_DG: tutorial_tau_est_DG.html
   tutorial_tau_est_kilosort: tutorial_tau_est_kilosort.html
-last_built: 2025-09-15T16:18Z
+last_built: 2025-09-25T19:01Z
 urls:
   reference: https://michaelbarkasi.github.io/neurons/reference
   article: https://michaelbarkasi.github.io/neurons/articles

@@ -16,7 +16,26 @@ using namespace Eigen;
 // Helper functions
 
 // Build sequence of numbered string prefixes
-CharacterVector enum_prefix(std::string prefix, int n);
+CharacterVector enum_prefix(
+    std::string prefix, 
+    int n
+  );
+
+// Rolling mean
+VectorXd roll_mean(
+    const VectorXd& series,    // 1D vector of points to take rolling mean
+    int filter_ws              // Size of window for taking rolling mean
+  );
+// ... overload
+NumericVector roll_mean(
+    const NumericVector& series, 
+    int filter_ws 
+  );
+// ... overload
+std::vector<double> roll_mean(
+    const std::vector<double>& series, 
+    int filter_ws  
+  );
 
 // Convert between vector types
 std::vector<double> to_dVec(const VectorXd& vec);
@@ -24,6 +43,32 @@ std::vector<double> to_dVec(const NumericVector& vec);
 VectorXd to_eVec(const std::vector<double>& vec);
 NumericVector to_NumVec(const VectorXd& vec);
 NumericVector to_NumVec(const std::vector<double>& vec);
+MatrixXd to_eMat(const NumericMatrix& X);
+NumericMatrix to_NumMat(const MatrixXd& M);
+
+// Empirical Pearson correlation between two vectors
+double empirical_corr(
+    const VectorXd& x,
+    const VectorXd& y
+  );
+
+// Empirical Pearson correlation between two variables sampled many times 
+double empirical_corr_multisample(
+    const MatrixXd& X, // Rows as intratrial samples, columns as trials
+    const MatrixXd& Y  // Rows as intratrial samples, columns as trials
+  );
+  
+// Estimate Pearson correlation across lags
+VectorXd empirical_corr_lagged(
+    const MatrixXd& TS1, // Time series 1, rows as time points, columns as trials
+    const MatrixXd& TS2  // Time series 2, rows as time points, columns as trials
+  );
+
+// Estimate raw correlation across lags, raw version (no mean subtraction, no normalization by std)
+VectorXd empirical_corr_lagged_raw(
+    const MatrixXd& TS1, // Time series 1, rows as time points, columns as trials
+    const MatrixXd& TS2  // Time series 2, rows as time points, columns as trials
+  );
 
 // Exponential decay function (with gradients) for modelling
 double EDF_autocorr(
@@ -34,13 +79,13 @@ double EDF_autocorr(
     const int& return_grad // 0 = function output, 1 = gradient wrt A, 2 = gradient wrt tau
   );
 
-// multivariate normal CDF
-double mvnorm_cdf(
-    const NumericVector& upper, 
+// multivariate normal CDF, upper tail
+double mvnorm_cdf_uppertail(
+    const NumericVector& threshold, 
     const NumericMatrix& sigma
   );
 
-// Normal CDF inverse
+// Normal CDF, with inverse
 double norm_cdf(
     const double& x, 
     const double& mu, 
@@ -65,14 +110,14 @@ NumericMatrix toeplitz(
 NumericVector dg_sigma_formula(
     const double& threshold,      // threshold for dichotomization
     const NumericVector& cov,     // desired covarance after dichotomization
-    const NumericMatrix& sigma    // covariance matrix
+    const NumericMatrix& sigma    // covariance matrix of multivariate Gaussian
   );
 
 // Wrapper for use with find-root-bisection algorithm 
 double dg_sigma_formula_scalar(
     const double& threshold,      // threshold for dichotomization
     const double& cov,            // desired covarance after dichotomization
-    const double& sigma           // covariance matrix
+    const double& sigma           // Gaussian covariance
   );
 
 // Function to find sigma by root bisection 
@@ -90,7 +135,7 @@ NumericMatrix makePositiveDefinite(
 
 class neuron {
   
-  // private:
+  // private: Eventually move some of the public stuff in here? 
   
   // public:
 
@@ -121,6 +166,8 @@ class neuron {
     MatrixXd spike_raster;                        // Nx2 matrix, each row one spike, columns as time (in "unit_time") and trial number
     double lambda;                                // Mean value of neuron, in "unit_data" per "unit_time"
     double lambda_bin;                            // Mean value of neuron, in "unit_data" per bin
+    double spike_sd;                              // Standard deviation of "unit_data" (presumably spike counts) across trials
+    double spike_sd_bin;                          // Standard deviation of "unit_data" (presumably spike counts) across trials, in time units of bin
     
     // Analysis fields
     VectorXd autocorr;                            // Estimated (observed) autocorrelation of trial_data
@@ -187,7 +234,8 @@ class neuron {
     
     // Member functions for data analysis
     void compute_autocorrelation(
-      const std::string& bin_count_action // action must be 'sum', 'boolean', or 'mean'
+      const std::string& bin_count_action, // action must be 'sum', 'boolean', or 'mean'
+      const bool& use_raw                  // whether to use raw autocorrelation (true) or standard centered and normalized correlation (false)
     ); 
     static double bounded_MSE_EDF_autocorr(
       // Objective function for fitting EDF model to autocorrelation
@@ -196,7 +244,7 @@ class neuron {
       void* data                    // neuron object (this)
     );
     void fit_autocorrelation();
-    void dg_parameters(const bool& verbose);
+    void dg_parameters(const bool& use_raw, const bool& verbose);
     neuron dg_simulation(const int& trials, const bool& verbose);
     NumericMatrix estimate_autocorr_params(
         const int& trials_per_sim, 
@@ -206,6 +254,7 @@ class neuron {
         const double& tau0,
         const double& ctol,
         const int& max_evals,
+        const bool& use_raw,
         const bool& verbose
     );
 

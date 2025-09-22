@@ -1,0 +1,25 @@
+---
+title: "Spike synchrony via cross-correlation"
+---
+
+```{r Rmdsetup, echo=FALSE}
+# Set max width of markdown code outputs
+options(width = 10000)
+```
+
+Intro here.
+
+<h2>Load spike rasters</h2>
+
+The first step is to set up the R environment by clearing the workspace, setting a random-number generator seed, and loading the neurons package.
+
+```{r Rsetup}
+# Clear the R workspace to start fresh
+rm(list = ls())
+
+# Set seed for reproducibility
+set.seed(12345) 
+
+# Load neurons package
+library(neurons) 
+```
