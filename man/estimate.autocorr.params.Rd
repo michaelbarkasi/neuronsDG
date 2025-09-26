@@ -9,6 +9,7 @@ estimate.autocorr.params(
   n_trials_per_sim = 300,
   n_sims_per_neurons = 100,
   bin_count_action = "sum",
+  max_lag = 0,
   A0 = 0.001,
   tau0 = 1,
   ctol = 1e-08,

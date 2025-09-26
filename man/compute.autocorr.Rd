@@ -4,12 +4,14 @@
 \alias{compute.autocorr}
 \title{Compute autocorrelation of single neuron object}
 \usage{
-compute.autocorr(nrn, bin_count_action = "sum", use_raw = TRUE)
+compute.autocorr(nrn, bin_count_action = "sum", max_lag = 0, use_raw = TRUE)
 }
 \arguments{
 \item{nrn}{Neuron object for which to compute autocorrelation.}
 
 \item{bin_count_action}{Method for counting spikes in each bin when computing autocorrelation; one of "boolean", "mean", or "sum" (default: "sum").}
+
+\item{max_lag}{Maximum lag (in units of the trial data) to compute autocorrelation; if 0, uses the number of time bins in the neuron's trial data (default: 0).}
 
 \item{use_raw}{Logical indicating whether to use raw autocorrelation (true) or standard centered and normalized correlation (false) (default: TRUE).}
 }

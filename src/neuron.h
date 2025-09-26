@@ -49,19 +49,23 @@ NumericMatrix to_NumMat(const MatrixXd& M);
 // Empirical Pearson correlation between two vectors
 double empirical_corr(
     const VectorXd& x,
-    const VectorXd& y
+    const VectorXd& y,
+    const bool& use_raw
   );
 
 // Empirical Pearson correlation between two variables sampled many times 
 double empirical_corr_multisample(
-    const MatrixXd& X, // Rows as intratrial samples, columns as trials
-    const MatrixXd& Y  // Rows as intratrial samples, columns as trials
+    const MatrixXd& X,  // Rows as intratrial samples, columns as trials
+    const MatrixXd& Y,  // Rows as intratrial samples, columns as trials
+    const bool& use_raw
   );
   
 // Estimate Pearson correlation across lags
 VectorXd empirical_corr_lagged(
-    const MatrixXd& TS1, // Time series 1, rows as time points, columns as trials
-    const MatrixXd& TS2  // Time series 2, rows as time points, columns as trials
+    const MatrixXd& TS1,  // Time series 1, rows as time points, columns as trials
+    const MatrixXd& TS2,  // Time series 2, rows as time points, columns as trials
+    const int& max_lag,
+    const bool& use_raw
   );
 
 // Estimate raw correlation across lags, raw version (no mean subtraction, no normalization by std)
@@ -212,10 +216,10 @@ class neuron {
     // Member functions for loading data
     void load_trial_data(const MatrixXd& td);
     void load_trial_data_R(const NumericMatrix& td);
-    void load_spike_raster(const MatrixXd& sr);
-    void load_spike_raster_R(const NumericMatrix& sr);
+    void load_spike_raster(const MatrixXd& sr, const int& min_duration, const int& max_displacement);
+    void load_spike_raster_R(const NumericMatrix& sr, const int& min_duration, const int& max_displacement);
     void infer_raster();
-    void infer_trial();
+    void infer_trial(const int& min_duration, const int& max_displacement);
     
     // Member functions for fetching data
     MatrixXd fetch_trial_data() const;
@@ -233,8 +237,23 @@ class neuron {
     NumericVector fetch_EDF_parameters() const;
     
     // Member functions for data analysis
+    VectorXd compute_crosscorrelation(
+      const neuron& nrn_compare,
+      const std::string& bin_count_action,
+      const int& max_lag,
+      const bool& use_raw,
+      const bool& verbose
+    );
+    NumericVector compute_crosscorrelation_R(
+      const neuron& nrn_compare,
+      const std::string& bin_count_action,
+      const int& max_lag,
+      const bool& use_raw,
+      const bool& verbose
+    );
     void compute_autocorrelation(
       const std::string& bin_count_action, // action must be 'sum', 'boolean', or 'mean'
+      int max_lag,                         // maximum lag (in unit_time) for autocorrelation
       const bool& use_raw                  // whether to use raw autocorrelation (true) or standard centered and normalized correlation (false)
     ); 
     static double bounded_MSE_EDF_autocorr(
@@ -249,6 +268,7 @@ class neuron {
     NumericMatrix estimate_autocorr_params(
         const int& trials_per_sim, 
         const int& num_sims,
+        int max_lag,
         const std::string& bin_count_action,
         const double& A0,
         const double& tau0,
@@ -257,7 +277,7 @@ class neuron {
         const bool& use_raw,
         const bool& verbose
     );
-
-};
+    
+  };
 
 #endif

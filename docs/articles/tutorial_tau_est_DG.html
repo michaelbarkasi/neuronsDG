@@ -442,24 +442,25 @@ high autocorrelation:</p>
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/compute.autocorr.html">compute.autocorr</a></span><span class="op">(</span><span class="va">neurons</span><span class="op">[[</span><span class="va">cell_high</span><span class="op">]</span><span class="op">]</span><span class="op">)</span> <span class="co"># Recompute with raw autocorrelation</span></span>
 <span><span class="fu"><a href="../reference/fit.edf.autocorr.html">fit.edf.autocorr</a></span><span class="op">(</span><span class="va">neurons</span><span class="op">[[</span><span class="va">cell_high</span><span class="op">]</span><span class="op">]</span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/plot-autocorrelation.html">plot.autocorrelation</a></span><span class="op">(</span><span class="va">neurons</span><span class="op">[[</span><span class="va">cell_high</span><span class="op">]</span><span class="op">]</span><span class="op">)</span></span></code></pre></div>
+<pre><code><span><span class="co">## Warning: Removed 153 rows containing missing values or values outside the scale range (`geom_line()`).</span></span></code></pre>
 <p><img src="tutorial_tau_est_DG_files/figure-html/fit_autocorrelation_high-1.png" width="700"></p>
 <p>The fitted model is plotted as the red line. The parameters of the
 exponential decay fit can be fetched directly with a neuron method and
 provide succinct quantification of the empirical autocorrelation.</p>
-<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">neurons</span><span class="op">[[</span><span class="va">cell_high</span><span class="op">]</span><span class="op">]</span><span class="op">$</span><span class="fu">fetch_EDF_parameters</span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">##           A         tau   bias_term </span></span>
-<span><span class="co">##  0.12535480 73.56534654  0.01105918</span></span></code></pre>
-<p>In this case, the time constant tau is estimated to be 73.6ms and the
+<span><span class="co">##  0.00100000 10.00000000  0.01105918</span></span></code></pre>
+<p>In this case, the time constant tau is estimated to be 10ms and the
 initial autocorrelation
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>A</mi><annotation encoding="application/x-tex">A</annotation></semantics></math>
-is estimated to be 0.125.</p>
+is estimated to be 0.001.</p>
 <p>The above shows empirical autocorrelation and model fit being
 performed in separate steps and for only one neuron at a time. The
 function <a href="../reference/process.autocorr.html">process.autocorr</a> will
 perform both steps at once for an entire list of neurons and return the
 results in a data frame.</p>
-<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">autocor.results.batch</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/process.autocorr.html">process.autocorr</a></span><span class="op">(</span><span class="va">neurons</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">autocor.results.batch</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">##       cell    lambda_ms  lambda_bin           A      tau    bias_term  autocorr1 max_autocorr mean_autocorr min_autocorr</span></span>
@@ -518,7 +519,7 @@ of 0 and standard deviation
 of 1) and such that a covariance
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>K</mi><mi>V</mi></msub><annotation encoding="application/x-tex">K_V</annotation></semantics></math>
 of 0.75 exists between these distributions.</p>
-<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">V_sample</span> <span class="op">&lt;-</span> <span class="fu">MASS</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/MASS/man/mvrnorm.html" class="external-link">mvrnorm</a></span><span class="op">(</span></span>
 <span>    n <span class="op">=</span> <span class="fl">300</span>,</span>
 <span>    mu <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>,<span class="fl">0</span><span class="op">)</span>,</span>
@@ -533,7 +534,7 @@ of 0.75 exists between these distributions.</p>
 thresholds
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>γ</mi><mo>=</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">\gamma = 1</annotation></semantics></math>
 for both dimensions, shading the area of points below the threshold.</p>
-<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Convert to data frame for plotting</span></span>
 <span><span class="va">V_sample</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/as.data.frame.html" class="external-link">as.data.frame</a></span><span class="op">(</span><span class="va">V_sample</span><span class="op">)</span> </span>
 <span><span class="va">threshold</span> <span class="op">&lt;-</span> <span class="fl">1</span></span>
@@ -771,7 +772,7 @@ each simulated spike train.</li>
 values for each neuron. For the purpose of speed, this tutorial runs
 only 100 simulations per neuron, but in practice, 1000 or more
 simulations should be run.</p>
-<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">autocor.ests</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/estimate.autocorr.params.html">estimate.autocorr.params</a></span><span class="op">(</span></span>
 <span>    neuron_list <span class="op">=</span> <span class="va">neurons</span>,</span>
 <span>    n_trials_per_sim <span class="op">=</span> <span class="fl">500</span>, </span>
@@ -780,12 +781,12 @@ simulations should be run.</p>
 <span>  <span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">autocor.ests</span><span class="op">$</span><span class="va">estimates</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">##    lambda_ms lambda_bin          A      tau    bias_term  autocorr1 max_autocorr mean_autocorr min_autocorr</span></span>
-<span><span class="co">## 1 0.01688889  0.1688889 0.01190413 38.56055 0.0002852346 0.01218937  0.009470064  0.0005497602 0.0002852346</span></span>
-<span><span class="co">## 2 0.01590850  0.1590850 0.01092675 40.61636 0.0002530803 0.01117983  0.008795191  0.0005105874 0.0002530803</span></span>
-<span><span class="co">## 3 0.01878431  0.1878431 0.01418505 36.24284 0.0003528504 0.01453790  0.011117548  0.0006465601 0.0003528504</span></span>
-<span><span class="co">## 4 0.01671895  0.1671895 0.01203930 36.50089 0.0002795234 0.01231883  0.009433704  0.0005308353 0.0002795234</span></span>
-<span><span class="co">## 5 0.01854902  0.1854902 0.01405934 37.42106 0.0003440661 0.01440341  0.011106459  0.0006460043 0.0003440661</span></span>
-<span><span class="co">## 6 0.01822222  0.1822222 0.01333629 37.17653 0.0003320494 0.01366834  0.010523018  0.0006163265 0.0003320494</span></span></code></pre>
+<span><span class="co">## 1 0.01894118  0.1894118 0.01465150 37.65935 0.0003587682 0.01501027  0.011593439  0.0006757069 0.0003587682</span></span>
+<span><span class="co">## 2 0.01796078  0.1796078 0.01348255 35.39960 0.0003225898 0.01380514  0.010487150  0.0005943226 0.0003225898</span></span>
+<span><span class="co">## 3 0.01641830  0.1641830 0.01203616 32.96063 0.0002695606 0.01230572  0.009155971  0.0004929665 0.0002695606</span></span>
+<span><span class="co">## 4 0.01590850  0.1590850 0.01124223 33.95163 0.0002530803 0.01149531  0.008627155  0.0004690252 0.0002530803</span></span>
+<span><span class="co">## 5 0.01747712  0.1747712 0.01392567 31.61749 0.0003054499 0.01423112  0.010455241  0.0005517200 0.0003054499</span></span>
+<span><span class="co">## 6 0.01545098  0.1545098 0.01153103 32.87796 0.0002387328 0.01176976  0.008745710  0.0004521406 0.0002387328</span></span></code></pre>
 <p>With the simulations run, the final step is to estimate the network
 time constant for covariates of interest. The function <a href="../reference/analyze.autocorr.html">analyze.autocorr</a> does this
 by bootstrapping over the tau values obtained from the simulations. If
@@ -801,7 +802,7 @@ draws with replacement from the pool of
 values for
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>τ</mi><annotation encoding="application/x-tex">\tau</annotation></semantics></math>.
 For this tutorial, 10k bootstrap resamples are used.</p>
-<div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">autocor.results.bootstraps</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/analyze.autocorr.html">analyze.autocorr</a></span><span class="op">(</span></span>
 <span>    <span class="va">autocor.ests</span>,</span>
 <span>    covariate <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"hemi"</span>,<span class="st">"genotype"</span><span class="op">)</span>,</span>
@@ -811,25 +812,25 @@ For this tutorial, 10k bootstrap resamples are used.</p>
 list with two objects. The first is <strong>resamples</strong>, a
 dataframe holding the tau values for each covariate from each
 simulation.</p>
-<div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb23"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">autocor.results.bootstraps</span><span class="op">$</span><span class="va">resamples</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">##   LH_CBA/J  RH_CBA/J</span></span>
-<span><span class="co">## 1 57.97739  80.89738</span></span>
-<span><span class="co">## 2 57.74824 108.46566</span></span>
-<span><span class="co">## 3 57.34851  76.86553</span></span>
-<span><span class="co">## 4 56.12538  89.17201</span></span>
-<span><span class="co">## 5 56.71212  95.08618</span></span>
-<span><span class="co">## 6 57.44959  81.51360</span></span></code></pre>
+<pre><code><span><span class="co">##   LH_CBA/J RH_CBA/J</span></span>
+<span><span class="co">## 1 57.22442 80.21855</span></span>
+<span><span class="co">## 2 57.30211 97.81091</span></span>
+<span><span class="co">## 3 58.54300 72.64840</span></span>
+<span><span class="co">## 4 56.35914 83.64592</span></span>
+<span><span class="co">## 5 56.42914 74.64158</span></span>
+<span><span class="co">## 6 57.88168 82.29466</span></span></code></pre>
 <p>The second is <strong>distribution_plot</strong>, a ggplot2 object
 visualizing the bootstrap distributions of tau for each covariate.</p>
-<div class="sourceCode" id="cb24"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb25"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">autocor.results.bootstraps</span><span class="op">$</span><span class="va">distribution_plot</span><span class="op">)</span></span></code></pre></div>
 <p><img src="tutorial_tau_est_DG_files/figure-html/plot_distribution-1.png" width="700"></p>
 <h2>
 Code summary
 </h2>
 <p>The essential steps to run this analysis are as follows:</p>
-<div class="sourceCode" id="cb25"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb26"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Setup</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/rm.html" class="external-link">rm</a></span><span class="op">(</span>list <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/ls.html" class="external-link">ls</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">12345</span><span class="op">)</span> </span>

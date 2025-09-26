@@ -30,7 +30,7 @@ library(neurons)
 
 All of the data is contained in a single csv file, provided with the neurons package, as a compact spike raster. 
 
-```{r load rasters}
+```{r load_rasters}
 spike.rasters <- read.csv(
   system.file(
       "extdata", 

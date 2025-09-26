@@ -77,7 +77,19 @@
 
     
     
-<p>Intro here.</p>
+<p>Synchronous firing between two neurons can be detected by computing
+the cross-correlation of their spike trains. The
+<em>cross-correlation</em> between two time series
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>R</mi><annotation encoding="application/x-tex">R</annotation></semantics></math>
+(the reference series) and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>C</mi><annotation encoding="application/x-tex">C</annotation></semantics></math>
+(the comparison series) is the correlation between
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>R</mi><annotation encoding="application/x-tex">R</annotation></semantics></math>
+and a lagged copy of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>C</mi><annotation encoding="application/x-tex">C</annotation></semantics></math>.
+This tutorial shows how to use functions from the neurons package and
+some basic R code to compute and visualize cross-correlations between
+spike trains.</p>
 <h2>
 Load spike rasters
 </h2>
@@ -93,7 +105,514 @@ neurons package.</p>
 <span></span>
 <span><span class="co"># Load neurons package</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va">neurons</span><span class="op">)</span> </span></code></pre></div>
-  </main>
+<p>The next step is to load data representing the spike trains to be
+analyzed. In this case, the data is in a csv file and formatted as a
+compact (spike-indexed) raster. That is, each row represents a spike,
+with a column for the time of the spike and a column for the cell that
+fired the spike. Additional columns provide information about the
+recording session and covariates, such as genotype.</p>
+<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">spike.rasters</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/utils/read.table.html" class="external-link">read.csv</a></span><span class="op">(</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span></span>
+<span>      <span class="st">"extdata"</span>, </span>
+<span>      <span class="st">"cross_corr_demo_data.csv"</span>, </span>
+<span>      package <span class="op">=</span> <span class="st">"neurons"</span></span>
+<span>    <span class="op">)</span></span>
+<span>  <span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">spike.rasters</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<pre><code><span><span class="co">##   time_in_ms genotype recording_name cell cluster</span></span>
+<span><span class="co">## 1     79.035   geno_1  penetration_1    1       1</span></span>
+<span><span class="co">## 2    211.563   geno_1  penetration_1    1       1</span></span>
+<span><span class="co">## 3    254.331   geno_1  penetration_1    1       1</span></span>
+<span><span class="co">## 4    267.630   geno_1  penetration_1    1       1</span></span>
+<span><span class="co">## 5    360.195   geno_1  penetration_1    1       1</span></span>
+<span><span class="co">## 6    371.877   geno_1  penetration_1    1       1</span></span></code></pre>
+<h2>
+Parse trials
+</h2>
+<p>The data used here is from multi-channel probe recordings in mouse
+auditory cortex. These recordings were parsed into spike clusters
+(proxies for individual cells) by kilosort4. In this data, the cluster
+column numbers the clusters identified on each probe, while the cell
+column simply renumbers the clusters so that each cluster has a unique
+identity.</p>
+<p>In this case, the spike times are in milliseconds and run
+continuously from zero to the end of the recording session. The
+recordings are long, running tens of minutes, with many thousands of
+spikes. Hence, it may not be the best idea to compute cross-correlations
+over the entire recording session. Instead, the recordings should be
+parsed into shorter trials. The trails could be defined by arbitrarily
+chunking the recordings into segments of a fixed duration, but there is
+a better way, given the goal of detecting synchronous firing.</p>
+<p>Suppose
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>R</mi><annotation encoding="application/x-tex">R</annotation></semantics></math>
+and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>C</mi><annotation encoding="application/x-tex">C</annotation></semantics></math>
+are binary series (of 0s and 1s) representing the presence or absence of
+spikes in small time bins. Series
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>R</mi><annotation encoding="application/x-tex">R</annotation></semantics></math>
+will be the reference series, and series
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>C</mi><annotation encoding="application/x-tex">C</annotation></semantics></math>
+will be the comparison series a lagged copy of which is used for
+computing correlation. If we want to know whether spikes in
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>C</mi><annotation encoding="application/x-tex">C</annotation></semantics></math>
+tend to occur synchronous with, or shortly after spikes in
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>R</mi><annotation encoding="application/x-tex">R</annotation></semantics></math>,
+then it makes sense to define trials by the spikes in
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>R</mi><annotation encoding="application/x-tex">R</annotation></semantics></math>.
+Specifically, each spike in
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>R</mi><annotation encoding="application/x-tex">R</annotation></semantics></math>
+will define a trial that begins some fixed duration before the spike and
+ends some fixed duration after the spike. A trial will be thrown out if
+a second spike from
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>R</mi><annotation encoding="application/x-tex">R</annotation></semantics></math>
+occurs in it. Each trial will thus contain a single spike from
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>R</mi><annotation encoding="application/x-tex">R</annotation></semantics></math>
+at time zero. High correlation at zero lag will indicate that
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>C</mi><annotation encoding="application/x-tex">C</annotation></semantics></math>
+tends to fire synchronously with
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>R</mi><annotation encoding="application/x-tex">R</annotation></semantics></math>,
+while high correlation at a short positive lag will indicate that
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>C</mi><annotation encoding="application/x-tex">C</annotation></semantics></math>
+tends to fire shortly after
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>R</mi><annotation encoding="application/x-tex">R</annotation></semantics></math>.</p>
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Write function that will parse a compact raster into trials defined by spikes from a reference cell</span></span>
+<span><span class="va">make_trials_from_spikes</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span></span>
+<span>    <span class="va">raster</span>,</span>
+<span>    <span class="va">cell_num</span>,</span>
+<span>    <span class="va">prespike_time</span>,   <span class="co"># In units of the raster, in this case, ms</span></span>
+<span>    <span class="va">postspike_time</span>,  <span class="co"># In units of the raster, in this case, ms</span></span>
+<span>    <span class="va">clean_only</span> <span class="op">=</span> <span class="cn">TRUE</span></span>
+<span>  <span class="op">)</span> <span class="op">{</span></span>
+<span>    </span>
+<span>    <span class="co"># Identify the penetration of the cell of interest</span></span>
+<span>    <span class="va">cell_pen</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/unique.html" class="external-link">unique</a></span><span class="op">(</span><span class="va">raster</span><span class="op">$</span><span class="va">recording_name</span><span class="op">[</span><span class="va">raster</span><span class="op">$</span><span class="va">cell</span> <span class="op">==</span> <span class="va">cell_num</span><span class="op">]</span><span class="op">)</span></span>
+<span>    </span>
+<span>    <span class="co"># Subset raster to the penetration of the cell of interest</span></span>
+<span>    <span class="va">raster_p</span> <span class="op">&lt;-</span> <span class="va">raster</span><span class="op">[</span><span class="va">raster</span><span class="op">$</span><span class="va">recording_name</span> <span class="op">==</span> <span class="va">cell_pen</span>,<span class="op">]</span></span>
+<span>    </span>
+<span>    <span class="co"># Get indices of spikes from the reference cell</span></span>
+<span>    <span class="va">cell_idx</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/which.html" class="external-link">which</a></span><span class="op">(</span><span class="va">raster_p</span><span class="op">$</span><span class="va">cell</span> <span class="op">==</span> <span class="va">cell_num</span><span class="op">)</span></span>
+<span>    </span>
+<span>    <span class="co"># Get spike times of the reference cell</span></span>
+<span>    <span class="va">ref_cell_spikes</span> <span class="op">&lt;-</span> <span class="va">raster_p</span><span class="op">$</span><span class="va">time_in_ms</span><span class="op">[</span><span class="va">cell_idx</span><span class="op">]</span></span>
+<span>    </span>
+<span>    <span class="co"># Find clear spikes, i.e., spikes surrounded by quiet periods</span></span>
+<span>    <span class="va">ref_cell_spikes_prespike_quiet</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/diff.html" class="external-link">diff</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="va">ref_cell_spikes</span><span class="op">)</span><span class="op">)</span></span>
+<span>    <span class="va">spikes_preclear</span> <span class="op">&lt;-</span> <span class="va">ref_cell_spikes_prespike_quiet</span> <span class="op">&gt;=</span> <span class="va">prespike_time</span></span>
+<span>    <span class="va">ref_cell_spikes_postspike_quiet</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/diff.html" class="external-link">diff</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">ref_cell_spikes</span>, <span class="cn">Inf</span><span class="op">)</span><span class="op">)</span></span>
+<span>    <span class="va">spikes_postclear</span> <span class="op">&lt;-</span> <span class="va">ref_cell_spikes_postspike_quiet</span> <span class="op">&gt;=</span> <span class="va">postspike_time</span></span>
+<span>    <span class="va">clear_spikes_idx</span> <span class="op">&lt;-</span> <span class="va">cell_idx</span><span class="op">[</span><span class="va">spikes_preclear</span> <span class="op">&amp;</span> <span class="va">spikes_postclear</span><span class="op">]</span></span>
+<span>    </span>
+<span>    <span class="co"># Create trial column </span></span>
+<span>    <span class="va">raster_p</span><span class="op">$</span><span class="va">trial</span> <span class="op">&lt;-</span> <span class="fl">0</span></span>
+<span>    </span>
+<span>    <span class="co"># Build trial around each clear spike from target cell </span></span>
+<span>    <span class="kw">for</span> <span class="op">(</span><span class="va">i</span> <span class="kw">in</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq_along</a></span><span class="op">(</span><span class="va">clear_spikes_idx</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
+<span>      <span class="va">spike_time</span> <span class="op">&lt;-</span> <span class="va">raster_p</span><span class="op">$</span><span class="va">time_in_ms</span><span class="op">[</span><span class="va">clear_spikes_idx</span><span class="op">[</span><span class="va">i</span><span class="op">]</span><span class="op">]</span></span>
+<span>      <span class="va">trial_start</span> <span class="op">&lt;-</span> <span class="va">spike_time</span> <span class="op">-</span> <span class="va">prespike_time</span></span>
+<span>      <span class="va">trial_end</span> <span class="op">&lt;-</span> <span class="va">spike_time</span> <span class="op">+</span> <span class="va">postspike_time</span></span>
+<span>      <span class="va">trial_mask</span> <span class="op">&lt;-</span> <span class="va">raster_p</span><span class="op">$</span><span class="va">time_in_ms</span> <span class="op">&gt;=</span> <span class="va">trial_start</span> <span class="op">&amp;</span> <span class="va">raster_p</span><span class="op">$</span><span class="va">time_in_ms</span> <span class="op">&lt;</span> <span class="va">trial_end</span></span>
+<span>      <span class="va">raster_p</span><span class="op">$</span><span class="va">trial</span><span class="op">[</span><span class="va">trial_mask</span><span class="op">]</span> <span class="op">&lt;-</span> <span class="va">i</span></span>
+<span>      <span class="va">raster_p</span><span class="op">$</span><span class="va">time_in_ms</span><span class="op">[</span><span class="va">trial_mask</span><span class="op">]</span> <span class="op">&lt;-</span> <span class="va">raster_p</span><span class="op">$</span><span class="va">time_in_ms</span><span class="op">[</span><span class="va">trial_mask</span><span class="op">]</span> <span class="op">-</span> <span class="va">spike_time</span></span>
+<span>    <span class="op">}</span></span>
+<span>    </span>
+<span>    <span class="co"># Keep only spikes in trials</span></span>
+<span>    <span class="va">raster_p</span> <span class="op">&lt;-</span> <span class="va">raster_p</span><span class="op">[</span><span class="va">raster_p</span><span class="op">$</span><span class="va">trial</span> <span class="op">&gt;</span> <span class="fl">0</span>, <span class="op">]</span></span>
+<span>    </span>
+<span>    <span class="co"># Return parsed raster</span></span>
+<span>    <span class="kw"><a href="https://rdrr.io/r/base/function.html" class="external-link">return</a></span><span class="op">(</span><span class="va">raster_p</span><span class="op">)</span></span>
+<span>    </span>
+<span>  <span class="op">}</span></span></code></pre></div>
+<h2>
+Visualizing cross-correlation
+</h2>
+<p>As a demonstration, let’s parse trials for one cell.</p>
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Parameters for trial parsing and cross-correlation</span></span>
+<span><span class="va">trial_duration</span> <span class="op">&lt;-</span> <span class="fl">100</span> <span class="co"># ms</span></span>
+<span><span class="va">lag_divider</span> <span class="op">&lt;-</span> <span class="fl">2</span>      <span class="co"># max lag will be trial_duration/lag_divider</span></span>
+<span><span class="va">bs</span> <span class="op">&lt;-</span> <span class="fl">1.0</span>             <span class="co"># bin size in ms</span></span>
+<span><span class="va">pre_ratio</span> <span class="op">&lt;-</span> <span class="fl">0.25</span>     <span class="co"># fraction of trial duration before spike</span></span>
+<span></span>
+<span><span class="co"># Choose two cells to compare</span></span>
+<span><span class="va">ref_cell</span> <span class="op">&lt;-</span> <span class="fl">13</span></span>
+<span><span class="va">comp_cell</span> <span class="op">&lt;-</span> <span class="fl">15</span></span>
+<span></span>
+<span><span class="co"># Parse trials for the reference cell</span></span>
+<span><span class="va">raster_demo</span> <span class="op">&lt;-</span> <span class="fu">make_trials_from_spikes</span><span class="op">(</span></span>
+<span>  raster <span class="op">=</span> <span class="va">spike.rasters</span>,</span>
+<span>  cell_num <span class="op">=</span> <span class="va">ref_cell</span>, </span>
+<span>  prespike_time <span class="op">=</span> <span class="va">trial_duration</span><span class="op">*</span><span class="va">pre_ratio</span>,</span>
+<span>  postspike_time <span class="op">=</span> <span class="va">trial_duration</span><span class="op">*</span><span class="op">(</span><span class="fl">1</span> <span class="op">-</span> <span class="va">pre_ratio</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">raster_demo</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<pre><code><span><span class="co">##        time_in_ms genotype recording_name cell cluster trial</span></span>
+<span><span class="co">## 259359          0   geno_2  penetration_4   13       1     1</span></span>
+<span><span class="co">## 260113          0   geno_2  penetration_4   13       1     2</span></span>
+<span><span class="co">## 260600          0   geno_2  penetration_4   13       1     3</span></span>
+<span><span class="co">## 260814          0   geno_2  penetration_4   13       1     4</span></span>
+<span><span class="co">## 261090          0   geno_2  penetration_4   13       1     5</span></span>
+<span><span class="co">## 261150          0   geno_2  penetration_4   13       1     6</span></span></code></pre>
+<p>The neurons package includes functions for computing both <a href="tutorial_tau_est_DG.html">raw and Pearson cross-correlations</a>
+from a raster like <strong>raster_demo</strong>. The first step is to
+convert <strong>raster_demo</strong> into a list of neuron objects using
+the <code>load.rasters.as.neurons</code> function.</p>
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">neurons</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/load.rasters.as.neurons.html">load.rasters.as.neurons</a></span><span class="op">(</span></span>
+<span>    <span class="va">raster_demo</span>, </span>
+<span>    bin_size <span class="op">=</span> <span class="va">bs</span>, </span>
+<span>    min_duration <span class="op">=</span> <span class="va">trial_duration</span>,</span>
+<span>    max_displacement <span class="op">=</span> <span class="op">-</span><span class="va">trial_duration</span><span class="op">*</span><span class="va">pre_ratio</span></span>
+<span>  <span class="op">)</span></span></code></pre></div>
+<p>The next step is to compute the cross-correlation between the
+reference cell and the comparison cell. The
+<strong>compute_crosscorrelation_R</strong> method of a neuron object
+computes the cross-correlation (raw or Pearson) between that neuron and
+another neuron. The method returns a vector of cross-correlation values
+at lags from zero to the specified max lag.</p>
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Grab neurons from list</span></span>
+<span><span class="va">ref_neuron</span> <span class="op">&lt;-</span> <span class="va">neurons</span><span class="op">[[</span><span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">"neuron_"</span>, <span class="va">ref_cell</span><span class="op">)</span><span class="op">]</span><span class="op">]</span></span>
+<span><span class="va">comp_neuron</span> <span class="op">&lt;-</span> <span class="va">neurons</span><span class="op">[[</span><span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">"neuron_"</span>, <span class="va">comp_cell</span><span class="op">)</span><span class="op">]</span><span class="op">]</span></span>
+<span></span>
+<span><span class="co"># Compute raw cross-correlation</span></span>
+<span><span class="va">cross_corr</span> <span class="op">&lt;-</span> <span class="va">ref_neuron</span><span class="op">$</span><span class="fu">compute_crosscorrelation_R</span><span class="op">(</span></span>
+<span>    <span class="va">comp_neuron</span>,                <span class="co"># Comparison neuron</span></span>
+<span>    <span class="st">"sum"</span>,                      <span class="co"># Binning action ("sum", "mean", "boolean")</span></span>
+<span>    <span class="va">trial_duration</span><span class="op">/</span><span class="va">lag_divider</span>, <span class="co"># max lag</span></span>
+<span>    <span class="cn">TRUE</span>,                       <span class="co"># Use raw correlation? If FALSE, use Pearson correlation</span></span>
+<span>    <span class="cn">TRUE</span>                        <span class="co"># Verbose?</span></span>
+<span>  <span class="op">)</span></span></code></pre></div>
+<pre><code><span><span class="co">## Computing cross-correlation between neuron 13 (ref) and neuron 15 (comparison)</span></span>
+<span><span class="co">## Both neurons have unit_time = ms</span></span>
+<span><span class="co">## Both neurons have t_per_bin = 1 ms</span></span>
+<span><span class="co">## Reference neuron trial length: 100 ms</span></span>
+<span><span class="co">## Comparison neuron trial length: 100 ms</span></span>
+<span><span class="co">## Converting to bins for cross-correlation calculation</span></span>
+<span><span class="co">## max_lag in bins: 50</span></span>
+<span><span class="co">## Reference neuron trial length in bins: 100</span></span>
+<span><span class="co">## Comparison neuron trial length in bins: 100</span></span>
+<span><span class="co">## Using bin_count_action = sum</span></span>
+<span><span class="co">## Computing cross-correlation vector of length 50 bins</span></span>
+<span><span class="co">## Possible lag steps: 50, good lag steps: 50</span></span>
+<span><span class="co">## Cross-correlation calculation complete</span></span></code></pre>
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Plot cross-correlation</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span></span>
+<span>    <span class="va">cross_corr</span>, </span>
+<span>    type<span class="op">=</span><span class="st">'l'</span>, </span>
+<span>    xlab <span class="op">=</span> <span class="st">"lag (ms)"</span>, </span>
+<span>    ylab <span class="op">=</span> <span class="st">"Raw cross-correlation"</span>, </span>
+<span>    main <span class="op">=</span> <span class="st">"Demo cross-correlation plot"</span></span>
+<span>  <span class="op">)</span>      </span></code></pre></div>
+<p><img src="tutorial_synchrony_crosscorr_files/figure-html/cross_corr_demo-1.png" width="700">
+Unfortunately, these two neurons seem to have no obvious peak in their
+cross-correlation, suggesting that they do not fire synchronously. To
+get a sense of what the cross-correlation plot would look like for two
+synchronously firing neurons, let’s artificially load the comparison
+neuron with lagged copies of spikes from the reference neuron.</p>
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Make function to load lagged spikes</span></span>
+<span><span class="va">load_lagged_spikes</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span></span>
+<span>    <span class="va">raster</span>,        <span class="co"># Raster to load</span></span>
+<span>    <span class="va">cell_num_comp</span>, <span class="co"># Number of cell to load</span></span>
+<span>    <span class="va">delay_time</span>     <span class="co"># Delay time in ms</span></span>
+<span>  <span class="op">)</span> <span class="op">{</span></span>
+<span>    <span class="co"># Find spikes from reference cell</span></span>
+<span>    <span class="va">cell_idx_comp</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/which.html" class="external-link">which</a></span><span class="op">(</span><span class="va">raster</span><span class="op">$</span><span class="va">cell</span> <span class="op">==</span> <span class="va">cell_num_comp</span><span class="op">)</span></span>
+<span>    <span class="co"># Select subset of these spikes to replace</span></span>
+<span>    <span class="va">cell_idx_comp</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/sample.html" class="external-link">sample</a></span><span class="op">(</span><span class="va">cell_idx_comp</span>, <span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">cell_idx_comp</span><span class="op">)</span><span class="op">/</span><span class="fl">4</span>, replace <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
+<span>    <span class="co"># Replace with lagged copies of reference spikes</span></span>
+<span>    <span class="va">raster</span><span class="op">$</span><span class="va">time_in_ms</span><span class="op">[</span><span class="va">cell_idx_comp</span><span class="op">]</span> <span class="op">&lt;-</span> <span class="va">delay_time</span> <span class="op">+</span> <span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">cell_idx_comp</span><span class="op">)</span>, <span class="fl">0</span>, <span class="fl">1</span><span class="op">)</span></span>
+<span>    <span class="kw"><a href="https://rdrr.io/r/base/function.html" class="external-link">return</a></span><span class="op">(</span><span class="va">raster</span><span class="op">)</span></span>
+<span>  <span class="op">}</span></span>
+<span></span>
+<span><span class="co"># Load lagged spikes into comparison cell</span></span>
+<span><span class="va">raster_demo_loaded</span> <span class="op">&lt;-</span> <span class="fu">load_lagged_spikes</span><span class="op">(</span><span class="va">raster_demo</span>, <span class="va">comp_cell</span>, <span class="fl">10</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Remake neurons</span></span>
+<span><span class="va">neurons_loaded</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/load.rasters.as.neurons.html">load.rasters.as.neurons</a></span><span class="op">(</span></span>
+<span>    <span class="va">raster_demo_loaded</span>, </span>
+<span>    bin_size <span class="op">=</span> <span class="va">bs</span>, </span>
+<span>    min_duration <span class="op">=</span> <span class="va">trial_duration</span>,</span>
+<span>    max_displacement <span class="op">=</span> <span class="op">-</span><span class="va">trial_duration</span><span class="op">*</span><span class="va">pre_ratio</span></span>
+<span>  <span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Compute cross-correlation for loaded neurons</span></span>
+<span><span class="va">ref_neuron_loaded</span> <span class="op">&lt;-</span> <span class="va">neurons_loaded</span><span class="op">[[</span><span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">"neuron_"</span>, <span class="va">ref_cell</span><span class="op">)</span><span class="op">]</span><span class="op">]</span></span>
+<span><span class="va">comp_neuron_loaded</span> <span class="op">&lt;-</span> <span class="va">neurons_loaded</span><span class="op">[[</span><span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">"neuron_"</span>, <span class="va">comp_cell</span><span class="op">)</span><span class="op">]</span><span class="op">]</span></span>
+<span><span class="va">cross_corr_loaded</span> <span class="op">&lt;-</span> <span class="va">ref_neuron_loaded</span><span class="op">$</span><span class="fu">compute_crosscorrelation_R</span><span class="op">(</span></span>
+<span>    <span class="va">comp_neuron_loaded</span>, </span>
+<span>    <span class="st">"sum"</span>, </span>
+<span>    <span class="va">trial_duration</span><span class="op">/</span><span class="va">lag_divider</span>,</span>
+<span>    <span class="cn">TRUE</span>,</span>
+<span>    <span class="cn">TRUE</span></span>
+<span>  <span class="op">)</span></span></code></pre></div>
+<pre><code><span><span class="co">## Computing cross-correlation between neuron 13 (ref) and neuron 15 (comparison)</span></span>
+<span><span class="co">## Both neurons have unit_time = ms</span></span>
+<span><span class="co">## Both neurons have t_per_bin = 1 ms</span></span>
+<span><span class="co">## Reference neuron trial length: 100 ms</span></span>
+<span><span class="co">## Comparison neuron trial length: 100 ms</span></span>
+<span><span class="co">## Converting to bins for cross-correlation calculation</span></span>
+<span><span class="co">## max_lag in bins: 50</span></span>
+<span><span class="co">## Reference neuron trial length in bins: 100</span></span>
+<span><span class="co">## Comparison neuron trial length in bins: 100</span></span>
+<span><span class="co">## Using bin_count_action = sum</span></span>
+<span><span class="co">## Computing cross-correlation vector of length 50 bins</span></span>
+<span><span class="co">## Possible lag steps: 50, good lag steps: 50</span></span>
+<span><span class="co">## Cross-correlation calculation complete</span></span></code></pre>
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Plot cross-correlation for loaded neurons</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span></span>
+<span>    <span class="va">cross_corr_loaded</span>, </span>
+<span>    type<span class="op">=</span><span class="st">'l'</span>, </span>
+<span>    xlab <span class="op">=</span> <span class="st">"lag (ms)"</span>, </span>
+<span>    ylab <span class="op">=</span> <span class="st">"Raw cross-correlation"</span>, </span>
+<span>    main <span class="op">=</span> <span class="st">"Demo cross-correlation plot"</span></span>
+<span>  <span class="op">)</span> </span></code></pre></div>
+<p><img src="tutorial_synchrony_crosscorr_files/figure-html/unnamed-chunk-1-1.png" width="700"></p>
+<p>Notice that now there is a clear peak, or spike, in correlatino at a
+lag of 10ms, which is the lag time used when loading spikes. This
+reflects how the lagged and loaded copy of the comparison neuron’s spike
+train contains a large number of spikes 10ms after spikes from the
+reference neuron.</p>
+<p>In addition to visualizing cross correlation as a line plot of
+correlation as a function of lag, it can also be visualized as a
+cross-correlogram, which is a histogram of the times of spikes from the
+comparison neuron relative to spikes from the reference neuron. Here,
+for example, is the cross-correlogram for the loaded neuron.</p>
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Fetch the raster of the loaded comparison neuron</span></span>
+<span><span class="va">loaded_raster</span> <span class="op">&lt;-</span> <span class="va">comp_neuron_loaded</span><span class="op">$</span><span class="fu">fetch_spike_raster_R</span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="co"># Extract spike times relative to reference spikes</span></span>
+<span><span class="va">loaded_spikes</span> <span class="op">&lt;-</span> <span class="va">loaded_raster</span><span class="op">[</span>,<span class="fl">1</span><span class="op">]</span></span>
+<span><span class="co"># Plot histogram of spike times</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/graphics/hist.html" class="external-link">hist</a></span><span class="op">(</span><span class="va">loaded_spikes</span>, main <span class="op">=</span> <span class="st">"Cross-correlogram of loaded neuron"</span>, xlab <span class="op">=</span> <span class="st">"Time relative to reference spikes (ms)"</span>, breaks <span class="op">=</span> <span class="fl">50</span><span class="op">)</span></span></code></pre></div>
+<p><img src="tutorial_synchrony_crosscorr_files/figure-html/cross_correlogram-1.png" width="700"></p>
+<p>The above histogram shows a clear peak at 10ms, reflecting the lagged
+spikes that were loaded into the comparison neuron.</p>
+<h2>
+Covariate analysis
+</h2>
+<p>The cells in the above demo data come from two genotypes of mice,
+“geno_1” and “geno_2”. Let’s compute cross-correlations for all pairs of
+cells in the data and see if there is any difference in
+cross-correlation between the two genotypes. Note that this function
+only plots correlation as a function of lag (not the cross-correlogram)
+and normalizes the values. This is because different cells will have
+different firing rates, which will distort both the raw
+cross-correlation and the cross-correlogram. Normalizing the
+cross-correlation by its mean value helps to mitigate this
+distortion.</p>
+<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">cross_corr_by_genotype</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span></span>
+<span>    <span class="va">raster</span>,</span>
+<span>    <span class="va">trial_duration</span>, <span class="co"># in ms</span></span>
+<span>    <span class="va">pre_ratio</span>,      <span class="co"># fraction of trial duration before spike</span></span>
+<span>    <span class="va">bs</span>,             <span class="co"># bin size in ms</span></span>
+<span>    <span class="va">lag_divider</span>,    <span class="co"># max lag will be trial_duration/lag_divider</span></span>
+<span>    <span class="va">verbose</span> <span class="op">=</span> <span class="cn">TRUE</span></span>
+<span>  <span class="op">)</span> <span class="op">{</span></span>
+<span>    </span>
+<span>    <span class="kw">if</span> <span class="op">(</span><span class="va">verbose</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"\nComputing cross-correlations by genotype\n"</span><span class="op">)</span></span>
+<span>   </span>
+<span>    <span class="co"># Extract cells from raster </span></span>
+<span>    <span class="va">cell_list</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/unique.html" class="external-link">unique</a></span><span class="op">(</span><span class="va">raster</span><span class="op">$</span><span class="va">cell</span><span class="op">)</span> </span>
+<span>    </span>
+<span>    <span class="co"># Compute cross-correlation by cell</span></span>
+<span>    <span class="va">cross_corr_by_cell</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span></span>
+<span>    <span class="kw">for</span> <span class="op">(</span><span class="va">ref_cell</span> <span class="kw">in</span> <span class="va">cell_list</span><span class="op">)</span> <span class="op">{</span></span>
+<span>      </span>
+<span>      <span class="kw">if</span> <span class="op">(</span><span class="va">verbose</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">"\nProcessing reference cell "</span>, <span class="va">ref_cell</span><span class="op">)</span><span class="op">)</span></span>
+<span>      </span>
+<span>      <span class="co"># Parse trials for the reference cell</span></span>
+<span>      <span class="va">raster_ref_cell</span> <span class="op">&lt;-</span> <span class="fu">make_trials_from_spikes</span><span class="op">(</span></span>
+<span>        raster <span class="op">=</span> <span class="va">raster</span>,</span>
+<span>        cell_num <span class="op">=</span> <span class="va">ref_cell</span>, </span>
+<span>        prespike_time <span class="op">=</span> <span class="va">trial_duration</span><span class="op">*</span><span class="va">pre_ratio</span>,</span>
+<span>        postspike_time <span class="op">=</span> <span class="va">trial_duration</span><span class="op">*</span><span class="op">(</span><span class="fl">1</span> <span class="op">-</span> <span class="va">pre_ratio</span><span class="op">)</span></span>
+<span>      <span class="op">)</span></span>
+<span>      </span>
+<span>      <span class="co"># Load parsed raster into neurons</span></span>
+<span>      <span class="va">neurons</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/load.rasters.as.neurons.html">load.rasters.as.neurons</a></span><span class="op">(</span></span>
+<span>        <span class="va">raster_ref_cell</span>, </span>
+<span>        bin_size <span class="op">=</span> <span class="va">bs</span>, </span>
+<span>        min_duration <span class="op">=</span> <span class="va">trial_duration</span>,</span>
+<span>        max_displacement <span class="op">=</span> <span class="op">-</span><span class="va">trial_duration</span><span class="op">*</span><span class="va">pre_ratio</span></span>
+<span>      <span class="op">)</span></span>
+<span>      </span>
+<span>      <span class="co"># Identify cells from same penetration as reference cell</span></span>
+<span>      <span class="va">comp_cell_list</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/unique.html" class="external-link">unique</a></span><span class="op">(</span><span class="va">raster_ref_cell</span><span class="op">$</span><span class="va">cell</span><span class="op">)</span></span>
+<span>      </span>
+<span>      <span class="co"># Compute cross-correlation between reference cell and comparison cells</span></span>
+<span>      <span class="va">cross_corr</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="op">)</span></span>
+<span>      <span class="kw">for</span> <span class="op">(</span><span class="va">comp_cell</span> <span class="kw">in</span> <span class="va">comp_cell_list</span><span class="op">)</span> <span class="op">{</span></span>
+<span>        </span>
+<span>        <span class="co"># Don't compute autocorrelation</span></span>
+<span>        <span class="kw">if</span> <span class="op">(</span><span class="va">ref_cell</span> <span class="op">==</span> <span class="va">comp_cell</span><span class="op">)</span> <span class="op">{</span><span class="kw">next</span><span class="op">}</span></span>
+<span>        </span>
+<span>        <span class="co"># Compute cross-correlation</span></span>
+<span>        <span class="va">cross_corr_cc</span> <span class="op">&lt;-</span> <span class="va">neurons</span><span class="op">[[</span><span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">"neuron_"</span>, <span class="va">ref_cell</span><span class="op">)</span><span class="op">]</span><span class="op">]</span><span class="op">$</span><span class="fu">compute_crosscorrelation_R</span><span class="op">(</span></span>
+<span>          <span class="va">neurons</span><span class="op">[[</span><span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">"neuron_"</span>, <span class="va">comp_cell</span><span class="op">)</span><span class="op">]</span><span class="op">]</span>, </span>
+<span>          <span class="st">"sum"</span>, </span>
+<span>          <span class="va">trial_duration</span><span class="op">/</span><span class="va">lag_divider</span>,   <span class="co"># max lag</span></span>
+<span>          <span class="cn">TRUE</span>,  <span class="co"># use raw?</span></span>
+<span>          <span class="cn">FALSE</span>  <span class="co"># verbose?</span></span>
+<span>        <span class="op">)</span></span>
+<span>        </span>
+<span>        <span class="co"># Append to results</span></span>
+<span>        <span class="va">cross_corr</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/cbind.html" class="external-link">rbind</a></span><span class="op">(</span><span class="va">cross_corr</span>, <span class="va">cross_corr_cc</span><span class="op">)</span></span>
+<span>        </span>
+<span>      <span class="op">}</span></span>
+<span>      </span>
+<span>      <span class="co"># Store cross-correlation results for this reference cell</span></span>
+<span>      <span class="va">cross_corr_by_cell</span><span class="op">[[</span><span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">"cross_corr_"</span>, <span class="va">ref_cell</span><span class="op">)</span><span class="op">]</span><span class="op">]</span> <span class="op">&lt;-</span> <span class="va">cross_corr</span></span>
+<span>      </span>
+<span>    <span class="op">}</span></span>
+<span>    </span>
+<span>    <span class="co"># Separate cross-correlations by genotype</span></span>
+<span>    <span class="kw">if</span> <span class="op">(</span><span class="va">verbose</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"\n\nSeparating cross-correlations by genotype\n"</span><span class="op">)</span></span>
+<span>    <span class="va">geno_1_crosscorr</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="op">)</span></span>
+<span>    <span class="va">geno_2_crosscorr</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="op">)</span></span>
+<span>    <span class="kw">for</span> <span class="op">(</span><span class="va">ref_cell</span> <span class="kw">in</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq_along</a></span><span class="op">(</span><span class="va">cross_corr_by_cell</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
+<span>      </span>
+<span>      <span class="kw">if</span> <span class="op">(</span><span class="va">verbose</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">"\nProcessing reference cell "</span>, <span class="va">ref_cell</span><span class="op">)</span><span class="op">)</span></span>
+<span>      </span>
+<span>      <span class="co"># Get all cross-correlations for this reference cell</span></span>
+<span>      <span class="va">cross_corr_matrix</span> <span class="op">&lt;-</span> <span class="va">cross_corr_by_cell</span><span class="op">[[</span><span class="va">ref_cell</span><span class="op">]</span><span class="op">]</span></span>
+<span>      </span>
+<span>      <span class="co"># Get genotype of this reference cell</span></span>
+<span>      <span class="va">geno</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/unique.html" class="external-link">unique</a></span><span class="op">(</span><span class="va">spike.rasters</span><span class="op">$</span><span class="va">genotype</span><span class="op">[</span><span class="va">spike.rasters</span><span class="op">$</span><span class="va">cell</span> <span class="op">==</span> <span class="va">ref_cell</span><span class="op">]</span><span class="op">)</span></span>
+<span>      </span>
+<span>      <span class="co"># Process cross-correlation from each comparison cell</span></span>
+<span>      <span class="kw">for</span> <span class="op">(</span><span class="va">comp_cell</span> <span class="kw">in</span> <span class="fl">1</span><span class="op">:</span><span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">cross_corr_matrix</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
+<span>        </span>
+<span>        <span class="co"># Grab cross-correlation vector</span></span>
+<span>        <span class="va">cross_corr_vector</span> <span class="op">&lt;-</span> <span class="va">cross_corr_matrix</span><span class="op">[</span><span class="va">comp_cell</span>, <span class="op">]</span></span>
+<span>        </span>
+<span>        <span class="co"># Normalize</span></span>
+<span>        <span class="va">cross_corr_vector</span> <span class="op">&lt;-</span> <span class="va">cross_corr_vector</span><span class="op">/</span><span class="fu"><a href="https://rdrr.io/r/base/mean.html" class="external-link">mean</a></span><span class="op">(</span><span class="va">cross_corr_vector</span><span class="op">)</span></span>
+<span>        </span>
+<span>        <span class="co"># Append to genotype-specific results</span></span>
+<span>        <span class="kw">if</span> <span class="op">(</span><span class="va">geno</span> <span class="op">==</span> <span class="st">"geno_1"</span><span class="op">)</span> <span class="op">{</span></span>
+<span>          <span class="va">geno_1_crosscorr</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/cbind.html" class="external-link">rbind</a></span><span class="op">(</span><span class="va">geno_1_crosscorr</span>, <span class="va">cross_corr_vector</span><span class="op">)</span></span>
+<span>        <span class="op">}</span> <span class="kw">else</span> <span class="kw">if</span> <span class="op">(</span><span class="va">geno</span> <span class="op">==</span> <span class="st">"geno_2"</span><span class="op">)</span> <span class="op">{</span></span>
+<span>          <span class="va">geno_2_crosscorr</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/cbind.html" class="external-link">rbind</a></span><span class="op">(</span><span class="va">geno_2_crosscorr</span>, <span class="va">cross_corr_vector</span><span class="op">)</span></span>
+<span>        <span class="op">}</span></span>
+<span>        </span>
+<span>      <span class="op">}</span></span>
+<span>    <span class="op">}</span></span>
+<span>    </span>
+<span>    <span class="co"># Plot genotype-specific cross-correlations</span></span>
+<span>    <span class="kw">if</span> <span class="op">(</span><span class="va">verbose</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"\n\nPlotting genotype-specific cross-correlations\n"</span><span class="op">)</span></span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span></span>
+<span>        <span class="fu"><a href="https://rdrr.io/r/base/colSums.html" class="external-link">colMeans</a></span><span class="op">(</span><span class="va">geno_2_crosscorr</span><span class="op">)</span>, </span>
+<span>        type<span class="op">=</span><span class="st">'l'</span>, </span>
+<span>        col<span class="op">=</span><span class="st">'blue'</span>, </span>
+<span>        xlab <span class="op">=</span> <span class="st">"lag (ms)"</span>, </span>
+<span>        ylab <span class="op">=</span> <span class="st">"normalized cross-correlation"</span>,</span>
+<span>        main <span class="op">=</span> <span class="st">"Cross-correlation by genotype (geno_1 = red, geno_2 = blue)"</span></span>
+<span>      <span class="op">)</span></span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/graphics/lines.html" class="external-link">lines</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/colSums.html" class="external-link">colMeans</a></span><span class="op">(</span><span class="va">geno_1_crosscorr</span><span class="op">)</span>, col<span class="op">=</span><span class="st">'red'</span><span class="op">)</span></span>
+<span>    </span>
+<span>  <span class="op">}</span></span></code></pre></div>
+<p>First, let’s compare the genotypes on a short timescale of 1-5ms.</p>
+<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu">cross_corr_by_genotype</span><span class="op">(</span></span>
+<span>      raster <span class="op">=</span> <span class="va">spike.rasters</span>,</span>
+<span>      trial_duration <span class="op">=</span> <span class="fl">20</span>,  <span class="co"># in ms</span></span>
+<span>      pre_ratio <span class="op">=</span> <span class="fl">0.5</span>,      <span class="co"># fraction of trial duration before spike</span></span>
+<span>      bs <span class="op">=</span> <span class="fl">1</span>,               <span class="co"># bin size in ms</span></span>
+<span>      lag_divider <span class="op">=</span> <span class="fl">4</span>,      <span class="co"># max lag will be trial_duration/lag_divider</span></span>
+<span>      verbose <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span>  <span class="op">)</span></span></code></pre></div>
+<p><img src="tutorial_synchrony_crosscorr_files/figure-html/cross_corr_by_genotype_short-1.png" width="700"></p>
+<p>Next, let’s compare the genotypes on a medium timescale of
+1-30ms.</p>
+<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu">cross_corr_by_genotype</span><span class="op">(</span></span>
+<span>      raster <span class="op">=</span> <span class="va">spike.rasters</span>,</span>
+<span>      trial_duration <span class="op">=</span> <span class="fl">90</span>,  <span class="co"># in ms</span></span>
+<span>      pre_ratio <span class="op">=</span> <span class="fl">1</span><span class="op">/</span><span class="fl">3</span>,      <span class="co"># fraction of trial duration before spike</span></span>
+<span>      bs <span class="op">=</span> <span class="fl">1</span>,               <span class="co"># bin size in ms</span></span>
+<span>      lag_divider <span class="op">=</span> <span class="fl">3</span>,      <span class="co"># max lag will be trial_duration/lag_divider</span></span>
+<span>      verbose <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span>  <span class="op">)</span></span></code></pre></div>
+<p><img src="tutorial_synchrony_crosscorr_files/figure-html/cross_corr_by_genotype_med-1.png" width="700"></p>
+<p>Finally, let’s compare the genotypes on a long timescale of
+1-100ms.</p>
+<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu">cross_corr_by_genotype</span><span class="op">(</span></span>
+<span>      raster <span class="op">=</span> <span class="va">spike.rasters</span>,</span>
+<span>      trial_duration <span class="op">=</span> <span class="fl">200</span>, <span class="co"># in ms</span></span>
+<span>      pre_ratio <span class="op">=</span> <span class="fl">0.25</span>,     <span class="co"># fraction of trial duration before spike</span></span>
+<span>      bs <span class="op">=</span> <span class="fl">1</span>,               <span class="co"># bin size in ms</span></span>
+<span>      lag_divider <span class="op">=</span> <span class="fl">2</span>,      <span class="co"># max lag will be trial_duration/lag_divider</span></span>
+<span>      verbose <span class="op">=</span> <span class="cn">TRUE</span></span>
+<span>  <span class="op">)</span></span></code></pre></div>
+<pre><code><span><span class="co">## </span></span>
+<span><span class="co">## Computing cross-correlations by genotype</span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## Processing reference cell 1</span></span>
+<span><span class="co">## Processing reference cell 2</span></span>
+<span><span class="co">## Processing reference cell 3</span></span>
+<span><span class="co">## Processing reference cell 4</span></span>
+<span><span class="co">## Processing reference cell 5</span></span>
+<span><span class="co">## Processing reference cell 6</span></span>
+<span><span class="co">## Processing reference cell 7</span></span>
+<span><span class="co">## Processing reference cell 8</span></span>
+<span><span class="co">## Processing reference cell 9</span></span>
+<span><span class="co">## Processing reference cell 10</span></span>
+<span><span class="co">## Processing reference cell 11</span></span>
+<span><span class="co">## Processing reference cell 12</span></span>
+<span><span class="co">## Processing reference cell 13</span></span>
+<span><span class="co">## Processing reference cell 14</span></span>
+<span><span class="co">## Processing reference cell 15</span></span>
+<span><span class="co">## Processing reference cell 16</span></span>
+<span><span class="co">## Processing reference cell 17</span></span>
+<span><span class="co">## Processing reference cell 18</span></span>
+<span><span class="co">## Processing reference cell 19</span></span>
+<span><span class="co">## Processing reference cell 20</span></span>
+<span><span class="co">## Processing reference cell 21</span></span>
+<span><span class="co">## Processing reference cell 22</span></span>
+<span><span class="co">## Processing reference cell 23</span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## Separating cross-correlations by genotype</span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## Processing reference cell 1</span></span>
+<span><span class="co">## Processing reference cell 2</span></span>
+<span><span class="co">## Processing reference cell 3</span></span>
+<span><span class="co">## Processing reference cell 4</span></span>
+<span><span class="co">## Processing reference cell 5</span></span>
+<span><span class="co">## Processing reference cell 6</span></span>
+<span><span class="co">## Processing reference cell 7</span></span>
+<span><span class="co">## Processing reference cell 8</span></span>
+<span><span class="co">## Processing reference cell 9</span></span>
+<span><span class="co">## Processing reference cell 10</span></span>
+<span><span class="co">## Processing reference cell 11</span></span>
+<span><span class="co">## Processing reference cell 12</span></span>
+<span><span class="co">## Processing reference cell 13</span></span>
+<span><span class="co">## Processing reference cell 14</span></span>
+<span><span class="co">## Processing reference cell 15</span></span>
+<span><span class="co">## Processing reference cell 16</span></span>
+<span><span class="co">## Processing reference cell 17</span></span>
+<span><span class="co">## Processing reference cell 18</span></span>
+<span><span class="co">## Processing reference cell 19</span></span>
+<span><span class="co">## Processing reference cell 20</span></span>
+<span><span class="co">## Processing reference cell 21</span></span>
+<span><span class="co">## Processing reference cell 22</span></span>
+<span><span class="co">## Processing reference cell 23</span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## Plotting genotype-specific cross-correlations</span></span></code></pre>
+<p><img src="tutorial_synchrony_crosscorr_files/figure-html/cross_corr_by_genotype_long-1.png" width="700"></p>
+<p>For all three time scales, the plots make clear that genotype 1 (red)
+exhibits constant cross-correlation hovering around its mean, while
+genotype 2 (blue) exhibits pronounced peaks in cross-correlation showing
+synchronized firing at all time scales.</p>
+  </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
+    </nav></aside>
 </div>
 
 

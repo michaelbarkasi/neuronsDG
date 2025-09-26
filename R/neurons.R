@@ -85,6 +85,8 @@ new_neuron <- function(
 #' 
 #' @param raster_df Data frame (or file name to csv importable as such), each row a spike; must have columns: cell, time_in_ms, trial; optional columns: recording_name, hemisphere, genotype, sex, region, age.
 #' @param bin_size Size of time bins in milliseconds (default: 10).
+#' @param min_duration Minimum trial duration in milliseconds (default: 0).
+#' @param max_displacement Max displacement of trial center in milliseconds (default: 1e9, i.e., "infinity").
 #' @param sample_rt Sample rate in the default unit for neuron objects, Hz (default: 1e4).
 #' @param time_cutoff Maximum time (in ms) to include spikes; spikes occurring after this time will be excluded (default: Inf).
 #' @return A list of neuron objects, one per unique cell in the raster data.
@@ -92,6 +94,8 @@ new_neuron <- function(
 load.rasters.as.neurons <- function(
     raster_df,
     bin_size = 10.0, 
+    min_duration = 0,
+    max_displacement = 1e9,
     sample_rt = 1e4,
     time_cutoff = Inf
   ) {
@@ -109,13 +113,11 @@ load.rasters.as.neurons <- function(
       
       # Make name for new neuron
       new_name <- paste0("neuron_", c)
-      
       # Grab raster
       c_mask <- raster_df$cell == c
       raster <- raster_df[c_mask, c("time_in_ms", "trial")]
       colnames(raster) <- c("time", "trial")
       raster <- raster[raster$time <= time_cutoff,]
-      
       # Extract meta data
       recording_name <- "not_provided"
       if ("recording_name" %in% colnames(raster_df)) {
@@ -163,7 +165,7 @@ load.rasters.as.neurons <- function(
         sample_rate = sample_rt
       )
       raster <- as.matrix(raster)
-      new_neuron$load_spike_raster_R(raster)
+      new_neuron$load_spike_raster_R(raster, min_duration, max_displacement)
       
       # Save in list
       neuron_list[[new_name]] <- new_neuron
@@ -368,6 +370,7 @@ test.sigma.assumption <- function(
 #' 
 #' @param neuron_list An R list of neuron objects.
 #' @param bin_count_action Method for counting spikes in each bin when computing autocorrelation; one of "boolean", "mean", or "sum" (default: "sum").
+#' @param max_lag Maximum lag (in units of the trial data) to compute autocorrelation; if 0, uses the number of time bins in the neuron's trial data (default: 0).
 #' @param A0 Initial guess for amplitude parameter of exponential decay function (default: 0.001).
 #' @param tau0 Initial guess for time constant parameter of exponential decay function (default: 1.0).
 #' @param ctol Convergence tolerance for fitting exponential decay function (default: 1e-8).
@@ -381,6 +384,7 @@ test.sigma.assumption <- function(
 process.autocorr <- function(
     neuron_list,
     bin_count_action = "sum", 
+    max_lag = 0,
     A0 = 0.001,
     tau0 = 1.0,
     ctol = 1e-8,
@@ -394,9 +398,20 @@ process.autocorr <- function(
     # Array to hold results
     autocor_results <- c()
     
+    # Find max lag if needed
+    if (max_lag == 0) {
+      trial_lengths <- rep(Inf, length(neuron_list))
+      for (i in seq_along(neuron_list)) {
+        nrn <- neuron_list[[i]]
+        trial_lengths[i] <- nrow(nrn$fetch_trial_data_R())
+      }
+      max_lag <- min(trial_lengths)
+    }
+    
     # Loop through neurons in the list
     for (i in seq_along(neuron_list)) {
       
+      # Grab neuron
       nrn <- neuron_list[[i]]
       
       # Set exponential decay function (EDF) parameters 
@@ -404,7 +419,7 @@ process.autocorr <- function(
       nrn$set_edf_termination(ctol, max_evals)
       
       # Compute autocorrelation
-      nrn$compute_autocorrelation(bin_count_action, use_raw)
+      nrn$compute_autocorrelation(bin_count_action, max_lag, use_raw)
       
       # Fit autocorrelation 
       nrn$fit_autocorrelation()
@@ -497,6 +512,7 @@ estimate.autocorr.params <- function(
     n_trials_per_sim = 300, 
     n_sims_per_neurons = 100, 
     bin_count_action = "sum", # "boolean", "mean", or "sum" 
+    max_lag = 0,
     A0 = 0.001,
     tau0 = 1.0,
     ctol = 1e-8,
@@ -504,6 +520,16 @@ estimate.autocorr.params <- function(
     use_raw = TRUE
   ) {
     
+    # Find max lag if needed
+    if (max_lag == 0) {
+      trial_lengths <- rep(Inf, length(neuron_list))
+      for (i in seq_along(neuron_list)) {
+        nrn <- neuron_list[[i]]
+        trial_lengths[i] <- nrow(nrn$fetch_trial_data_R())/nrn$fetch_id_data()[["t_per_bin"]]
+      }
+      max_lag <- min(trial_lengths)
+    }
+   
     # Pre-allocate matrix 
     n_neurons <- length(neuron_list)
     dg_estimates <- matrix(NA_real_, nrow = n_sims_per_neurons * n_neurons, ncol = 9)
@@ -518,6 +544,7 @@ estimate.autocorr.params <- function(
       dg_estimates_nrn <- nrn$estimate_autocorr_params(
         n_trials_per_sim,
         n_sims_per_neurons,
+        max_lag,
         bin_count_action,
         A0,
         tau0,
@@ -719,15 +746,20 @@ analyze.autocorr <- function(
 #' 
 #' @param nrn Neuron object for which to compute autocorrelation.
 #' @param bin_count_action Method for counting spikes in each bin when computing autocorrelation; one of "boolean", "mean", or "sum" (default: "sum").
+#' @param max_lag Maximum lag (in units of the trial data) to compute autocorrelation; if 0, uses the number of time bins in the neuron's trial data (default: 0).
 #' @param use_raw Logical indicating whether to use raw autocorrelation (true) or standard centered and normalized correlation (false) (default: TRUE).
 #' @return None. Modifies neuron in place.
 #' @export
 compute.autocorr <- function(
     nrn,
     bin_count_action = "sum",
+    max_lag = 0,
     use_raw = TRUE
   ) {
-    nrn <- nrn$compute_autocorrelation(bin_count_action, use_raw)
+    if (max_lag == 0) {
+      max_lag <- nrow(nrn$fetch_trial_data_R())
+    }
+    nrn <- nrn$compute_autocorrelation(bin_count_action, max_lag, use_raw)
   }
 
 #' Fit exponential decay function to autocorrelation of single neuron object

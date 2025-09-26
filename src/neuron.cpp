@@ -145,44 +145,52 @@ NumericMatrix to_NumMat(
 // Empirical Pearson correlation between two vectors
 double empirical_corr(
     const VectorXd& x,
-    const VectorXd& y
+    const VectorXd& y,
+    const bool& use_raw
   ) {
    
     // Check dimensions
     int n = x.size();
     if (y.size() != n) {Rcpp::stop("Vectors must be same length for empirical correlation calculation");}
     
-    // Calculate components
-    double mean_x = x.sum()/(double)n;
-    double mean_y = y.sum()/(double)n;
+    // Calculate components for raw correlation
     double mean_xy = x.dot(y)/(double)n;
-    double mean_x2 = x.dot(x)/(double)n;
-    double mean_y2 = y.dot(y)/(double)n;
-    double sd_x = sqrt(mean_x2 - mean_x * mean_x);
-    double sd_y = sqrt(mean_y2 - mean_y * mean_y);
-    
-    // Return correlation estimate
-    double corr = (mean_xy - mean_x * mean_y)/(sd_x * sd_y);
-    return corr;
+    if (use_raw) {
+      return mean_xy;
+    } else {
+      
+      // Calculate components for Pearson correlation
+      double mean_x = x.sum()/(double)n;
+      double mean_y = y.sum()/(double)n;
+      double mean_x2 = x.dot(x)/(double)n;
+      double mean_y2 = y.dot(y)/(double)n;
+      double sd_x = sqrt(mean_x2 - mean_x * mean_x);
+      double sd_y = sqrt(mean_y2 - mean_y * mean_y);
+      
+      // Return correlation estimate
+      double corr = (mean_xy - mean_x * mean_y)/(sd_x * sd_y);
+      return corr;
+      
+    }
     
   }
 
 // Empirical Pearson correlation between two variables sampled many times 
 double empirical_corr_multisample(
-    const MatrixXd& X, // Rows as intratrial samples, columns as trials
-    const MatrixXd& Y  // Rows as intratrial samples, columns as trials
+    const MatrixXd& X,  // Rows as intratrial samples, columns as trials
+    const MatrixXd& Y,  // Rows as intratrial samples, columns as trials
+    const bool& use_raw
   ) {
     
     // Check dimensions
     int n_trials = X.cols();
     if (Y.cols() != n_trials) {Rcpp::stop("Matrices must have same number of columns (trials) for empirical correlation calculation");}
-    
     // Calculate correlation within each trial
     double corr = 0.0;
     int n_trials_nonan = n_trials;
     for (int n = 0; n < n_trials; n++) {
-      double corr_n = empirical_corr(X.col(n), Y.col(n));
-      if (std::isnan(corr_n)) {
+      double corr_n = empirical_corr(X.col(n), Y.col(n), use_raw);
+      if (std::isnan(corr_n) || std::isinf(corr_n)) {
         n_trials_nonan -= 1;
       } else {
         corr += corr_n;
@@ -196,15 +204,27 @@ double empirical_corr_multisample(
 
 // Estimate Pearson correlation across lags
 VectorXd empirical_corr_lagged(
-    const MatrixXd& TS1, // Time series 1, rows as time points, columns as trials
-    const MatrixXd& TS2  // Time series 2, rows as time points, columns as trials
+    const MatrixXd& TS_ref,  // Reference time series, rows as time points, columns as trials
+    const MatrixXd& TS_cmp,  // Comparison time series (to be lagged), rows as time points, columns as trials
+    const int& max_lag,
+    const bool& use_raw
   ) {
     
     // Check for matching dimensions 
-    const int max_lag = TS1.rows();
-    if (TS2.rows() != max_lag) {Rcpp::stop("Time series must have same number of time points (rows)");}
-    const int N_trial = TS1.cols();
-    if (TS2.cols() != N_trial) {Rcpp::stop("Time series must have same number of trials (columns)");}
+    const int n_ref = TS_ref.rows();
+    const int n_cmp = TS_cmp.rows();
+    const int N_trial = TS_ref.cols();
+    if (max_lag > n_ref) {Rcpp::stop("max_lag cannot be greater than number of time points (rows) in the reference time series");}
+    if (n_cmp < n_ref) {Rcpp::stop("Comparison time series must have at least as many rows as the reference series");}
+    if (TS_cmp.cols() != N_trial) {Rcpp::stop("Time series must have same number of trials (columns)");}
+    // Check if padding by zeros is needed
+    MatrixXd TS_cmp_padded;
+    if (n_cmp < n_ref + max_lag) {
+      TS_cmp_padded = MatrixXd::Zero(n_ref + max_lag, N_trial);
+      TS_cmp_padded(seq(0, n_cmp - 1), Eigen::all) = TS_cmp;
+    } else {
+      TS_cmp_padded = TS_cmp; 
+    }
     
     // Initialize vector to hold autocorrelation values
     VectorXd lagged_corr(max_lag);
@@ -212,9 +232,8 @@ VectorXd empirical_corr_lagged(
     
     // Compute correlation for all possible lags
     for (int lag = 0; lag < max_lag; lag++) {
-      MatrixXd TS2_shifted = TS2(seq(0 + lag, max_lag), Eigen::all);
-      MatrixXd TS1_cut = TS1(seq(0, max_lag - lag), Eigen::all);
-      lagged_corr(lag) = empirical_corr_multisample(TS1_cut, TS2_shifted);
+      MatrixXd TS_cmp_shifted = TS_cmp_padded(seq(0 + lag, n_ref + lag - 1), Eigen::all);
+      lagged_corr(lag) = empirical_corr_multisample(TS_ref, TS_cmp_shifted, use_raw);
     }
     
     // Return correlation 
@@ -615,7 +634,11 @@ void neuron::load_trial_data_R(const NumericMatrix& td) {
   } 
 
 // Loading spike raster (Eigen matrix)
-void neuron::load_spike_raster(const MatrixXd& sr) {
+void neuron::load_spike_raster(
+    const MatrixXd& sr,
+    const int& min_duration,
+    const int& max_displacement
+  ) {
     
     // Check input form
     if (unit_data != "spike") {Rcpp::stop("Spike raster can only be loaded if unit_data is 'spike'");}
@@ -625,7 +648,7 @@ void neuron::load_spike_raster(const MatrixXd& sr) {
     spike_raster = sr;
     
     // Infer trial data
-    infer_trial();
+    infer_trial(min_duration, max_displacement);
     
     // Compute mean neuron value (e.g., firing rate)
     lambda = trial_data.sum()/(double)(trial_data.rows() * trial_data.cols());
@@ -637,7 +660,11 @@ void neuron::load_spike_raster(const MatrixXd& sr) {
   } 
 
 // Loading spike raster (Rcpp matrix)
-void neuron::load_spike_raster_R(const NumericMatrix& sr) {
+void neuron::load_spike_raster_R(
+    const NumericMatrix& sr,
+    const int& min_duration,
+    const int& max_displacement
+  ) {
     
     // Check input form
     if (unit_data != "spike") {Rcpp::stop("Spike raster can only be loaded if unit_data is 'spike'");}
@@ -649,7 +676,7 @@ void neuron::load_spike_raster_R(const NumericMatrix& sr) {
     spike_raster = as<MatrixXd>(sr);
     
     // Infer trial data
-    infer_trial();
+    infer_trial(min_duration, max_displacement);
     
     // Compute mean neuron value (e.g., firing rate)
     lambda = trial_data.sum()/(double)(trial_data.rows() * trial_data.cols());
@@ -721,20 +748,33 @@ NumericVector neuron::fetch_lambda() const {
  */
 
 // Infer trial data from spike raster
-void neuron::infer_trial() {
+void neuron::infer_trial(
+    const int& min_duration,
+    const int& max_displacement
+  ) {
     
-    // Find needed dimensions
+    // Find number of trials
     int num_trials = static_cast<int>(spike_raster.col(1).maxCoeff());
-    int max_time = static_cast<int>(spike_raster.col(0).maxCoeff() - spike_raster.col(0).minCoeff());
-    max_time = ((max_time + 9) / 10) * 10; // round up to nearest 10
+    
+    // Find duration
+    int duration = static_cast<int>(spike_raster.col(0).maxCoeff() - spike_raster.col(0).minCoeff());
+    duration = ((duration + 9) / 10) * 10; // round up to nearest 10
+    if (duration < min_duration) {duration = min_duration;}
+    if (duration <= 0) {Rcpp::stop("Spike raster has zero or negative duration");}
+    
+    // Find displacement
+    int displacement = static_cast<int>(std::round(spike_raster.col(0).minCoeff()));
+    if (displacement > max_displacement) {displacement = max_displacement;}
     
     // Resize trial_data and set to zero
-    trial_data.resize(max_time, num_trials);
+    trial_data.resize(duration, num_trials);
     trial_data.setZero();
     
     // Fill trial data with recorded spikes 
     for (int r = 0; r < spike_raster.rows(); r++) {
-      trial_data(static_cast<int>(spike_raster(r, 0)) - 1, static_cast<int>(spike_raster(r, 1)) - 1) += 1.0;
+      int time_idx = std::max(0, static_cast<int>(std::round(spike_raster(r, 0))) - displacement - 1);
+      int trial_idx = static_cast<int>(std::round(spike_raster(r, 1))) - 1;
+      trial_data(time_idx, trial_idx) += 1.0;
     }
     
   }
@@ -783,9 +823,168 @@ NumericVector neuron::fetch_EDF_parameters() const {
  * Member function implementations, analysis
  */
 
+// Compute cross-correlation of this neuron with another neuron
+VectorXd neuron::compute_crosscorrelation(
+    const neuron& nrn_compare,
+    const std::string& bin_count_action,
+    const int& max_lag,
+    const bool& use_raw,
+    const bool& verbose
+  ) {
+    
+    if (verbose) {
+      Rcpp::Rcout << "Computing cross-correlation between neuron " << id_num << " (ref) and neuron " << nrn_compare.id_num << " (comparison)" << std::endl;
+    }
+    
+    // Compare time units 
+    if (unit_time != nrn_compare.unit_time) {
+      Rcpp::stop("Both neurons must have the same unit_time for cross-correlation calculation");
+    } else if (verbose) {
+      Rcpp::Rcout << "Both neurons have unit_time = " << unit_time << std::endl;
+    }
+    
+    // Compare bin size 
+    if (t_per_bin != nrn_compare.t_per_bin) {
+      Rcpp::stop("Both neurons must have the same t_per_bin for cross-correlation calculation");
+    } else if (verbose) {
+      Rcpp::Rcout << "Both neurons have t_per_bin = " << t_per_bin << " " << unit_time << std::endl;
+    }
+    
+    // Compare trial lengths
+    const int trial_length_ref = trial_data.rows();
+    const int trial_length_comp = nrn_compare.trial_data.rows();
+    if (verbose) {
+      Rcpp::Rcout << "Reference neuron trial length: " << trial_length_ref << " " << unit_time << std::endl;
+      Rcpp::Rcout << "Comparison neuron trial length: " << trial_length_comp << " " << unit_time << std::endl;
+    }
+    if (trial_length_comp < trial_length_ref) {Rcpp::stop("Comparison neuron must have trial length at least as long as reference neuron for cross-correlation calculation");}
+    if (max_lag > trial_length_ref) {Rcpp::stop("max_lag must be less than or equal to the trial length of the reference neuron for cross-correlation calculation");}
+    
+    // Check time unit of the trial matrix, home cell
+    bool convert_to_bins = false;
+    int max_lag_bin = max_lag;
+    int trial_length_ref_bin = trial_length_ref;
+    int trial_length_comp_bin = trial_length_comp;
+    if (unit_time != "bin") {
+      convert_to_bins = true;
+      max_lag_bin = (int) max_lag/t_per_bin;
+      trial_length_ref_bin = (int) trial_length_ref/t_per_bin;
+      trial_length_comp_bin = (int) trial_length_comp/t_per_bin;
+      if (verbose) {
+        Rcpp::Rcout << "Converting to bins for cross-correlation calculation" << std::endl;
+        Rcpp::Rcout << "max_lag in bins: " << max_lag_bin << std::endl;
+        Rcpp::Rcout << "Reference neuron trial length in bins: " << trial_length_ref_bin << std::endl;
+        Rcpp::Rcout << "Comparison neuron trial length in bins: " << trial_length_comp_bin << std::endl;
+      }
+    }
+    
+    // Check binning action
+    if (bin_count_action != "sum" && bin_count_action != "boolean" && bin_count_action != "mean") {
+      Rcpp::stop("bin_count_action must be 'sum', 'boolean', or 'mean'");
+    } else if (verbose) {
+      Rcpp::Rcout << "Using bin_count_action = " << bin_count_action << std::endl;
+    }
+    
+    // Initialize matrices for data manipulation 
+    const int N_trial = std::min(trial_data.cols(), nrn_compare.trial_data.cols());
+    MatrixXd binned_data_ref(trial_length_ref_bin, N_trial);
+    MatrixXd binned_data_comp(trial_length_comp_bin, N_trial);
+    
+    // Collapse bins if needed
+    if (convert_to_bins) {
+      
+      for (int n = 0; n < N_trial; n++) {
+        for (int b = 0; b < trial_length_ref_bin; b++) {
+          // Sum spikes in bin
+          double bin_count_ref = trial_data(seq(b*(int)t_per_bin, (b*(int)t_per_bin) + t_per_bin - 1), n).sum();
+          // Apply binning action
+          if (bin_count_action == "mean") {
+            binned_data_ref(b, n) = bin_count_ref/(double)t_per_bin;
+          } else if (bin_count_action == "sum") {
+            binned_data_ref(b, n) = bin_count_ref;
+          } else if (bin_count_action == "boolean") {
+            binned_data_ref(b, n) = (bin_count_ref > 0.0) ? 1.0 : 0.0;
+          }
+        }
+        for (int b = 0; b < trial_length_comp_bin; b++) {
+          // Sum spikes in bin
+          double bin_count_comp = nrn_compare.trial_data(seq(b*(int)t_per_bin, (b*(int)t_per_bin) + t_per_bin - 1), n).sum();
+          // Apply binning action
+          if (bin_count_action == "mean") {
+            binned_data_comp(b, n) = bin_count_comp/(double)t_per_bin;
+          } else if (bin_count_action == "sum") {
+            binned_data_comp(b, n) = bin_count_comp;
+          } else if (bin_count_action == "boolean") { 
+            binned_data_comp(b, n) = (bin_count_comp > 0.0) ? 1.0 : 0.0;
+          }
+        } 
+      }
+      
+    } else {
+      // No binning
+      binned_data_ref = trial_data;
+      binned_data_comp = nrn_compare.trial_data;
+    }
+    
+    // How many times should the lag be stepped across the data?
+    int n_lag_steps = trial_length_ref_bin - max_lag_bin;
+    int n_lag_steps_good = n_lag_steps;
+    
+    // compute cross-correlation as average of lagged correlations across all possible lag steps
+    if (verbose) {
+      Rcpp::Rcout << "Computing cross-correlation vector of length " << max_lag_bin << " bins" << std::endl;
+    }
+    VectorXd crosscorr(max_lag_bin);
+    crosscorr.setZero();
+    for (int lag_step = 0; lag_step <= n_lag_steps; lag_step++) {
+      
+      // Subset data to current lag step
+      int ref_end = lag_step + max_lag_bin - 1;
+      MatrixXd binned_data_ref_cut = binned_data_ref(seq(lag_step, ref_end), Eigen::all);
+      // Comparison data should be longer, as it is shifted by max_lag_bin
+      int comp_end = std::min(ref_end + max_lag_bin, trial_length_comp_bin);
+      MatrixXd binned_data_comp_cut = binned_data_comp(seq(lag_step, comp_end), Eigen::all);
+      // Find lagged correlation for this step
+      VectorXd step_crosscorr = empirical_corr_lagged(binned_data_ref_cut, binned_data_comp_cut, max_lag_bin, use_raw);
+      
+      // If lagged correlation is well defined, add to running sum
+      if ((step_crosscorr.array().isNaN()).any() || (step_crosscorr.array().isInf()).any()) {
+        n_lag_steps_good -= 1;
+      } else {
+        crosscorr += step_crosscorr;
+      }
+    }
+    // Reduce running sum to average
+    crosscorr /= (double)(n_lag_steps + 1);
+    
+    if (verbose) {
+      Rcpp::Rcout << "Possible lag steps: " << n_lag_steps << ", good lag steps: " << n_lag_steps_good << std::endl;
+      Rcpp::Rcout << "Cross-correlation calculation complete" << std::endl;
+    }
+    
+    crosscorr = roll_mean(crosscorr, t_per_bin); // smooth with rolling mean
+    
+    // Return 
+    return crosscorr;
+    
+  }
+
+// Wrapper
+NumericVector neuron::compute_crosscorrelation_R(
+    const neuron& nrn_compare,
+    const std::string& bin_count_action,
+    const int& max_lag,
+    const bool& use_raw,
+    const bool& verbose
+  ) {
+    VectorXd cc = compute_crosscorrelation(nrn_compare, bin_count_action, max_lag, use_raw, verbose);
+    return to_NumVec(cc);
+  }
+
 // Compute autocorrelation of trial data
 void neuron::compute_autocorrelation(
     const std::string& bin_count_action,
+    int max_lag,
     const bool& use_raw
   ) {
     
@@ -797,10 +996,16 @@ void neuron::compute_autocorrelation(
     
     // Check time unit of the trial matrix
     bool convert_to_bins = false;
-    int max_lag = trial_data.rows();
+    int T_n = trial_data.rows();
+    if (max_lag > T_n) {
+      std::cout << "T_n: " << T_n << std::endl;
+      std::cout << "max_lag: " << max_lag << std::endl;
+      Rcpp::stop("max_lag must be less than or equal to the trial length");
+    }
     if (unit_time != "bin") {
       convert_to_bins = true;
       max_lag = (int) max_lag/t_per_bin;
+      T_n = (int) T_n/t_per_bin;
     }
     
     // Check binning action
@@ -809,7 +1014,6 @@ void neuron::compute_autocorrelation(
     }
     
     // Initialize matrix for data manipulation 
-    const int T_n = max_lag;
     const int N_trial = trial_data.cols();
     MatrixXd data(T_n, N_trial);
     
@@ -829,7 +1033,7 @@ void neuron::compute_autocorrelation(
         }
       }
       
-      // Compute standard deviation
+      // Compute standard deviation, used below, in dg_parameters
       spike_sd_bin = sqrt(data.array().square().sum()/(double)(data.rows() * data.cols()) - lambda_bin * lambda_bin);
       
     } else {
@@ -838,16 +1042,18 @@ void neuron::compute_autocorrelation(
     }
     
     // Find autocorrelation
-    if (use_raw) {
-      autocorr = empirical_corr_lagged_raw(data, data);
-    } else {
-      autocorr = empirical_corr_lagged(data, data);
-    }
+    // if (use_raw) {
+    //   autocorr = empirical_corr_lagged_raw(data, data);
+    // } else {
+    //   autocorr = empirical_corr_lagged(data, data, use_raw);
+    // }
+    autocorr = empirical_corr_lagged(data, data, max_lag, use_raw);
     
     autocorr = roll_mean(autocorr, t_per_bin); // smooth with rolling mean
     
   }
 
+// Objective function for fitting EDF model to autocorrelation
 double neuron::bounded_MSE_EDF_autocorr(
     const std::vector<double>& x, // 0 is A, 1 is tau
     std::vector<double>& grad,
@@ -908,6 +1114,7 @@ double neuron::bounded_MSE_EDF_autocorr(
     
   }
 
+// Fit EDF model to autocorrelation
 void neuron::fit_autocorrelation() { 
    
     // Grab initial parameters
@@ -968,6 +1175,7 @@ void neuron::fit_autocorrelation() {
     
   } 
 
+// Find parameters for dichotomized Gaussian simulation
 void neuron::dg_parameters(
     const bool& use_raw,
     const bool& verbose
@@ -1059,6 +1267,7 @@ neuron neuron::dg_simulation(
 NumericMatrix neuron::estimate_autocorr_params(
     const int& trials_per_sim, 
     const int& num_sims,
+    int max_lag,
     const std::string& bin_count_action,
     const double& A0,
     const double& tau0,
@@ -1078,7 +1287,7 @@ NumericMatrix neuron::estimate_autocorr_params(
       set_edf_initials(A0, tau0);
       set_edf_termination(ctol, max_evals);
       // ... compute autocorrelation
-      compute_autocorrelation(bin_count_action, use_raw);
+      compute_autocorrelation(bin_count_action, max_lag, use_raw);
       // ... fit autocorrelation 
       fit_autocorrelation();
     }
@@ -1105,7 +1314,7 @@ NumericMatrix neuron::estimate_autocorr_params(
       my_sim.set_edf_termination(ctol, max_evals);
       
       // Compute autocorrelation
-      my_sim.compute_autocorrelation(bin_count_action, use_raw);
+      my_sim.compute_autocorrelation(bin_count_action, max_lag, use_raw);
       
       // Fit autocorrelation 
       my_sim.fit_autocorrelation();
@@ -1154,6 +1363,7 @@ RCPP_MODULE(neuron) {
   .method("fetch_id_data", &neuron::fetch_id_data)
   .method("fetch_lambda", &neuron::fetch_lambda)
   .method("compute_autocorrelation", &neuron::compute_autocorrelation)
+  .method("compute_crosscorrelation_R", &neuron::compute_crosscorrelation_R)
   .method("fit_autocorrelation", &neuron::fit_autocorrelation)
   .method("dg_parameters", &neuron::dg_parameters)
   .method("dg_simulation", &neuron::dg_simulation)

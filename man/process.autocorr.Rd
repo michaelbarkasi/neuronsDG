@@ -7,6 +7,7 @@
 process.autocorr(
   neuron_list,
   bin_count_action = "sum",
+  max_lag = 0,
   A0 = 0.001,
   tau0 = 1,
   ctol = 1e-08,
@@ -21,6 +22,8 @@ process.autocorr(
 \item{neuron_list}{An R list of neuron objects.}
 
 \item{bin_count_action}{Method for counting spikes in each bin when computing autocorrelation; one of "boolean", "mean", or "sum" (default: "sum").}
+
+\item{max_lag}{Maximum lag (in units of the trial data) to compute autocorrelation; if 0, uses the number of time bins in the neuron's trial data (default: 0).}
 
 \item{A0}{Initial guess for amplitude parameter of exponential decay function (default: 0.001).}
 

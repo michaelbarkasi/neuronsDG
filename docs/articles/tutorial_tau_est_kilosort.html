@@ -466,9 +466,9 @@ results:</p>
 <span><span class="co">## 2   neuron_2 0.0019181991 0.019181991 0.009126643  71.81541 3.679488e-04 0.009494591  0.008308256  7.724912e-04 3.679488e-04</span></span>
 <span><span class="co">## 3   neuron_3 0.0030543226 0.030543226 0.017661381  82.14318 9.328886e-04 0.018594270  0.016569917  1.836363e-03 9.328888e-04</span></span>
 <span><span class="co">## 4   neuron_4 0.0032458782 0.032458782 0.014882406  78.08601 1.053573e-03 0.015935978  0.014147071  1.774952e-03 1.053573e-03</span></span>
-<span><span class="co">## 5   neuron_5 0.0054718876 0.054718876 0.051488330  70.30392 2.994155e-03 0.054482485  0.047655824  5.224944e-03 2.994155e-03</span></span>
-<span><span class="co">## 6   neuron_6 0.0029790213 0.029790213 0.016326248  67.27314 8.874568e-04 0.017213705  0.014958604  1.562098e-03 8.874568e-04</span></span>
-<span><span class="co">## 7   neuron_7 0.0018270450 0.018270450 0.009625929  54.83363 3.338094e-04 0.009959738  0.008355030  6.524564e-04 3.338094e-04</span></span>
+<span><span class="co">## 5   neuron_5 0.0054718876 0.054718876 0.051480600  70.30975 2.994155e-03 0.054474755  0.047649645  5.224807e-03 2.994155e-03</span></span>
+<span><span class="co">## 6   neuron_6 0.0029790213 0.029790213 0.016318386  67.29038 8.874568e-04 0.017205843  0.014952363  1.561959e-03 8.874568e-04</span></span>
+<span><span class="co">## 7   neuron_7 0.0018270450 0.018270450 0.009617739  54.85215 3.338094e-04 0.009951548  0.008348698  6.523030e-04 3.338094e-04</span></span>
 <span><span class="co">## 8   neuron_8 0.0010396851 0.010396851 0.005687176  52.10008 1.080945e-04 0.005795270  0.004802049  2.860916e-04 1.080945e-04</span></span>
 <span><span class="co">## 9   neuron_9 0.0010211900 0.010211900 0.005913492  41.77791 1.042829e-04 0.006017775  0.004758974  2.490937e-04 1.042829e-04</span></span>
 <span><span class="co">## 10 neuron_10 0.0016103889 0.016103889 0.014570541  62.30812 2.593352e-04 0.014829876  0.012669415  8.136122e-04 2.593352e-04</span></span>
@@ -496,7 +496,7 @@ results:</p>
 <span><span class="co">## 32 neuron_32 0.0014070303 0.014070303 0.008488876  54.52572 1.979734e-04 0.008686849  0.007264414  4.772545e-04 1.979734e-04</span></span>
 <span><span class="co">## 33 neuron_33 0.0006434355 0.006434355 0.004149423  35.74107 4.140093e-05 0.004190824  0.003178125  1.265161e-04 4.140093e-05</span></span>
 <span><span class="co">## 34 neuron_34 0.0010196155 0.010196155 0.006513936  41.99332 1.039616e-04 0.006617898  0.005237581  2.644010e-04 1.039616e-04</span></span>
-<span><span class="co">## 35 neuron_35 0.0019766477 0.019766477 0.015101218  69.92589 3.907136e-04 0.015491932  0.013479644  1.041216e-03 3.907136e-04</span></span>
+<span><span class="co">## 35 neuron_35 0.0019766477 0.019766477 0.015107869  69.92591 3.907136e-04 0.015498582  0.013485409  1.041503e-03 3.907136e-04</span></span>
 <span><span class="co">## 36 neuron_36 0.0006286167 0.006286167 0.004018344  44.35807 3.951590e-05 0.004057860  0.003246823  1.447533e-04 3.951590e-05</span></span>
 <span><span class="co">## 37 neuron_37 0.0037323984 0.037323984 0.020823406  42.25347 1.393080e-03 0.022216486  0.017828038  1.909535e-03 1.393080e-03</span></span></code></pre>
 <p>As the last neuron, number 37, is the only C57 sample, it should be
@@ -571,13 +571,13 @@ simulations should be run.</p>
 <span>    n_sims_per_neurons <span class="op">=</span> <span class="fl">100</span></span>
 <span>  <span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">autocor.ests</span><span class="op">$</span><span class="va">estimates</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">##    lambda_ms lambda_bin          A      tau    bias_term  autocorr1 max_autocorr mean_autocorr min_autocorr</span></span>
-<span><span class="co">## 1 0.01948684  0.1948684 0.01486577 58.24632 0.0003797370 0.01524550   0.01290035  0.0009053484 0.0003797370</span></span>
-<span><span class="co">## 2 0.02139474  0.2139474 0.01657849 62.59910 0.0004577348 0.01703623   0.01458857  0.0010915839 0.0004577348</span></span>
-<span><span class="co">## 3 0.01825000  0.1825000 0.01434228 58.70580 0.0003330625 0.01467534   0.01242901  0.0008445185 0.0003330625</span></span>
-<span><span class="co">## 4 0.01688158  0.1688158 0.01214002 68.21286 0.0002849877 0.01242500   0.01076958  0.0007941849 0.0002849877</span></span>
-<span><span class="co">## 5 0.01650000  0.1650000 0.01271856 59.68026 0.0002722500 0.01299081   0.01102867  0.0007339912 0.0002722500</span></span>
-<span><span class="co">## 6 0.01740789  0.1740789 0.01304315 54.17459 0.0003030348 0.01334619   0.01114772  0.0007291255 0.0003030348</span></span></code></pre>
+<pre><code><span><span class="co">##    lambda_ms lambda_bin          A       tau    bias_term  autocorr1 max_autocorr mean_autocorr min_autocorr</span></span>
+<span><span class="co">## 1 0.01678947  0.1678947 0.01270898 56.452089 0.0002818864 0.01299086   0.01092770  0.0007161768 0.0002818864</span></span>
+<span><span class="co">## 2 0.01818421  0.1818421 0.01433227 53.615035 0.0003306655 0.01466294   0.01222425  0.0007935731 0.0003306655</span></span>
+<span><span class="co">## 3 0.01582895  0.1582895 0.01205559 55.332217 0.0002505556 0.01230614   0.01031291  0.0006536013 0.0002505556</span></span>
+<span><span class="co">## 4 0.01660526  0.1660526 0.01236305 56.637237 0.0002757348 0.01263878   0.01063778  0.0006997160 0.0002757348</span></span>
+<span><span class="co">## 5 0.01606579  0.1606579 0.01168360 57.442723 0.0002581096 0.01194171   0.01007495  0.0006650062 0.0002581096</span></span>
+<span><span class="co">## 6 0.01672368  0.1672368 0.11825572  4.422962 0.0002796816 0.11853540   0.01260827  0.0003708305 0.0002796816</span></span></code></pre>
 <p>With the simulations run, the final step is to estimate the network
 time constant for covariates of interest. The function <a href="../reference/analyze.autocorr.html">analyze.autocorr</a> does this
 by bootstrapping over the tau values obtained from the simulations. If
@@ -607,12 +607,12 @@ simulation.</p>
 <div class="sourceCode" id="cb32"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">autocor.results.bootstraps</span><span class="op">$</span><span class="va">resamples</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">##   RH_Mecp2 HET LH_Shank3 KO</span></span>
-<span><span class="co">## 1     61.33279     60.74396</span></span>
-<span><span class="co">## 2     64.65464     60.19603</span></span>
-<span><span class="co">## 3     60.08000     60.14660</span></span>
-<span><span class="co">## 4     67.13821     60.24043</span></span>
-<span><span class="co">## 5     61.03050     62.86448</span></span>
-<span><span class="co">## 6     59.48968     63.56738</span></span></code></pre>
+<span><span class="co">## 1     62.25255     61.50968</span></span>
+<span><span class="co">## 2     64.67203     58.74362</span></span>
+<span><span class="co">## 3     60.17618     60.29191</span></span>
+<span><span class="co">## 4     64.52362     60.07483</span></span>
+<span><span class="co">## 5     61.49527     63.27440</span></span>
+<span><span class="co">## 6     61.66852     61.51078</span></span></code></pre>
 <p>The second is <strong>distribution_plot</strong>, a ggplot2 object
 visualizing the bootstrap distributions of tau for each covariate.</p>
 <div class="sourceCode" id="cb34"><pre class="downlit sourceCode r">
