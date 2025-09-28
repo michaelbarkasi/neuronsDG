@@ -7,7 +7,7 @@ title: "Spike synchrony via cross-correlation"
 options(width = 10000)
 ```
 
-Synchronous firing between two neurons can be detected by computing the cross-correlation of their spike trains. The *cross-correlation* between two time series $R$ (the reference series) and $C$ (the comparison series) is the correlation between $R$ and a lagged copy of $C$. This tutorial shows how to use functions from the neurons package and some basic R code to compute and visualize cross-correlations between spike trains.
+Synchronous firing between two neurons can be detected by computing the cross-correlation of their spike trains. The *cross-correlation* between two time series $R$ (the reference series) and $C$ (the comparison series) is the correlation between $R$ and a lagged copy of $C$. This tutorial shows how to use functions from the neurons package and some basic R code to compute and visualize cross-correlations between spike trains. Data from the thalamic reticular nucleus (TRN) of wildtype and Mut-S Homolog 2 (Msh2) knock-out mice is used. As discussed in the [preprint](https://www.biorxiv.org/content/10.1101/2025.02.13.638164v1) from which the data is taken, the Msh2 knock-out mice were observed to exhibit increased gap junction formation in the TRN, and thus it would be expected that the knock-out mice would exhibit increased synchronous firing. This is because gap junctions are fast, electrical synapses between cells. 
 
 <h2>Load spike rasters</h2>
 
@@ -37,19 +37,19 @@ spike.rasters <- read.csv(
 print(head(spike.rasters))
 ```
 
-<h2>Parse trials</h2>
+<h2>Parsing trials</h2>
 
-The data used here is from multi-channel probe recordings in mouse auditory cortex. These recordings were parsed into spike clusters (proxies for individual cells) by kilosort4. In this data, the cluster column numbers the clusters identified on each probe, while the cell column simply renumbers the clusters so that each cluster has a unique identity. 
+The data used here is from multi-channel probe recordings in mouse TRN. These recordings were parsed into spike clusters (proxies for individual cells) by kilosort1. In this data, the cluster column numbers the clusters identified on each probe, while the cell column simply renumbers the clusters so that each cluster has a unique identity. 
 
 In this case, the spike times are in milliseconds and run continuously from zero to the end of the recording session. The recordings are long, running tens of minutes, with many thousands of spikes. Hence, it may not be the best idea to compute cross-correlations over the entire recording session. Instead, the recordings should be parsed into shorter trials. The trails could be defined by arbitrarily chunking the recordings into segments of a fixed duration, but there is a better way, given the goal of detecting synchronous firing. 
 
 Suppose $R$ and $C$ are binary series (of 0s and 1s) representing the presence or absence of spikes in small time bins. Series $R$ will be the reference series, and series $C$ will be the comparison series a lagged copy of which is used for computing correlation. If we want to know whether spikes in $C$ tend to occur synchronous with, or shortly after spikes in $R$, then it makes sense to define trials by the spikes in $R$. Specifically, each spike in $R$ will define a trial that begins some fixed duration before the spike and ends some fixed duration after the spike. A trial will be thrown out if a second spike from $R$ occurs in it. Each trial will thus contain a single spike from $R$ at time zero. High correlation at zero lag will indicate that $C$ tends to fire synchronously with $R$, while high correlation at a short positive lag will indicate that $C$ tends to fire shortly after $R$.
 
 ```{r parse_trials}
-# Write function that will parse a compact raster into trials defined by spikes from a reference cell
+# Write function to parse a compact raster into trials defined by spikes from a reference cell
 make_trials_from_spikes <- function(
     raster,
-    cell_num,
+    cell_num,        # ID of reference cell
     prespike_time,   # In units of the raster, in this case, ms
     postspike_time,  # In units of the raster, in this case, ms
     clean_only = TRUE
@@ -148,14 +148,21 @@ cross_corr <- ref_neuron$compute_crosscorrelation_R(
     TRUE                        # Verbose?
   )
 
-# Plot cross-correlation
-plot(
-    cross_corr, 
-    type='l', 
-    xlab = "lag (ms)", 
-    ylab = "Raw cross-correlation", 
-    main = "Demo cross-correlation plot"
-  )      
+# Plot cross-correlation with ggplot2
+ggplot2::ggplot(
+  data.frame(
+    lag = seq_along(cross_corr),
+    value = cross_corr), 
+  ggplot2::aes(x = lag, y = value)) +
+  ggplot2::geom_line() +
+  ggplot2::labs(
+    x = "lag (ms)",
+    y = "Raw cross-correlation",
+    title = "Demo cross-correlation plot") +
+  ggplot2::theme_minimal() +
+  ggplot2::theme(
+    panel.background = ggplot2::element_rect(fill = "white", colour = NA),
+    plot.background  = ggplot2::element_rect(fill = "white", colour = NA))
 ```
 Unfortunately, these two neurons seem to have no obvious peak in their cross-correlation, suggesting that they do not fire synchronously. To get a sense of what the cross-correlation plot would look like for two synchronously firing neurons, let's artificially load the comparison neuron with lagged copies of spikes from the reference neuron. 
 
@@ -198,16 +205,23 @@ cross_corr_loaded <- ref_neuron_loaded$compute_crosscorrelation_R(
   )
 
 # Plot cross-correlation for loaded neurons
-plot(
-    cross_corr_loaded, 
-    type='l', 
-    xlab = "lag (ms)", 
-    ylab = "Raw cross-correlation", 
-    main = "Demo cross-correlation plot"
-  ) 
+ggplot2::ggplot(
+  data.frame(
+    lag = seq_along(cross_corr_loaded),
+    value = cross_corr_loaded), 
+  ggplot2::aes(x = lag, y = value)) +
+  ggplot2::geom_line() +
+  ggplot2::labs(
+    x = "lag (ms)",
+    y = "Raw cross-correlation",
+    title = "Demo cross-correlation plot with loaded spikes") +
+  ggplot2::theme_minimal() +
+  ggplot2::theme(
+    panel.background = ggplot2::element_rect(fill = "white", colour = NA),
+    plot.background  = ggplot2::element_rect(fill = "white", colour = NA))
 ```
 
-Notice that now there is a clear peak, or spike, in correlatino at a lag of 10ms, which is the lag time used when loading spikes. This reflects how the lagged and loaded copy of the comparison neuron's spike train contains a large number of spikes 10ms after spikes from the reference neuron.
+Notice that now there is a clear peak, or spike, in correlation at a lag of 10ms, which is the lag time used when loading spikes. This reflects how the lagged and loaded copy of the comparison neuron's spike train contains a large number of spikes 10ms after spikes from the reference neuron.
 
 In addition to visualizing cross correlation as a line plot of correlation as a function of lag, it can also be visualized as a cross-correlogram, which is a histogram of the times of spikes from the comparison neuron relative to spikes from the reference neuron. Here, for example, is the cross-correlogram for the loaded neuron. 
 
@@ -217,14 +231,27 @@ loaded_raster <- comp_neuron_loaded$fetch_spike_raster_R()
 # Extract spike times relative to reference spikes
 loaded_spikes <- loaded_raster[,1]
 # Plot histogram of spike times
-hist(loaded_spikes, main = "Cross-correlogram of loaded neuron", xlab = "Time relative to reference spikes (ms)", breaks = 50)
+ggplot2::ggplot(
+    data.frame(loaded_spikes = loaded_spikes),
+    ggplot2::aes(x = loaded_spikes)
+  ) +
+  ggplot2::geom_histogram(bins = 50, color = "black", fill = "grey") +
+  ggplot2::labs(
+    title = "Cross-correlogram of loaded neuron",
+    x = "Time relative to reference spikes (ms)",
+    y = "Count"
+  ) +
+  ggplot2::theme_minimal() +
+  ggplot2::theme(
+    panel.background = ggplot2::element_rect(fill = "white", colour = NA),
+    plot.background  = ggplot2::element_rect(fill = "white", colour = NA))
 ```
 
 The above histogram shows a clear peak at 10ms, reflecting the lagged spikes that were loaded into the comparison neuron.
 
-<h2>Covariate analysis</h2>
+<h2>Analyzing covariates</h2>
 
-The cells in the above demo data come from two genotypes of mice, "geno_1" and "geno_2". Let's compute cross-correlations for all pairs of cells in the data and see if there is any difference in cross-correlation between the two genotypes. Note that this function only plots correlation as a function of lag (not the cross-correlogram) and normalizes the values. This is because different cells will have different firing rates, which will distort both the raw cross-correlation and the cross-correlogram. Normalizing the cross-correlation by its mean value helps to mitigate this distortion.
+The cells in the above demo data come from two genotypes of mice, wildtype (WT) and Msh2 knock-outs (Msh2KO). Let's compute cross-correlations for all pairs of cells in the data and see if there is any difference in cross-correlation between the two genotypes. Note that this function only plots correlation as a function of lag (not the cross-correlogram) and normalizes the values. This is because different cells will have different firing rates, which will distort both the raw cross-correlation and the cross-correlogram. Normalizing the cross-correlation by its mean value helps to mitigate this distortion.
 
 ```{r}
 cross_corr_by_genotype <- function(
@@ -232,20 +259,15 @@ cross_corr_by_genotype <- function(
     trial_duration, # in ms
     pre_ratio,      # fraction of trial duration before spike
     bs,             # bin size in ms
-    lag_divider,    # max lag will be trial_duration/lag_divider
-    verbose = TRUE
+    lag_divider     # max lag will be trial_duration/lag_divider
   ) {
     
-    if (verbose) cat("\nComputing cross-correlations by genotype\n")
-   
     # Extract cells from raster 
     cell_list <- unique(raster$cell) 
     
     # Compute cross-correlation by cell
     cross_corr_by_cell <- list()
     for (ref_cell in cell_list) {
-      
-      if (verbose) cat(paste0("\nProcessing reference cell ", ref_cell))
       
       # Parse trials for the reference cell
       raster_ref_cell <- make_trials_from_spikes(
@@ -254,6 +276,10 @@ cross_corr_by_genotype <- function(
         prespike_time = trial_duration*pre_ratio,
         postspike_time = trial_duration*(1 - pre_ratio)
       )
+      #cat("\n\nNumber of trials found: ", length(unique(raster_ref_cell$trial)))
+      #stop("quality control")
+      # ^^^ Interesting number to track for QC; 
+      #      as trial duration increases, this number falls, making estimates less reliable
       
       # Load parsed raster into neurons
       neurons <- load.rasters.as.neurons(
@@ -271,15 +297,17 @@ cross_corr_by_genotype <- function(
       for (comp_cell in comp_cell_list) {
         
         # Don't compute autocorrelation
-        if (ref_cell == comp_cell) {next}
+        if (ref_cell == comp_cell) next
         
         # Compute cross-correlation
-        cross_corr_cc <- neurons[[paste0("neuron_", ref_cell)]]$compute_crosscorrelation_R(
-          neurons[[paste0("neuron_", comp_cell)]], 
+        ref_neuron <- neurons[[paste0("neuron_", ref_cell)]]
+        comp_neuron <- neurons[[paste0("neuron_", comp_cell)]]
+        cross_corr_cc <- ref_neuron$compute_crosscorrelation_R(
+          comp_neuron, 
           "sum", 
           trial_duration/lag_divider,   # max lag
-          TRUE,  # use raw?
-          FALSE  # verbose?
+          TRUE,                         # use raw?
+          FALSE                         # verbose?
         )
         
         # Append to results
@@ -293,12 +321,9 @@ cross_corr_by_genotype <- function(
     }
     
     # Separate cross-correlations by genotype
-    if (verbose) cat("\n\nSeparating cross-correlations by genotype\n")
-    geno_1_crosscorr <- c()
-    geno_2_crosscorr <- c()
+    geno_WT_crosscorr <- c()
+    geno_Msh2KO_crosscorr <- c()
     for (ref_cell in seq_along(cross_corr_by_cell)) {
-      
-      if (verbose) cat(paste0("\nProcessing reference cell ", ref_cell))
       
       # Get all cross-correlations for this reference cell
       cross_corr_matrix <- cross_corr_by_cell[[ref_cell]]
@@ -316,26 +341,53 @@ cross_corr_by_genotype <- function(
         cross_corr_vector <- cross_corr_vector/mean(cross_corr_vector)
         
         # Append to genotype-specific results
-        if (geno == "geno_1") {
-          geno_1_crosscorr <- rbind(geno_1_crosscorr, cross_corr_vector)
-        } else if (geno == "geno_2") {
-          geno_2_crosscorr <- rbind(geno_2_crosscorr, cross_corr_vector)
+        if (geno == "WT") {
+          geno_WT_crosscorr <- rbind(geno_WT_crosscorr, cross_corr_vector)
+        } else if (geno == "Msh2KO") {
+          geno_Msh2KO_crosscorr <- rbind(geno_Msh2KO_crosscorr, cross_corr_vector)
         }
         
       }
     }
     
     # Plot genotype-specific cross-correlations
-    if (verbose) cat("\n\nPlotting genotype-specific cross-correlations\n")
-    plot(
-        colMeans(geno_2_crosscorr), 
-        type='l', 
-        col='blue', 
-        xlab = "lag (ms)", 
-        ylab = "normalized cross-correlation",
-        main = "Cross-correlation by genotype (geno_1 = red, geno_2 = blue)"
+    df <- data.frame(
+      lag   = seq_along(colMeans(geno_WT_crosscorr)),
+      geno1 = colMeans(geno_WT_crosscorr),
+      geno2 = colMeans(geno_Msh2KO_crosscorr)
+    )
+    df_long <- data.frame(
+      lag      = c(df$lag, df$lag),
+      value    = c(df$geno1, df$geno2),
+      genotype = factor(
+        rep(c("WT", "Msh2KO"), each = nrow(df)),
+        levels = c("WT", "Msh2KO")
       )
-    lines(colMeans(geno_1_crosscorr), col='red')
+    )
+    
+    plt <- ggplot2::ggplot(df_long, ggplot2::aes(x = lag, y = value, color = genotype)) +
+      ggplot2::geom_line() +
+      ggplot2::scale_color_manual(
+        values = c("WT" = "red", "Msh2KO" = "blue")
+      ) +
+      ggplot2::labs(
+        x = "lag (ms)",
+        y = "normalized cross-correlation",
+        title = "Cross-correlation by genotype"
+      ) +
+      ggplot2::theme_minimal() +
+      ggplot2::theme(
+        panel.background = ggplot2::element_rect(fill = "white", colour = NA),
+        plot.background  = ggplot2::element_rect(fill = "white", colour = NA)
+      )
+    print(plt)
+    
+    # ggplot2::ggsave(
+    #   filename = paste0("cross_corr_plot_", trial_duration, "ms.svg"),
+    #   plot = plt,
+    #   device = svglite::svglite,
+    #   width = 10, height = 7
+    # )
     
   }
 ```
@@ -348,8 +400,7 @@ cross_corr_by_genotype(
       trial_duration = 20,  # in ms
       pre_ratio = 0.5,      # fraction of trial duration before spike
       bs = 1,               # bin size in ms
-      lag_divider = 4,      # max lag will be trial_duration/lag_divider
-      verbose = FALSE
+      lag_divider = 4       # max lag will be trial_duration/lag_divider
   )
 ```
 
@@ -361,8 +412,7 @@ cross_corr_by_genotype(
       trial_duration = 90,  # in ms
       pre_ratio = 1/3,      # fraction of trial duration before spike
       bs = 1,               # bin size in ms
-      lag_divider = 3,      # max lag will be trial_duration/lag_divider
-      verbose = FALSE
+      lag_divider = 3       # max lag will be trial_duration/lag_divider
   )
 ```
 
@@ -374,9 +424,8 @@ cross_corr_by_genotype(
       trial_duration = 200, # in ms
       pre_ratio = 0.25,     # fraction of trial duration before spike
       bs = 1,               # bin size in ms
-      lag_divider = 2,      # max lag will be trial_duration/lag_divider
-      verbose = TRUE
+      lag_divider = 2       # max lag will be trial_duration/lag_divider
   )
 ```
 
-For all three time scales, the plots make clear that genotype 1 (red) exhibits constant cross-correlation hovering around its mean, while genotype 2 (blue) exhibits pronounced peaks in cross-correlation showing synchronized firing at all time scales. 
+As expected, for all three time scales, the plots make clear that wildtype mice (red) exhibit constant cross-correlation hovering around its mean, while the Msh2 knock-out mice (blue) exhibit pronounced peaks in cross-correlation at 3-4ms of lag, showing synchronized firing. The large peaks around 80ms are also curious, and perhaps unexpected. They might also be due to random chance, as longer time scales leave fewer quiet spikes from which to build trials (although the 200ms trial duration still left well over 2,000 trials from which to sample, compared with around 7,000 trials for the 20ms duration). 

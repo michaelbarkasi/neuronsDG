@@ -222,7 +222,7 @@ Notice how a threshold value $\gamma$ defines, for any $V_i$, a new binary rando
 
 <h3>Simulating spike rate</h3>
 
-If $X$ is a dichotomized Gaussian, the probability $P(X=1)$ that $X$ is 1 is given by the cumulative distribution function of $V_i$ evaluated at $\gamma$. As each $V_i$ is stipulated to be a standard normal ($\mu=0$, $\sigma=1$), this cumulative distribution function is the standard normal cumulative distribution function $\Phi$:
+If $X$ is a dichotomized Gaussian, the probability $P(X=1)$ that $X$ is 1 is given by the cumulative distribution function of $V_i$ evaluated at $\gamma$. As each $V_i$ is stipulated to be a standard normal ($\mu=0$ and $\sigma=1$), this cumulative distribution function is the standard normal cumulative distribution function $\Phi$:
 \[\Phi(x) = \frac{1}{\sqrt{2\pi}} \int_{-\infty}^x \exp(-t^2/2) dt\]
 Thus:
 \[P(X=1) = P(V_i>\gamma) = 1 - \Phi(\gamma)\]
