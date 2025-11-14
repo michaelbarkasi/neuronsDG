@@ -16,6 +16,9 @@ NULL
 
 .onLoad <- function(libname, pkgname) {
     Rcpp::loadModule("neuron", TRUE)
+    Rcpp::loadModule("motif", TRUE)
+    Rcpp::loadModule("network", TRUE)
+    Rcpp::loadModule("Projection", TRUE)
   }
 
 core_num <- parallel::detectCores() - 2 # Set to 1 to disable parallel processing (e.g., on windows)
@@ -34,11 +37,11 @@ runparallel <- function(
     return(results)
   }
 
-# Define functions #####################################################################################################
+# Initialization for C++ object classes ################################################################################
 
-#' Initialize neuron object
+#' Initialize neuron
 #' 
-#' This function initializes a new neuron object with specified parameters. The neuron objects are the main tools for running autocorrelation analyses of spike data.
+#' This function initializes a new neuron object with specified parameters. The neuron objects are the main tools for running correlation analyses of spike data.
 #' 
 #' @param id_num Numeric identifier for the neuron (default: 0).
 #' @param recording_name Recording (if any) on which this neuron is based (default: "not_provided").
@@ -56,7 +59,7 @@ runparallel <- function(
 #' @param sample_rate Sample rate (in above units), e.g., 1e4 Hz (default: 1e4).
 #' @return A new neuron object.
 #' @export
-new_neuron <- function(
+new.neuron <- function(
     id_num = 0, 
     recording_name = "not_provided", 
     type = "generic", 
@@ -78,6 +81,336 @@ new_neuron <- function(
     )
     return(neuron)
   }
+
+#' Initialize motif
+#' 
+#' This function initializes a new motif object with specified parameters. Motifs are used for building networks of interconnected neurons. They are recipes for building internode projections within a neural network. They are "columnar", in the sense that they are repeated across cortical columns. 
+#' 
+#' @param motif_name Character string giving name of the motif (default: "not_provided").
+#' @return A new motif object.
+#' @export
+new.motif <- function(
+    motif_name = "not_provided"
+  ) {
+    motif <- new(
+      motif,
+      motif_name
+    )
+    return(motif)
+  }
+
+#' Initialize network
+#' 
+#' This function initializes a new network object with specified parameters. Networks are used to simulate two-dimensional cortical patches (of layers and columns) using Growth Transform dynamical systems. 
+#' 
+#' Mathematically, networks are points (representing neurons) connected by directed edges. Within the growth-transform (GT) model framework, these edges are transconductance values representing synaptic connections between neurons.
+#' 
+#' Point types: Points can be grouped by types, which affect their behavior and connectivity. Within the GT model framework, these types each have their own temporal modulation constants (determining, e.g., whether the cell bursts or fires singular spikes) and valence (excitatory or inhibitory).
+#' 
+#' Global structure: Modelling the mammalian cortex, networks are assumed to divide into a coarse-grained two-dimensional coordinate system of layers (rows) and columns (columns). Each point is assigned to a layer-column coordinate (called a "node"), having both local x-y coordinates within that node and a global x-y coordinate within the network. 
+#'  
+#' Local structure: Each layer-column coordinate defines a "node" containing a number of points determined by layer and type. Connections (edges) within a node are determined by a local recurrence factor matrix determining the transconductance between points of each type. These edges are called "local". 
+#' 
+#' Long-range projections: Connections (edges) between points in different nodes are determined by a long-range projection motif and labelled with the same of that motif. 
+#' 
+#' @param network_name Character string giving name of the network (default: "not_provided").
+#' @param recording_name Character string giving name of the recording on which this network is based (default: "not_provided").
+#' @param type Character string giving type of network; "Growth_Transform" is the only option available (default: "Growth_Transform").
+#' @param genotype Character string giving genotype of the animal from which the modelled network comes, e.g. "WT", "KO", "MECP2", "transgenic", etc. (default: "not_provided").
+#' @param sex Character string giving sex of the animal from which the modelled network comes (default: "not_provided").
+#' @param hemi Character string giving hemisphere of the animal from which the modelled network comes, e.g. "left", "right" (default: "not_provided").
+#' @param region Character string giving brain region of the animal from which the modelled network comes, e.g. "V1", "M1", "CA1", "PFC", etc. (default: "not_provided").
+#' @param age Character string giving age of the animal from which the modelled network comes, e.g. "P0", "P7", "P14", "adult", etc. (default: "not_provided").
+#' @param unit_time Character string giving unit of time for spike raster or other recording data on which the model is based or being compared, e.g. "ms", "s", etc. (default: "ms").
+#' @param unit_sample_rate Character string giving unit of sample rate for recording data on which the model is based or being compared, e.g. "Hz", "kHz", etc. (default: "Hz").
+#' @param unit_potential Character string giving unit of cell-membrane potential for recording data on which the model is based or being compared, e.g. "mV", "uV", etc. (default: "mV").
+#' @param unit_current Character string giving unit of cell current for recording data on which the model is based or being compared, e.g. "mA", "uA", etc. (default: "mA").
+#' @param unit_conductance Character string giving unit of axon and dendrite conductance for recording data on which the model is based or being compared, e.g. "mS", "uS", etc. (default: "mS").
+#' @param unit_distance Character string giving unit of distance axon and dendrite measurements on which the model is based or being compared, e.g. "micron", "mm", etc. (default: "micron").
+#' @param t_per_bin Time (in above units) per bin, e.g., 1 ms per bin (default: 10.0).
+#' @param sample_rate Sample rate (in above units), e.g., 1e4 Hz (default: 1e4).
+#' @return A new network object.
+#' @export
+new.network <- function(
+    network_name = "not_provided", 
+    recording_name = "not_provided", 
+    type = "Growth_Transform", 
+    genotype = "WT",
+    sex = "not_provided",
+    hemi = "not_provided",
+    region = "not_provided",
+    age = "not_provided",
+    unit_time = "ms", 
+    unit_sample_rate = "Hz", 
+    unit_potential = "mV", 
+    unit_current = "mA",
+    unit_conductance = "mS",
+    unit_distance = "micron",
+    t_per_bin = 1.0, 
+    sample_rate = 1e4
+  ) {
+    network <- new(
+      network, 
+      network_name,
+      recording_name,
+      type,
+      genotype,
+      sex,
+      hemi,
+      region,
+      age,
+      unit_time,
+      unit_sample_rate,
+      unit_potential,
+      unit_current,
+      unit_conductance,
+      unit_distance,
+      t_per_bin,
+      sample_rate
+    )
+    return(network)
+  }
+
+# Functions for network ################################################################################################
+
+#' Load projection into motif
+#' 
+#' This function loads a projection schema into a motif object. Projections define internode connectivity within a network built using the motif.
+#' 
+#' @param motif Motif object into which to load the projection.
+#' @param presynaptic_type Character string giving type of presynaptic neuron, e.g. "excitatory", "inhibitory", etc.
+#' @param presynaptic_layer Character string giving layer of presynaptic neuron, e.g. "L2/3", "L4", "L5", "L6", etc.
+#' @param presynaptic_density Numeric giving density of presynaptic neuron type in presynaptic layer (e.g., ratio of neurons per node).
+#' @param postsynaptic_type Character string giving type of postsynaptic neuron, e.g. "excitatory", "inhibitory", etc.
+#' @param postsynaptic_layer Character string giving layer of postsynaptic neuron, e.g. "L2/3", "L4", "L5", "L6", etc.
+#' @param postsynaptic_density Numeric giving density of postsynaptic neuron type in postsynaptic layer (e.g., ratio of neurons per node).
+#' @param max_col_shift_up Maximum number of columns upwards (increasing columnar indexes) that the projection can reach (default: 0).
+#' @param max_col_shift_down Maximum number of columns downwards (decreasing columnar indexes) that the projection can reach (default: 0).
+#' @param connection_strength Numeric giving overall strength of the projection (default: 1.0).
+#' @return The updated motif object with the new projection loaded.
+#' @export
+load.projection.into.motif <- function(
+    motif,
+    presynaptic_type,
+    presynaptic_layer,
+    presynaptic_density,
+    postsynaptic_type,
+    postsynaptic_layer,
+    postsynaptic_density,
+    max_col_shift_up = 0,
+    max_col_shift_down = 0,
+    connection_strength = 1.0
+  ) {
+    # Initialize new projection object
+    proj <- new(Projection)
+    # Load projection parameters 
+    proj$pre_type <- presynaptic_type
+    proj$pre_layer <- presynaptic_layer
+    proj$pre_density <- max(min(presynaptic_density, 1), 0)
+    proj$post_type <- postsynaptic_type
+    proj$post_layer <- postsynaptic_layer
+    proj$post_density <- max(min(postsynaptic_density, 1), 0)
+    # Add projection to motif
+    motif$load_projection(
+      proj,
+      as.integer(max_col_shift_up),
+      as.integer(max_col_shift_down),
+      connection_strength
+    )
+    return(motif)
+  }
+
+#' Set network structure
+#' 
+#' This function sets the structure of a network object, defining its layers, columns, neuron types, and local connectivity parameters. It also generates local nodes based on the specified structure.
+#' 
+#' @param network Network object to configure.
+#' @param neuron_types Character vector giving types of neurons in the network, e.g. c("principal", "interneuron").
+#' @param neuron_type_valences Numeric vector giving valences of each neuron type, e.g. c(1, -1) for excitatory and inhibitory neurons.
+#' @param layer_names Character vector giving names of layers in the network, e.g. c("L2/3", "L4", "L5", "L6").
+#' @param n_layers Integer giving number of layers in the network.
+#' @param n_columns Integer giving number of columns in the network.
+#' @param layer_height Numeric giving height of each layer (in units specified at network creation, default unit is microns, default value is 1.0).
+#' @param column_width Numeric giving width of each column (in units specified at network creation, default unit is microns, default value is 1.0).
+#' @param layer_separation_factor Numeric giving mean distance between layers as a fraction of layer height (default: 1.25).
+#' @param column_separation_factor Numeric giving mean distance between columns as a fraction of column width (default: 1.5).
+#' @param neurons_per_node Matrix giving number of neurons of each type per node in each layer; dimensions must match n_layers (rows) and length of neuron_types (columns).
+#' @param recurrence_factors List of matrices giving local recurrence factors for each layer; each matrix must have dimensions matching length of neuron_types (rows and columns).
+#' @param pruning_threshold_factor Numeric giving factor for pruning weak connections within nodes; connections with strength below this factor times the maximum connection strength in the node will be pruned (default: 0.1).
+#' @return The updated network object with the specified structure and local nodes generated.
+#' @export
+set.network.structure <- function(
+    network,
+    neuron_types = c("principal"),
+    neuron_type_valences = c(1),
+    layer_names = c("layer"),
+    n_layers = 1,
+    n_columns = 1,
+    layer_height = 1.0,
+    column_width = 1.0,
+    layer_separation_factor = 1.25,
+    column_separation_factor = 1.5,
+    neurons_per_node = matrix(10, nrow = 1, ncol = 1),
+    recurrence_factors = list(matrix(0.5, nrow = 1, ncol = 1)),
+    pruning_threshold_factor = 0.1
+  ) {
+    # Run checks 
+    if (length(neuron_types) != length(neuron_type_valences)) {
+      stop("Length of neuron_types must match length of neuron_type_valences.")
+    }
+    if (length(layer_names) != n_layers) {
+      stop("Length of layer_names must match n_layers.")
+    }
+    npn_dim <- c(1, length(neurons_per_node))
+    if (n_layers > 1 && length(neurons_per_node) > 1) {
+      npn_dim <- dim(neurons_per_node)
+    } 
+    if (any(npn_dim != c(n_layers, length(neuron_types)))) {
+      stop("Dimensions of neurons_per_node must match n_layers and length of neuron_types.")
+    }
+    if (!("list" %in% class(recurrence_factors))) {
+      stop("recurrence_factors must be a list of matrices.")
+    } else if (length(recurrence_factors) != n_layers) {
+      stop("Length of recurrence_factors list must match n_layers.") 
+    } else {
+      for (l in seq_len(n_layers)) {
+        rf_dim <- dim(recurrence_factors[[l]])
+        if (length(rf_dim) != 2) {
+          stop(paste0("recurrence_factors[[", l, "]] must be a matrix."))
+        }
+        if (any(rf_dim != c(length(neuron_types), length(neuron_types)))) {
+          stop(paste0("Dimensions of recurrence_factors[[", l, "]] must match length of neuron_types."))
+        }
+      }
+    }
+    # Set structure
+    network$set_network_structure_R(
+      neuron_types,
+      as.integer(neuron_type_valences),
+      layer_names,
+      as.integer(n_layers),
+      as.integer(n_columns),
+      layer_height,
+      column_width,
+      layer_separation_factor,
+      column_separation_factor,
+      neurons_per_node,
+      recurrence_factors,
+      pruning_threshold_factor
+    )
+    # Make local nodes and return
+    network$make_local_nodes()
+    return(network)
+  }
+
+#' Apply circuit motif to network
+#' 
+#' This function applies a circuit motif to a network object, adding long-range projections between nodes in the network based on the motif's defined projections.
+#' 
+#' @param network Network object to which the motif will be applied.
+#' @param motif Motif object defining the circuit motif to apply.
+#' @return The updated network object with the motif applied.
+#' @export
+apply.circuit.motif <- function(
+    network,
+    motif
+  ) {
+    network$apply_circuit_motif(motif)
+    return(network)
+  }
+
+#' Plot network as directed graph
+#' 
+#' This function plots a network object as a directed graph using ggplot2. Nodes represent neurons, and directed edges represent connections between them. The plot can be customized by selecting which motif to display and how to color the edges.
+#' 
+#' @param network Network object to plot.
+#' @param title Title for the plot (default: "Cortical Patch").
+#' @param plot_motif Character string specifying which motif to plot; options include "local" for local connections within each node or the name of a long-range projection motif (default: "local").
+#' @param edge_color Character string specifying how to color the edges; options include "pre_type" to color by presynaptic neuron type, "post_type" to color by postsynaptic neuron type, or "motif" to color by motif type (default: "pre_type").
+plot.network <- function(
+    network,
+    title = "Cortical Patch",
+    plot_motif = "local",
+    edge_color = "pre_type",
+    return_plot = FALSE
+  ) {
+    
+    # Get network components
+    ntw <- network$fetch_network_components()
+    
+    # Get cell coordinates and types 
+    neuron_coordinates <- ntw$coordinates_spatial
+    neuron_types <- ntw$neuron_type_name
+    
+    # Get cell edge pairs
+    edges <- matrix(0, nrow = 0, ncol = 5)
+    edge_type_names <- ntw$edge_type_names
+    edge_type_mask <- edge_type_names %in% plot_motif
+    edge_type_names <- edge_type_names[edge_type_mask]
+    n_edge_types <- length(edge_type_names)
+    for (et in seq_along(edge_type_names)) {
+      et_name <- edge_type_names[et]
+      et_edges <- ntw$edge_types[[et]]
+      et_edges <- cbind(
+        et_edges, 
+        rep(et_name, nrow(et_edges)),
+        neuron_types[et_edges[,1] + 1],
+        neuron_types[et_edges[,2] + 1]
+      )
+      edges <- rbind(edges, et_edges)
+    }
+    edges <- as.data.frame(edges)
+    colnames(edges) <- c("pre_idx", "post_idx", "motif", "pre_type", "post_type")
+    
+    # Adjust for zero-index of C++
+    edges$pre_idx <- as.integer(edges$pre_idx) + 1
+    edges$post_idx <- as.integer(edges$post_idx) + 1
+    
+    # Create cells dataframe
+    cells <- data.frame(
+      idx = c(1:nrow(neuron_coordinates)), 
+      x = neuron_coordinates[,1], 
+      y = neuron_coordinates[,2],
+      type = neuron_types
+    )
+    
+    # Find coordinates for start and end of edges
+    edges$x_start <- cells[edges$pre_idx, "x"]
+    edges$y_start <- cells[edges$pre_idx, "y"]
+    edges$x_end <- cells[edges$post_idx, "x"]
+    edges$y_end <- cells[edges$post_idx, "y"]
+    
+    # Plot
+    plt <- ggplot2::ggplot() +
+      # edges as arrows
+      ggplot2::geom_segment(
+        data = edges,
+        ggplot2::aes(x = x_start, y = y_start, xend = x_end, yend = y_end, color = .data[[edge_color]]),
+        arrow = ggplot2::arrow(length = ggplot2::unit(0.05, "inches"), type = "closed"),
+      ) +
+      # nodes as points
+      ggplot2::geom_point(data = cells, ggplot2::aes(x = x, y = y, color = type)) +
+      ggplot2::theme_minimal() +
+      ggplot2::labs(title = title, x = "columnar coordinate", y = "laminar coordinate") + 
+      ggplot2::guides(size = "none")  +
+      ggplot2::theme(
+        plot.title = ggplot2::element_text(size = 20, hjust = 0.5),       # Title size
+        axis.title.x = ggplot2::element_text(size = 16),     # X-axis label size
+        axis.title.y = ggplot2::element_text(size = 16),     # Y-axis label size
+        axis.text.x = ggplot2::element_text(size = 14),      # X-axis tick label size
+        axis.text.y = ggplot2::element_text(size = 14)       # Y-axis tick label size
+      )
+    
+    if (return_plot) {
+      return(plt)
+    } else {
+      print(plt)
+      return(invisible(NULL))
+    }
+    
+  }
+
+# Functions for neuron analysis ########################################################################################
 
 #' Load neuron data from raster file
 #' 
@@ -151,7 +484,7 @@ load.rasters.as.neurons <- function(
       }
       
       # Make new neuron object
-      new_neuron <- new_neuron(
+      new_neuron <- new.neuron(
         id_num = c,
         recording_name = recording_name,
         genotype = genotype,

@@ -13,7 +13,10 @@
 using namespace Rcpp;
 using namespace Eigen;
 
-// Helper functions
+/*
+ * ***********************************************************************************
+ * Helper functions
+ */
 
 // Build sequence of numbered string prefixes
 CharacterVector enum_prefix(
@@ -37,6 +40,16 @@ std::vector<double> roll_mean(
     int filter_ws  
   );
 
+// Return logical vector giving elements of left which match right
+LogicalVector eq_left_broadcast(const CharacterVector& left, const String& right);
+// ... overload
+LogicalVector eq_left_broadcast(const std::vector<int>& left, const int& right);
+// ... overload 
+LogicalVector eq_left_broadcast(const VectorXi& left, const int& right);
+
+// Convert boolean masks to integer indexes
+IntegerVector Rwhich(const LogicalVector& x);
+
 // Convert between vector types
 std::vector<double> to_dVec(const VectorXd& vec);
 std::vector<double> to_dVec(const NumericVector& vec);
@@ -44,7 +57,15 @@ VectorXd to_eVec(const std::vector<double>& vec);
 NumericVector to_NumVec(const VectorXd& vec);
 NumericVector to_NumVec(const std::vector<double>& vec);
 MatrixXd to_eMat(const NumericMatrix& X);
+MatrixXi to_eiMat(const IntegerMatrix& X);
 NumericMatrix to_NumMat(const MatrixXd& M);
+NumericMatrix to_NumMat(const MatrixXi& M);
+IntegerMatrix to_IntMat(const MatrixXi& M);
+
+/*
+ * ***********************************************************************************
+ * Functions for computing correlations
+ */
 
 // Empirical Pearson correlation between two vectors
 double empirical_corr(
@@ -55,8 +76,8 @@ double empirical_corr(
 
 // Empirical Pearson correlation between two variables sampled many times 
 double empirical_corr_multisample(
-    const MatrixXd& X,  // Rows as intratrial samples, columns as trials
-    const MatrixXd& Y,  // Rows as intratrial samples, columns as trials
+    const MatrixXd& X,    // Rows as intratrial samples, columns as trials
+    const MatrixXd& Y,    // Rows as intratrial samples, columns as trials
     const bool& use_raw
   );
   
@@ -70,8 +91,8 @@ VectorXd empirical_corr_lagged(
 
 // Estimate raw correlation across lags, raw version (no mean subtraction, no normalization by std)
 VectorXd empirical_corr_lagged_raw(
-    const MatrixXd& TS1, // Time series 1, rows as time points, columns as trials
-    const MatrixXd& TS2  // Time series 2, rows as time points, columns as trials
+    const MatrixXd& TS1,  // Time series 1, rows as time points, columns as trials
+    const MatrixXd& TS2   // Time series 2, rows as time points, columns as trials
   );
 
 // Exponential decay function (with gradients) for modelling
@@ -82,6 +103,11 @@ double EDF_autocorr(
     const double& bias_term, 
     const int& return_grad // 0 = function output, 1 = gradient wrt A, 2 = gradient wrt tau
   );
+
+/*
+ * ***********************************************************************************
+ * Probability distribution functions
+ */
 
 // multivariate normal CDF, upper tail
 double mvnorm_cdf_uppertail(
@@ -104,11 +130,10 @@ MatrixXd mvnorm_random(
     MatrixXd sigma
   );
 
-// Function to create Toeplitz matrix
-NumericMatrix toeplitz(
-    const std::vector<double>& first_col, 
-    const std::vector<double>& first_row
-  );
+/*
+ * ***********************************************************************************
+ * Dichotomized Gaussian helper functions
+ */
 
 // Formula for estimating sigma for dichotomized Gaussian simulation
 NumericVector dg_sigma_formula(
@@ -130,12 +155,26 @@ double dg_find_sigma_RootBisection(
     const double& cov             // desired covarance after dichotomization
   );
 
+/*
+ * ***********************************************************************************
+ * Matrix and vector operations
+ */
+
+// Create Toeplitz matrix
+NumericMatrix toeplitz(
+    const std::vector<double>& first_col, 
+    const std::vector<double>& first_row
+  );
+
 // Function to make a matrix positive definite
 NumericMatrix makePositiveDefinite(
     const NumericMatrix& NumX
   );
 
-// Neuron class
+/*
+ * ***********************************************************************************
+ * Neuron class
+ */
 
 class neuron {
   
@@ -144,6 +183,8 @@ class neuron {
   // public:
 
   public:
+    
+    // Variables *********************************
     
     // ID parameters
     int id_num = 0;                               // Fixed ID number for neuron
@@ -186,6 +227,8 @@ class neuron {
     double bias_term;                             // Bias term for EDF model of autocorrelation
     double penalty_multiple;                      // For scaling boundary penalty terms when fitting EDF model of autocorrelation
     double gamma;                                 // Threshold for dichotomized Gaussian simulation (in time units of bin)
+    
+    // Functions *********************************
     
     // Constructor and Destructor
     neuron(
@@ -233,7 +276,7 @@ class neuron {
     VectorXd fetch_autocorr() const;
     NumericVector fetch_autocorr_R() const;
     NumericVector fetch_autocorr_edf_R() const;
-    NumericVector fetch_sigma_gauss_R() const; // continuous (normal) equivalent of autocorr_edf
+    NumericVector fetch_sigma_gauss_R() const;    // continuous (normal) equivalent of autocorr_edf
     NumericVector fetch_EDF_parameters() const;
     
     // Member functions for data analysis
@@ -252,31 +295,235 @@ class neuron {
       const bool& verbose
     );
     void compute_autocorrelation(
-      const std::string& bin_count_action, // action must be 'sum', 'boolean', or 'mean'
-      int max_lag,                         // maximum lag (in unit_time) for autocorrelation
-      const bool& use_raw                  // whether to use raw autocorrelation (true) or standard centered and normalized correlation (false)
+      const std::string& bin_count_action,        // action must be 'sum', 'boolean', or 'mean'
+      int max_lag,                                // maximum lag (in unit_time) for autocorrelation
+      const bool& use_raw                         // whether to use raw autocorrelation (true) or standard centered and normalized correlation (false)
     ); 
     static double bounded_MSE_EDF_autocorr(
       // Objective function for fitting EDF model to autocorrelation
-      const std::vector<double>& x, // 0 is A, 1 is tau
+      const std::vector<double>& x,               // 0 is A, 1 is tau
       std::vector<double>& grad,
-      void* data                    // neuron object (this)
+      void* data                                  // neuron object (this)
     );
     void fit_autocorrelation();
     void dg_parameters(const bool& use_raw, const bool& verbose);
     neuron dg_simulation(const int& trials, const bool& verbose);
     NumericMatrix estimate_autocorr_params(
-        const int& trials_per_sim, 
-        const int& num_sims,
-        int max_lag,
-        const std::string& bin_count_action,
-        const double& A0,
-        const double& tau0,
-        const double& ctol,
-        const int& max_evals,
-        const bool& use_raw,
-        const bool& verbose
+      const int& trials_per_sim, 
+      const int& num_sims,
+      int max_lag,
+      const std::string& bin_count_action,
+      const double& A0,
+      const double& tau0,
+      const double& ctol,
+      const int& max_evals,
+      const bool& use_raw,
+      const bool& verbose
     );
+    
+  };
+
+/*
+ * ***********************************************************************************
+ * Network class
+ */
+
+struct Projection {
+  std::string pre_type;
+  std::string pre_layer;
+  double pre_density;
+  std::string post_type;
+  std::string post_layer;
+  double post_density;
+};
+
+class motif {
+  
+  /*
+   * Motifs are recipes for building internode projections within a neural network. They are 
+   *   "columnar", in the sense that they are repeated across cortical columns. 
+   */
+  
+  // private: Eventually move some of the public stuff in here? 
+  
+  // public:
+  
+  public:
+    
+    // Variables *********************************
+    
+    std::string motif_name = "not_provided";      // Name of motif
+    std::vector<Projection> projections;
+    std::vector<int> max_col_shift_up;            // Maximum number of columns to shift up when applying motif
+    std::vector<int> max_col_shift_down;          // Maximum number of columns to shift down when applying motif
+    std::vector<double> connection_strength;      // Strength of connection for each projection
+    int n_projections = 0;                        // Number of projections in motif
+    
+    // Functions *********************************
+    
+    // Constructor and Destructor
+    motif(
+      const std::string motif_name = "not_provided"
+    );
+    virtual ~motif() {};
+    
+    // Copy method 
+    motif(const motif& other) = default;
+    
+    // Load projection into motif
+    void load_projection(
+      const Projection& proj,
+      const int& max_up = 0,
+      const int& max_down = 0,
+      const double& c_strength = 1.0
+    );
+    
+  };
+
+class network {
+  
+  /*
+   * Networks are points (representing neurons) connected by directed edges. Within the growth-transform (GT) model
+   *   framework, these edges are transconductance values representing synaptic connections between neurons.
+   * 
+   * Point types: Points can be grouped by types, which affect 
+   *   their behavior and connectivity. Within the GT model framework, these types each have their own 
+   *   temporal modulation constants (determining, e.g., whether the cell bursts or fires singular spikes) and 
+   *   valence (excitatory or inhibitory).
+   * 
+   * Global structure: Modelling the mammalian cortex, networks are assumed to divide into a coarse-grained 
+   *   two-dimensional coordinate system of layers (rows) and columns (columns). Each point is assigned to a layer-column
+   *   coordinate (called a "node"), having both local x-y coordinates within that node and a global x-y coordinate within the network. 
+   *   
+   * Local structure: Each layer-column coordinate defines a "node" containing a number of points determined by layer and type. 
+   *   Connections (edges) within a node are determined by a local recurrence factor matrix determining the transconductance between 
+   *   points of each type. These edges are called "local". 
+   *   
+   * Long-range projections: Connections (edges) between points in different nodes are determined by a long-range projection motif and 
+   *   labelled with the same of that motif. 
+   * 
+   */
+  
+  // private: Eventually move some of the public stuff in here? 
+  
+  // public:
+  
+  public:
+    
+    // Variables *********************************
+    
+    // ID parameters
+    std::string network_name = "not_provided";    // Name of network
+    std::string recording_name = "not_provided";  // Recording (if any) on which this network is based
+    std::string type = "Growth_Transform";        // Type of network, only "Growth_Transform" currently supported
+    std::string genotype = "WT";                  // Genotype of animal, e.g. "WT", "KO", "MECP2", "transgenic", etc.
+    std::string sex = "not_provided";             // Sex of animal
+    std::string hemi = "not_provided";            // Hemisphere of neuron, e.g. "left", "right"
+    std::string region = "not_provided";          // Brain region of neuron, e.g. "V1", "M1", "CA1", "PFC", etc.
+    std::string age = "not_provided";             // Age of animal, e.g. "P0", "P7", "P14", "adult", etc.
+    
+    // Unit specifications
+    std::string unit_time = "ms";                 // Unit of time, e.g., "ms", "bin", "sample"
+    std::string unit_sample_rate = "Hz";          // Unit of recording sample rate, e.g., "Hz", "kHz"
+    std::string unit_potential = "mV";            // Unit of membrane potential, e.g., "mV"
+    std::string unit_current = "mA";              // Unit of current, e.g., "mA", "nA"
+    std::string unit_conductance = "mS";          // Unit of conductance, e.g., "mS", "uS"
+    std::string unit_distance = "micron";         // Unit of distance, e.g., "micron", "mm"
+    
+    // Unit conversions 
+    double t_per_bin = 1.0;                       // Time (in above units) per bin, e.g., 1 ms per bin
+    double sample_rate = 1e4;                     // Sample rate (in above units), e.g., 10000 Hz
+    
+    // Network structure
+    CharacterVector neuron_types;                 // Types of neurons in network, e.g., "principal", "PV", "SST", "VIP"
+    std::vector<int> neuron_type_valences;        // Vector giving the valence of each neuron type, +1 for excitatory, -1 for inhibitory
+    CharacterVector layer_names;                  // Names of layers in the network
+    int n_layers = 1;                             // number of layers in the network
+    int n_columns = 1;                            // number of columns in the network
+    double layer_height = 1.0;                    // sd of the normal distribution for local y coordinates of the neurons
+    double column_width = 1.0;                    // sd of the normal distribution for local x coordinates of the neurons
+    double layer_separation_factor = 1.25;        // factor to multiply layer height by to get the distance between layers
+    double column_separation_factor = 1.5;        // factor to multiply column width by to get the distance between columns
+    MatrixXi neurons_per_node;                    // mean number of neurons in each layer (rows) by type (columns)
+    std::vector<MatrixXd> recurrence_factors;     // Vector of matrices of sd of the normal distribution for local transconductances between neurons of each type, one matrix per layer
+    double pruning_threshold_factor = 0.1;        // transconductances below this fraction of the recurrence factor set to zero
+    
+    // Network components 
+    int n_neurons;                                // Total number of neurons in the network
+    int n_neuron_types;                           // Number of different neuron types in the network
+    std::vector<MatrixXd> transconductances;      // Vector of square matrices, each giving the transconductance between each neuron in the network, rows are post-synaptic, columns are pre-synaptic
+    MatrixXd node_coordinates_spatial;            // Mx2 matrix giving the (x,y) spatial coordinates of each node in the network
+    MatrixXd coordinates_spatial;                 // Nx2 matrix giving the (x,y) spatial coordinates of each neuron in the network
+    MatrixXi coordinates_node;                    // Nx2 matrix giving the (column, layer) node coordinates of each neuron in the network
+    CharacterVector neuron_type_name;             // Vector giving the type of each neuron in the network, as a string
+    std::vector<int> neuron_type_num;             // Vector giving the type of each neuron in the network, as an integer index
+    std::vector<int> node_range_ends;             // Vector giving the ending neuron index for each node in the network
+    std::vector<MatrixXi> edge_types;             // Vector of integer matrices giving all transconductance matrix coordinates for each edge type 
+    CharacterVector edge_type_names = {"local"};  // Names of elements in edge_types
+    
+    // Functions *********************************
+    
+    // Constructor and Destructor
+    network(
+      const std::string network_name = "not_provided", 
+      const std::string recording_name = "not_provided", 
+      const std::string type = "Growth_Transform", 
+      const std::string genotype = "WT",
+      const std::string sex = "not_provided",
+      const std::string hemi = "not_provided",
+      const std::string region = "not_provided",
+      const std::string age = "not_provided",
+      const std::string unit_time = "ms", 
+      const std::string unit_sample_rate = "Hz", 
+      const std::string unit_potential = "mV", 
+      const std::string unit_current = "mA",
+      const std::string unit_conductance = "mS",
+      const std::string unit_distance = "micron",
+      const double t_per_bin = 1.0, 
+      const double sample_rate = 1e4
+    );
+    virtual ~network() {};
+    
+    // Copy method 
+    network(const network& other) = default;
+    
+    // Member functions for adjusting settings
+    void set_network_structure(
+      CharacterVector nrn_types = {"principal"},
+      std::vector<int> nrn_type_valences = {1},
+      CharacterVector lyr_names = {"layer"},
+      int n_lyr = 1,
+      int n_cls = 1,
+      double lyr_height = 1.0,
+      double cls_width = 1.0,
+      double lyr_separation_factor = 1.25,
+      double cls_separation_factor = 1.5,
+      MatrixXi nrn_per_node = MatrixXi::Constant(1,1,10),
+      std::vector<MatrixXd> recur_factors = {MatrixXd::Constant(1,1,0.5)},
+      double pruning_thresh_factor = 0.1
+    );
+    // ... wrapper 
+    void set_network_structure_R(
+      CharacterVector neuron_types = {"principal"},
+      std::vector<int> neuron_type_valences = {1},
+      CharacterVector layer_names = {"layer"},
+      int n_layers = 1,
+      int n_columns = 1,
+      double layer_height = 1.0,
+      double column_width = 1.0,
+      double layer_separation_factor = 1.25,
+      double column_separation_factor = 1.5,
+      IntegerMatrix neurons_per_node = to_IntMat(MatrixXi::Constant(1,1,10)),
+      List recurrence_factors = List::create(to_NumMat(MatrixXd(MatrixXd::Constant(1,1,0.5)))),
+      double pruning_threshold_factor = 0.1
+    );
+    
+    // Member functions for building network
+    void make_local_nodes(); 
+    void apply_circuit_motif(const motif& cmot);
+    
+    // Member functions for fetching data 
+    List fetch_network_components() const;
     
   };
 

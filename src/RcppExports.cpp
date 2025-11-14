@@ -13,9 +13,15 @@ Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 
 
 RcppExport SEXP _rcpp_module_boot_neuron();
+RcppExport SEXP _rcpp_module_boot_motif();
+RcppExport SEXP _rcpp_module_boot_network();
+RcppExport SEXP _rcpp_module_boot_Projection();
 
 static const R_CallMethodDef CallEntries[] = {
     {"_rcpp_module_boot_neuron", (DL_FUNC) &_rcpp_module_boot_neuron, 0},
+    {"_rcpp_module_boot_motif", (DL_FUNC) &_rcpp_module_boot_motif, 0},
+    {"_rcpp_module_boot_network", (DL_FUNC) &_rcpp_module_boot_network, 0},
+    {"_rcpp_module_boot_Projection", (DL_FUNC) &_rcpp_module_boot_Projection, 0},
     {NULL, NULL, 0}
 };
 

@@ -20,8 +20,8 @@ CharacterVector enum_prefix(std::string prefix, int n) {
 
 // Rolling mean
 VectorXd roll_mean(
-    const VectorXd& series,    // 1D vector of points to take rolling mean
-    int filter_ws              // Size of window for taking rolling mean
+    const VectorXd& series,         // 1D vector of points to take rolling mean
+    int filter_ws                   // Size of window for taking rolling mean
   ) {
     int n = series.size();
     VectorXd series_out(n);
@@ -65,6 +65,56 @@ std::vector<double> roll_mean(
       series_out[i] = std::accumulate(start, end, 0.0) / static_cast<double>(ws);
     } 
     return series_out;
+  }
+
+// Return logical vector giving elements of left which match right
+LogicalVector eq_left_broadcast(
+    const CharacterVector& left,
+    const String& right
+  ) {
+    int n = left.size();
+    LogicalVector out(n);
+    for (int i = 0; i < n; i++) {
+      out[i] = left[i] == right;
+    }
+    return out;
+  }
+// ... overload
+LogicalVector eq_left_broadcast(
+    const std::vector<int>& left,
+    const int& right
+  ) {
+    int n = left.size();
+    LogicalVector out(n);
+    for (int i = 0; i < n; i++) {
+      out[i] = left[i] == right;
+    }
+    return out;
+  }
+// ... overload
+LogicalVector eq_left_broadcast(
+    const VectorXi& left,
+    const int& right
+  ) {
+    int n = left.size();
+    LogicalVector out(n);
+    for (int i = 0; i < n; i++) {
+      out[i] = left[i] == right;
+    }
+    return out;
+  }
+
+// Convert boolean masks to integer indexes
+IntegerVector Rwhich(
+    const LogicalVector& x
+  ) {
+    std::vector<int> indices;  // Use std::vector for efficient dynamic resizing
+    for (int i = 0; i < x.size(); ++i) {
+      if (x[i]) {
+        indices.push_back(i);
+      }
+    }
+    return wrap(indices);  // Convert std::vector to IntegerVector
   }
 
 // Convert to std::vector with doubles 
@@ -127,6 +177,21 @@ MatrixXd to_eMat(
     return M;
   }
 
+// Convert to Eigen matrix with integers
+MatrixXi to_eiMat(
+    const IntegerMatrix& X
+  ) {
+    int Xnrow = X.nrow();
+    int Xncol = X.ncol();
+    MatrixXi M = MatrixXi(Xnrow, Xncol);
+    for (int i = 0; i < Xnrow; i++) {
+      for (int j = 0; j < Xncol; j++) {
+        M(i, j) = X(i, j);
+      }
+    }
+    return M;
+  }
+
 // Convert to NumericMatrix
 NumericMatrix to_NumMat(
     const MatrixXd& M
@@ -141,6 +206,40 @@ NumericMatrix to_NumMat(
     }
     return X;
   }
+// ... overload
+NumericMatrix to_NumMat(
+    const MatrixXi& M
+  ) {
+    int M_nrow = M.rows();
+    int M_ncol = M.cols();
+    NumericMatrix X(M_nrow, M_ncol);
+    for (int i = 0; i < M_nrow; i++) {
+      for (int j = 0; j < M_ncol; j++) {
+        X(i, j) = M(i, j);
+      }
+    }
+    return X;
+  }
+
+// Convert to IntegerMatrix
+IntegerMatrix to_IntMat(
+    const MatrixXi& M
+  ) {
+    int M_nrow = M.rows();
+    int M_ncol = M.cols();
+    IntegerMatrix X(M_nrow, M_ncol);
+    for (int i = 0; i < M_nrow; i++) {
+      for (int j = 0; j < M_ncol; j++) {
+        X(i, j) = M(i, j);
+      }
+    }
+    return X;
+  }
+
+/*
+ * ***********************************************************************************
+ * Functions for computing correlations
+ */
 
 // Empirical Pearson correlation between two vectors
 double empirical_corr(
@@ -177,8 +276,8 @@ double empirical_corr(
 
 // Empirical Pearson correlation between two variables sampled many times 
 double empirical_corr_multisample(
-    const MatrixXd& X,  // Rows as intratrial samples, columns as trials
-    const MatrixXd& Y,  // Rows as intratrial samples, columns as trials
+    const MatrixXd& X,            // Rows as intratrial samples, columns as trials
+    const MatrixXd& Y,            // Rows as intratrial samples, columns as trials
     const bool& use_raw
   ) {
     
@@ -204,8 +303,8 @@ double empirical_corr_multisample(
 
 // Estimate Pearson correlation across lags
 VectorXd empirical_corr_lagged(
-    const MatrixXd& TS_ref,  // Reference time series, rows as time points, columns as trials
-    const MatrixXd& TS_cmp,  // Comparison time series (to be lagged), rows as time points, columns as trials
+    const MatrixXd& TS_ref,       // Reference time series, rows as time points, columns as trials
+    const MatrixXd& TS_cmp,       // Comparison time series (to be lagged), rows as time points, columns as trials
     const int& max_lag,
     const bool& use_raw
   ) {
@@ -243,8 +342,8 @@ VectorXd empirical_corr_lagged(
 
 // Estimate raw correlation across lags, raw version (no mean subtraction, no normalization by std)
 VectorXd empirical_corr_lagged_raw(
-    const MatrixXd& TS1, // Time series 1, rows as time points, columns as trials
-    const MatrixXd& TS2  // Time series 2, rows as time points, columns as trials
+    const MatrixXd& TS1,          // Time series 1, rows as time points, columns as trials
+    const MatrixXd& TS2           // Time series 2, rows as time points, columns as trials
   ) {
     
     // Check for matching dimensions 
@@ -301,10 +400,15 @@ double EDF_autocorr(
     }
   }
 
+/*
+ * ***********************************************************************************
+ * Probability distribution functions
+ */
+
 // Multivariate normal CDF, upper tail
 double mvnorm_cdf_uppertail(
     const NumericVector& threshold, 
-    const NumericMatrix& sigma  // covariance matrix of dimension n less than 1000
+    const NumericMatrix& sigma    // covariance matrix of dimension n less than 1000
   ) {
     
     if (sigma.nrow() != sigma.ncol()) {Rcpp::stop("Covariance matrix must be square");}
@@ -347,9 +451,9 @@ double norm_cdf(
 
 // Multivariate normal random number generator
 NumericMatrix mvnorm_random(
-    int n,                   // Number of points to generate
-    NumericVector mu,        // Mean vector, length determines dimension
-    NumericMatrix sigma      // Covariance matrix, square, same dimension as mu
+    int n,                        // Number of points to generate
+    NumericVector mu,             // Mean vector, length determines dimension
+    NumericMatrix sigma           // Covariance matrix, square, same dimension as mu
   ) {
    
     if (sigma.nrow() != sigma.ncol()) {Rcpp::stop("Covariance matrix must be square");}
@@ -371,25 +475,10 @@ NumericMatrix mvnorm_random(
     
   } 
 
-// Function to create Toeplitz matrix
-NumericMatrix toeplitz(
-    const std::vector<double>& first_col, 
-    const std::vector<double>& first_row
-  ) {
-    
-    int rows = first_col.size();
-    int cols = first_row.size();
-    NumericMatrix T(rows, cols);
-    
-    for (int i = 0; i < rows; i++) {
-      for (int j = 0; j < cols; j++) {
-        T(i, j) = (i >= j) ? first_col[i - j] : first_row[j - i];
-      }
-    }
-    
-    return T;
-    
-  }
+/*
+ * ***********************************************************************************
+ * Dichotomized Gaussian helper functions
+ */
 
 // For estimating sigma for dichotomized Gaussian simulation
 NumericVector dg_sigma_formula(
@@ -506,6 +595,31 @@ double dg_find_sigma_RootBisection(
     
   }
 
+/*
+ * ***********************************************************************************
+ * Matrix and vector operations
+ */
+
+// Create Toeplitz matrix
+NumericMatrix toeplitz(
+    const std::vector<double>& first_col, 
+    const std::vector<double>& first_row
+  ) {
+    
+    int rows = first_col.size();
+    int cols = first_row.size();
+    NumericMatrix T(rows, cols);
+    
+    for (int i = 0; i < rows; i++) {
+      for (int j = 0; j < cols; j++) {
+        T(i, j) = (i >= j) ? first_col[i - j] : first_row[j - i];
+      }
+    }
+    
+    return T;
+    
+  }
+
 // Function to make a matrix positive definite
 NumericMatrix makePositiveDefinite(
     const NumericMatrix& NumX
@@ -524,16 +638,16 @@ NumericMatrix makePositiveDefinite(
     }
     
     // Reconstruct the matrix
-    return to_NumMat(eigenvectors * eigenvalues.asDiagonal() * eigenvectors.transpose());
+    return to_NumMat(MatrixXd(eigenvectors * eigenvalues.asDiagonal() * eigenvectors.transpose()));
     
   }
 
 /*
  * ***********************************************************************************
- * Main neuron class
+ * Neuron and network classes
  */
 
-// Constructor
+// Constructor, neuron
 neuron::neuron(
     const int id_num, 
     const std::string recording_name, 
@@ -567,9 +681,55 @@ neuron::neuron(
       // No initialization operations
   }
 
+// Constructor, motif
+motif::motif(
+    const std::string motif_name
+  ) : motif_name(motif_name)
+  { 
+      // No initialization operations
+  }
+
+// Constructor, network
+network::network(
+    const std::string network_name, 
+    const std::string recording_name, 
+    const std::string type, 
+    const std::string genotype,
+    const std::string sex,
+    const std::string hemi,
+    const std::string region,
+    const std::string age,
+    const std::string unit_time, 
+    const std::string unit_sample_rate, 
+    const std::string unit_potential, 
+    const std::string unit_current,
+    const std::string unit_conductance,
+    const std::string unit_distance,
+    const double t_per_bin, 
+    const double sample_rate
+  ) : network_name(network_name), 
+    recording_name(recording_name), 
+    type(type), 
+    genotype(genotype),
+    sex(sex),
+    hemi(hemi), 
+    region(region),
+    age(age),
+    unit_time(unit_time), 
+    unit_sample_rate(unit_sample_rate), 
+    unit_potential(unit_potential), 
+    unit_current(unit_current),
+    unit_conductance(unit_conductance),
+    unit_distance(unit_distance),
+    t_per_bin(t_per_bin), 
+    sample_rate(sample_rate)
+  { 
+      // No initialization operations
+  }
+
 /*
  * ***********************************************************************************
- * Member function implementations, adjust settings
+ * Neuron and network member function implementations, adjust settings
  */
 
 void neuron::set_edf_initials(
@@ -588,9 +748,360 @@ void neuron::set_edf_termination(
     max_evals = me;
   };
 
+void network::set_network_structure(
+    CharacterVector nrn_types,
+    std::vector<int> nrn_type_valences,
+    CharacterVector lyr_names,
+    int n_lyr,
+    int n_cls,
+    double lyr_height,
+    double cls_width,
+    double lyr_separation_factor,
+    double cls_separation_factor,
+    MatrixXi nrn_per_node,
+    std::vector<MatrixXd> recur_factors,
+    double pruning_thresh_factor
+  ) {
+    
+    // Check layer names (needed for motifs)
+    if (lyr_names.size() != n_lyr) {
+      Rcpp::Rcout << "lyr_names size: " << lyr_names.size() << ", n_layers: " << n_lyr << std::endl;
+      Rcpp::stop("Length of lyr_names must equal n_layers");
+    }
+   
+    // Set parameters
+    neuron_types = nrn_types;
+    neuron_type_valences = nrn_type_valences;
+    layer_names = lyr_names;
+    n_layers = n_lyr;
+    n_columns = n_cls;
+    layer_height = lyr_height;
+    column_width = cls_width;
+    layer_separation_factor = lyr_separation_factor;
+    column_separation_factor = cls_separation_factor;
+    neurons_per_node = nrn_per_node;
+    recurrence_factors = recur_factors;
+    pruning_threshold_factor = pruning_thresh_factor;
+    
+    // Set network components
+    n_neuron_types = neuron_types.size();
+    int n_nodes = n_layers * n_columns;
+    n_neurons = 0; // Compute total number of neurons as we go
+    node_range_ends.assign(n_nodes, 0);
+    node_coordinates_spatial.resize(n_nodes, 2);
+    for (int l = 0; l < n_layers; l++) {
+      for (int c = 0; c < n_columns; c++) {
+        int node_idx = l * n_columns + c;
+        // Set global spatial coordinates for this node
+        node_coordinates_spatial(node_idx, 0) = c * column_width * column_separation_factor;
+        node_coordinates_spatial(node_idx, 1) = l * layer_height * layer_separation_factor;
+        for (int t = 0; t < n_neuron_types; t++) {
+          // Randomly select neuron numbers for each node
+          int n = (int)R::rpois(neurons_per_node(l,t));
+          // Keep track of the number of cells assigned so far
+          n_neurons += n; 
+          // Keep track of the types of these cells
+          for (int i = 0; i < n; i++) {
+            neuron_type_name.push_back(neuron_types[t]);
+            neuron_type_num.push_back(t);
+          }
+        }
+        // Save end-point index for this node
+        node_range_ends[node_idx] = n_neurons - 1;
+      }
+    }
+    
+    // Resize network coordinate components 
+    coordinates_spatial = MatrixXd::Zero(n_neurons, 2); 
+    coordinates_node = MatrixXi::Zero(n_neurons, 2); // layer, column
+    
+  };
+
+void network::set_network_structure_R(
+    CharacterVector neuron_types,
+    std::vector<int> neuron_type_valences,
+    CharacterVector layer_names,
+    int n_layers,
+    int n_columns,
+    double layer_height,
+    double column_width,
+    double layer_separation_factor,
+    double column_separation_factor,
+    IntegerMatrix neurons_per_node,
+    List recurrence_factors,
+    double pruning_threshold_factor
+  ) {
+    
+    // Convert recurrence factors from R List to std::vector<MatrixXd>
+    std::vector<MatrixXd> rec_factors_vec;
+    for (int i = 0; i < recurrence_factors.size(); i++) {
+      NumericMatrix rec_mat_r = recurrence_factors[i];
+      MatrixXd rec_mat = to_eMat(rec_mat_r);
+      rec_factors_vec.push_back(rec_mat);
+    }
+    
+    // Call main function
+    set_network_structure(
+      neuron_types,
+      neuron_type_valences,
+      layer_names,
+      n_layers,
+      n_columns,
+      layer_height,
+      column_width,
+      layer_separation_factor,
+      column_separation_factor,
+      to_eiMat(neurons_per_node),
+      rec_factors_vec,
+      pruning_threshold_factor
+    );
+    
+  };
+
 /*
  * ***********************************************************************************
- * Member function implementations, basic data handling, loading
+ * Network member function implementations, build network
+ */
+
+void motif::load_projection(
+    const Projection& proj,
+    const int& max_up,
+    const int& max_down,
+    const double& c_strength
+  ) {
+    projections.push_back(proj);
+    max_col_shift_up.push_back(max_up);
+    max_col_shift_down.push_back(max_down);
+    connection_strength.push_back(c_strength);
+    n_projections++;
+  }
+
+// Function to set transconductances and spatial coordinates for all local nodes 
+void network::make_local_nodes() {
+    
+    if (edge_types.size() != 0) {
+      Rcpp::Rcout << "Edge types have already been set; cannot run make_local_nodes twice; returning." << std::endl;
+      return;
+    }
+    
+    // Initialize vectors to track local edge coordinates
+    std::vector<int> local_edges_pre; 
+    std::vector<int> local_edges_post;
+    
+    // Initialize local transconductance matrix
+    MatrixXd local_transconductances = MatrixXd::Zero(n_neurons, n_neurons);
+   
+    // Layer index of the local node
+    for (int l = 0; l < n_layers; l++) {
+      
+      // Get recurrence factor matrix for this layer
+      MatrixXd recurrence_factor_matrix = recurrence_factors[l];
+      
+      // Column index of the local node
+      for (int c = 0; c < n_columns; c++) {
+        
+        // Get node ID number
+        int node_idx = l * n_columns + c;
+        // Get spatial position of this node
+        double node_x = node_coordinates_spatial(node_idx, 0);
+        double node_y = node_coordinates_spatial(node_idx, 1);
+        // Get the range of neuron ID numbers for this node
+        int node_range_start = (node_idx == 0) ? 0 : node_range_ends[node_idx - 1] + 1;
+        int node_range_end = node_range_ends[node_idx];
+        
+        // For all combinations of pre- and post-synaptic neurons in this node
+        for (int idx_pre = node_range_start; idx_pre <= node_range_end; idx_pre++) {
+          
+          // Set spatial coordinates
+          coordinates_spatial(idx_pre, 0) = node_x + R::rnorm(0.0, column_width);
+          coordinates_spatial(idx_pre, 1) = node_y + R::rnorm(0.0, layer_height);
+          
+          // Set node coordinates
+          coordinates_node(idx_pre, 0) = c;
+          coordinates_node(idx_pre, 1) = l;
+          
+          // Set transconductance into post-synaptic cells
+          for (int idx_post = node_range_start; idx_post <= node_range_end; idx_post++) {
+            
+            // Get neuron types for pre- and post-synaptic neurons
+            int t_pre = neuron_type_num[idx_pre];
+            int t_post = neuron_type_num[idx_post];
+            
+            // Get neuron valences for pre-synaptic neurons
+            double val_pre = (double)neuron_type_valences[t_pre];
+            
+            // Get recurrence factor for this connection type
+            double rec_factor = recurrence_factor_matrix(t_post, t_pre);
+            double pruning_threshold = pruning_threshold_factor * rec_factor;
+            
+            // Set transductance 
+            double trans = std::abs(R::rnorm(0.0, rec_factor));
+            if (trans > pruning_threshold) {
+              local_transconductances(idx_post, idx_pre) = val_pre * trans;
+              // Save edge coordinate
+              local_edges_pre.push_back(idx_pre);
+              local_edges_post.push_back(idx_post);
+            }
+            
+          }
+          
+        }
+        
+      }
+    }
+    
+    // Save to transconductance matrix
+    transconductances.push_back(local_transconductances);
+    
+    // Collect local edge coordinates in matrix
+    int n_local_edges = local_edges_pre.size();
+    MatrixXi local_edges(n_local_edges, 2); 
+    local_edges.col(0) = Eigen::Map<VectorXi>(local_edges_pre.data(), n_local_edges);
+    local_edges.col(1) = Eigen::Map<VectorXi>(local_edges_post.data(), n_local_edges);
+    
+    // Save to edge types
+    edge_types.push_back(local_edges);
+    
+  }
+
+// Function to apply circuit motif
+void network::apply_circuit_motif(
+    const motif& cmot
+  ) {
+   
+    if (edge_types.size() != 1) {
+      Rcpp::Rcout << "Must set local edges before applying any circuit motifs; returning." << std::endl;
+      return;
+    }
+    
+    // Initialize vectors to track motif edge coordinates
+    std::vector<int> motif_edges_pre; 
+    std::vector<int> motif_edges_post;
+    
+    // Initialize motif transconductance matrix
+    MatrixXd motif_transconductances = MatrixXd::Zero(n_neurons, n_neurons);
+    
+    // For each projection in the motif
+    for (int p = 0; p < cmot.n_projections; p++) {
+      
+      // Grab projection
+      Projection proj = cmot.projections[p];
+      
+      // Grab projection strength and set pruning threshold
+      double proj_strength = cmot.connection_strength[p];
+      double pruning_threshold = pruning_threshold_factor * proj_strength;
+      
+      // Grab pre and post cell types 
+      int type_pre = Rwhich(eq_left_broadcast(neuron_types, proj.pre_type))[0];
+      int type_post = Rwhich(eq_left_broadcast(neuron_types, proj.post_type))[0];
+      // ... and make masks 
+      LogicalVector pre_type_mask = eq_left_broadcast(neuron_type_num, type_pre);
+      LogicalVector post_type_mask = eq_left_broadcast(neuron_type_num, type_post);
+      
+      // Grab pre-synaptic valence
+      int val_pre = neuron_type_valences[type_pre];
+      
+      // Grab pre and post layers
+      int layer_pre = Rwhich(eq_left_broadcast(layer_names, proj.pre_layer))[0];
+      int layer_post = Rwhich(eq_left_broadcast(layer_names, proj.post_layer))[0];
+      // ... and make masks 
+      LogicalVector pre_layer_mask = eq_left_broadcast(coordinates_node(Eigen::all,1), layer_pre);
+      LogicalVector post_layer_mask = eq_left_broadcast(coordinates_node(Eigen::all,1), layer_post);
+      
+      // Grab pre and post densities
+      double density_pre = proj.pre_density;
+      double density_post = proj.post_density;
+      
+      // Grab max shifts
+      int max_up = cmot.max_col_shift_up[p];
+      int max_down = cmot.max_col_shift_down[p];
+      
+      // Build column range
+      VectorXi col_range(max_down - max_down + 1);
+      for (int i = 0; i < col_range.size(); i++) col_range[i] = max_down + i;
+      
+      // Pre-make all column masks 
+      LogicalMatrix column_masks(n_neurons, n_columns);
+      for (int c = 0; c < n_columns; c++) {
+        column_masks(_, c) = eq_left_broadcast(coordinates_node(Eigen::all,0), c);
+      }
+      
+      // Apply projection to each column 
+      for (int c = 0; c < n_columns; c++) {
+        
+        // Get pre-synaptic column mask
+        LogicalVector pre_column_mask = column_masks(_, c);
+        
+        // Shift range to this column 
+        VectorXi col_range_shifted = col_range.array() + c;
+        
+        // For each target column
+        for (int tc : col_range_shifted) {
+          
+          // Check if target column is valid
+          if (tc < 0 || tc >= n_columns) {continue;}
+          
+          // Get post-synaptic column mask
+          LogicalVector post_column_mask = column_masks(_, tc);
+          
+          // Sample pre-synaptic cells 
+          LogicalVector pre_mask = pre_type_mask & pre_layer_mask & pre_column_mask;
+          IntegerVector pre_indices = Rwhich(pre_mask);
+          int n_pre = R::rpois(pre_indices.size() * density_pre);
+          n_pre = std::min(n_pre, 1);
+          IntegerVector pre_sampled = Rcpp::sample(pre_indices, n_pre, false);
+          
+          // Prepare for repeated sampling of post-synaptic cells
+          LogicalVector post_mask = post_type_mask & post_layer_mask & post_column_mask;
+          IntegerVector post_indices = Rwhich(post_mask);
+          
+          for (int pre_c : pre_sampled) {
+            
+            // Sample post-synaptic cells
+            int n_post = R::rpois(post_indices.size() * density_post);
+            n_post = std::min(n_post, 1);
+            IntegerVector post_sampled = Rcpp::sample(post_indices, n_post, false);
+            
+            // Set transductances 
+            for (int post_c : post_sampled) {
+              double trans = std::abs(R::rnorm(0.0, proj_strength));
+              if (trans > pruning_threshold) {
+                motif_transconductances(post_c, pre_c) = val_pre * trans;
+                // Save edge coordinate
+                motif_edges_pre.push_back(pre_c);
+                motif_edges_post.push_back(post_c);
+              }
+              
+            }
+            
+          }
+          
+        }
+        
+      }
+      
+    }
+    
+    // Save to transconductance matrix vector 
+    transconductances.push_back(motif_transconductances);
+    
+    // Collect local edge coordinates in matrix
+    int n_motif_edges = motif_edges_pre.size();
+    MatrixXi motif_edges(n_motif_edges, 2); 
+    motif_edges.col(0) = Eigen::Map<VectorXi>(motif_edges_pre.data(), n_motif_edges);
+    motif_edges.col(1) = Eigen::Map<VectorXi>(motif_edges_post.data(), n_motif_edges);
+    
+    // Save to edge types
+    edge_types.push_back(motif_edges);
+    
+    // Add motif name
+    edge_type_names.push_back(cmot.motif_name);
+    
+  }
+
+/*
+ * ***********************************************************************************
+ * Neuron member function implementations, basic data handling, loading
  */
 
 // Loading trial data (Eigen matrix)
@@ -689,7 +1200,7 @@ void neuron::load_spike_raster_R(
 
 /*
  * ***********************************************************************************
- * Member function implementations, basic data handling, fetching
+ * Neuron and network member function implementations, basic data handling, fetching
  */
 
 // Fetching trial data (Eigen matrix)
@@ -742,9 +1253,46 @@ NumericVector neuron::fetch_lambda() const {
     return lambdas;
   }
 
+// Method to fetch network components 
+List network::fetch_network_components() const {
+   
+    // Convert transconductances into list of NumericMatrix
+    List transconductance_matrices(transconductances.size());
+    for (int tci = 0; tci < transconductances.size(); tci++) {
+      MatrixXd tc = transconductances[tci];
+      NumericMatrix tc_r = to_NumMat(tc);
+      transconductance_matrices[tci] = tc_r;
+    } 
+    
+    // Convert edge_types into list of NumericMatrix
+    List edge_type_matrices(edge_types.size());
+    CharacterVector emn = CharacterVector::create("pre_neuron_idx", "post_neuron_idx");
+    for (int eti = 0; eti < edge_types.size(); eti++) {
+      MatrixXi et = edge_types[eti];
+      NumericMatrix et_r = to_NumMat(et);
+      colnames(et_r) = emn;
+      edge_type_matrices[eti] = et_r;
+    }
+    
+    return List::create(
+      _["n_neurons"] = n_neurons,
+      _["n_neuron_types"] = n_neuron_types,
+      _["transconductances"] = transconductance_matrices,
+      _["node_coordinates_spatial"] = to_NumMat(node_coordinates_spatial),
+      _["coordinates_spatial"] = to_NumMat(coordinates_spatial),
+      _["coordinates_node"] = to_NumMat(coordinates_node),
+      _["neuron_type_name"] = neuron_type_name,
+      _["neuron_type_num"] = neuron_type_num,
+      _["node_range_ends"] = node_range_ends,
+      _["edge_types"] = edge_type_matrices, 
+      _["edge_type_names"] = edge_type_names
+    );
+   
+  }
+
 /*
  * ***********************************************************************************
- * Member function implementations, basic data handling, misc
+ * Neuron member function implementations, basic data handling, misc
  */
 
 // Infer trial data from spike raster
@@ -800,7 +1348,7 @@ void neuron::infer_raster() {
 
 /*
  * ***********************************************************************************
- * Member function implementations, fetch analysis results
+ * Neuron member function implementations, fetch analysis results
  */
 
 // Fetching autocorrelation 
@@ -820,7 +1368,7 @@ NumericVector neuron::fetch_EDF_parameters() const {
 
 /*
  * ***********************************************************************************
- * Member function implementations, analysis
+ * Neuron member function implementations, analysis
  */
 
 // Compute cross-correlation of this neuron with another neuron
@@ -1343,7 +1891,7 @@ NumericMatrix neuron::estimate_autocorr_params(
   }
 
 /*
- * RCPP_MODULE to expose class to R and function to initialize neuron
+ * RCPP_MODULE to expose class to R
  */
 
 RCPP_EXPOSED_CLASS(neuron)
@@ -1370,3 +1918,32 @@ RCPP_MODULE(neuron) {
   .method("estimate_autocorr_params", &neuron::estimate_autocorr_params);
 }
 
+RCPP_EXPOSED_CLASS(motif)
+RCPP_MODULE(motif) {
+  class_<motif>("motif")
+  .constructor<std::string>()
+  .method("load_projection", &motif::load_projection);
+}
+
+RCPP_EXPOSED_CLASS(network)
+RCPP_MODULE(network) {
+  class_<network>("network")
+  .constructor<std::string, std::string, std::string, std::string, std::string, std::string, std::string, std::string, std::string, std::string, std::string, std::string, std::string, std::string, double, double>()
+  .method("set_network_structure", &network::set_network_structure)
+  .method("set_network_structure_R", &network::set_network_structure_R)
+  .method("make_local_nodes", &network::make_local_nodes)
+  .method("apply_circuit_motif", &network::apply_circuit_motif)
+  .method("fetch_network_components", &network::fetch_network_components);
+}
+
+RCPP_EXPOSED_CLASS(Projection)
+RCPP_MODULE(Projection) {
+  class_<Projection>("Projection")
+  .constructor()
+  .field("pre_type",      &Projection::pre_type)
+  .field("pre_layer",     &Projection::pre_layer)
+  .field("pre_density",   &Projection::pre_density)
+  .field("post_type",     &Projection::post_type)
+  .field("post_layer",    &Projection::post_layer)
+  .field("post_density",  &Projection::post_density);
+}
