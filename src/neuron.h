@@ -459,7 +459,7 @@ class network {
     std::vector<int> neuron_type_num;             // Vector giving the type of each neuron in the network, as an integer index
     std::vector<int> node_range_ends;             // Vector giving the ending neuron index for each node in the network
     std::vector<MatrixXi> edge_types;             // Vector of integer matrices giving all transconductance matrix coordinates for each edge type 
-    CharacterVector edge_type_names = {"local"};  // Names of elements in edge_types
+    CharacterVector edge_type_names = {"local connections"};  // Names of elements in edge_types
     
     // Functions *********************************
     

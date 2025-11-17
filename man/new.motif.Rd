@@ -2,7 +2,7 @@
 % Please edit documentation in R/neurons.R
 \name{new.motif}
 \alias{new.motif}
-\title{Initialize motif}
+\title{Initialize network (circuit) motif}
 \usage{
 new.motif(motif_name = "not_provided")
 }

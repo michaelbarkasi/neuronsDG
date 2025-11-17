@@ -1,11 +1,16 @@
 ---
 title: "Spike synchrony via cross-correlation"
+author: "Michael Barkasi"
+date: "`r Sys.Date()`"
 ---
 
 ```{r Rmdsetup, echo=FALSE}
 # Set max width of markdown code outputs
 options(width = 10000)
+knitr::opts_chunk$set(class.output = "scroll-output")
 ```
+
+<h2>Introduction</h2>
 
 Synchronous firing between two neurons can be detected by computing the cross-correlation of their spike trains. The *cross-correlation* between two time series $R$ (the reference series) and $C$ (the comparison series) is the correlation between $R$ and a lagged copy of $C$. This tutorial shows how to use functions from the neurons package and some basic R code to compute and visualize cross-correlations between spike trains. Data from the thalamic reticular nucleus (TRN) of wildtype and Mut-S Homolog 2 (Msh2) knock-out mice is used. As discussed in the [preprint](https://www.biorxiv.org/content/10.1101/2025.02.13.638164v1) from which the data is taken, the Msh2 knock-out mice were observed to exhibit increased gap junction formation in the TRN, and thus it would be expected that the knock-out mice would exhibit increased synchronous firing. This is because gap junctions are fast, electrical synapses between cells. 
 
@@ -121,7 +126,7 @@ raster_demo <- make_trials_from_spikes(
 print(head(raster_demo))
 ```
 
-The neurons package includes functions for computing both [raw and Pearson cross-correlations](tutorial_tau_est_DG.html) from a raster like **raster_demo**. The first step is to convert **raster_demo** into a list of neuron objects using the `load.rasters.as.neurons` function. 
+The neurons package includes functions for computing both [raw and Pearson cross-correlations](tutorial_tau_est_DG.html) from a raster like **raster_demo**. The first step is to convert **raster_demo** into a list of neuron objects using the [load.rasters.as.neurons()](../reference/load.rasters.as.neurons.html) function. 
 
 ```{r load_neurons}
 neurons <- load.rasters.as.neurons(
@@ -132,7 +137,7 @@ neurons <- load.rasters.as.neurons(
   )
 ```
 
-The next step is to compute the cross-correlation between the reference cell and the comparison cell. The **compute_crosscorrelation_R** method of a neuron object computes the cross-correlation (raw or Pearson) between that neuron and another neuron. The method returns a vector of cross-correlation values at lags from zero to the specified max lag.
+The next step is to compute the cross-correlation between the reference cell and the comparison cell. The **compute_crosscorrelation_R()** method of a neuron object computes the cross-correlation (raw or Pearson) between that neuron and another neuron. The method returns a vector of cross-correlation values at lags from zero to the specified max lag.
 
 ```{r cross_corr_demo}
 # Grab neurons from list
@@ -164,6 +169,7 @@ ggplot2::ggplot(
     panel.background = ggplot2::element_rect(fill = "white", colour = NA),
     plot.background  = ggplot2::element_rect(fill = "white", colour = NA))
 ```
+
 Unfortunately, these two neurons seem to have no obvious peak in their cross-correlation, suggesting that they do not fire synchronously. To get a sense of what the cross-correlation plot would look like for two synchronously firing neurons, let's artificially load the comparison neuron with lagged copies of spikes from the reference neuron. 
 
 ```{r}

@@ -2,7 +2,7 @@
 % Please edit documentation in R/neurons.R
 \name{new.network}
 \alias{new.network}
-\title{Initialize network}
+\title{Initialize neuron network}
 \usage{
 new.network(
   network_name = "not_provided",

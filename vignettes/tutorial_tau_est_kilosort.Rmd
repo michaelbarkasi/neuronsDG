@@ -1,11 +1,16 @@
 ---
 title: "Network time constants from KiloSort4 data"
+author: "Michael Barkasi"
+date: "`r Sys.Date()`"
 ---
 
 ```{r Rmdsetup, echo=FALSE}
 # Set max width of markdown code outputs
 options(width = 10000)
+knitr::opts_chunk$set(class.output = "scroll-output")
 ```
+
+<h2>Introduction</h2>
 
 The neurons package provides functions to use [dichotomized Gaussians to estimate network time constants](tutorial_tau_est_DG.html) on different kinds of spike data ([Macke et al. 2009](https://doi.org/10.1162/neco.2008.02-08-713), [Neophytou et al. 2022](https://doi.org/10.1371/journal.pbio.3001803)), including kilosort4 output. [KiloSort4](https://doi.org/10.1038/s41592-024-02232-7) is a [Python package](https://github.com/MouseLand/Kilosort), completely distinct from the neurons package, for extracting spike clusters (a proxy for individual neurons) from multi-channel probe recordings. Network time constants provide an estimate of recurrence by quantifying decay in spiking autocorrelation as a function of lag time. A higher network time constant indicates that a neuron receives a larger number of projections back on itself. Intuitively, the longer into the future a spike *now* increases the probability of a spike *later*, the stronger the connections from that neuron back onto itself must be. 
 
@@ -37,7 +42,7 @@ demo_data <- system.file(
   )
 ```
 
-The function used to process kilosort4 output is [preprocess.kilo4](../reference/preprocess.kilo4.html). This function expects its argument **data_path** to point to a folder the subfolders of which each contain a single kilosort4 output. This output should be in its own folder **/kilosort4**. The following four files are needed:
+The function used to process kilosort4 output is [preprocess.kilo4()](../reference/preprocess.kilo4.html). This function expects its argument **data_path** to point to a folder the subfolders of which each contain a single kilosort4 output. This output should be in its own folder **/kilosort4**. The following four files are needed:
 
 - **spike_positions.npy**: 2D array giving the x and y position of each spike  
 - **spike_clusters.npy**: integer giving the cluster number of each spike  
@@ -48,7 +53,7 @@ In addition, a MATLAB file **includeVector.mat** specifying whether each cluster
 
 <div class="figure">
   <img src="fig_folderstructure.png" alt="Image showing folder structure necessary for preprocess.kilo4 function." width="90%">
-  <p class="caption">Folder structure necessary for [preprocess.kilo4](../reference/preprocess.kilo4.html) function.</p>
+  <p class="caption">Folder structure necessary for [preprocess.kilo4()](../reference/preprocess.kilo4.html) function.</p>
 </div>
 
 <h3>Covariate data</h3>
@@ -91,11 +96,11 @@ print(head(kilo4_metadata))
 
 <h2>Preprocessing kilosort4 data into spike rasters</h2>
 
-The function [preprocess.kilo4](../reference/preprocess.kilo4.html) converts cluster spike times into spike rasters of the format expected by the neurons package. 
+The function [preprocess.kilo4()](../reference/preprocess.kilo4.html) converts cluster spike times into spike rasters of the format expected by the neurons package. 
 
 <h3>Parsing trials and quality control</h3>
 
-The output of kilosort4 must be partitioned into trials, which [preprocess.kilo4](../reference/preprocess.kilo4.html) does with start and stop times relative to a stimulus specified in **StimulusStamps.csv**. For example, information about responses to stimuli can be analyzed by setting the start time to something negative (before the stimulus) and the end time to something positive (after the stimulus). However, for estimating autocorrelation, it's the spontaneous activity during a period of silence after the stimulus which should be analyzed. In this case, the start time should be some time after the stimulus (to allow for settling) and the end time some time later. 
+The output of kilosort4 must be partitioned into trials, which [preprocess.kilo4()](../reference/preprocess.kilo4.html) does with start and stop times relative to a stimulus specified in **StimulusStamps.csv**. For example, information about responses to stimuli can be analyzed by setting the start time to something negative (before the stimulus) and the end time to something positive (after the stimulus). However, for estimating autocorrelation, it's the spontaneous activity during a period of silence after the stimulus which should be analyzed. In this case, the start time should be some time after the stimulus (to allow for settling) and the end time some time later. 
 
 ```{r preprocess_kilosort4_data}
 spike.rasters <- preprocess.kilo4(
@@ -113,9 +118,9 @@ spike.rasters <- preprocess.kilo4(
   ) 
 ```
 
-A path (such as **demo_data**) for the data must be passed to [preprocess.kilo4](../reference/preprocess.kilo4.html). Metadata (such as **kilo4_metadata**) is not necessary for the function to run. If left out, the preprocessed output will lack information about covariates. 
+A path (such as **demo_data**) for the data must be passed to [preprocess.kilo4()](../reference/preprocess.kilo4.html). Metadata (such as **kilo4_metadata**) is not necessary for the function to run. If left out, the preprocessed output will lack information about covariates. 
 
-In addition to the start and stop times and pointers to the data, [preprocess.kilo4](../reference/preprocess.kilo4.html) has three Boolean variables controlling the quality of clusters extracted for further analysis:
+In addition to the start and stop times and pointers to the data, [preprocess.kilo4()](../reference/preprocess.kilo4.html) has three Boolean variables controlling the quality of clusters extracted for further analysis:
 
 - **pure_trials_only**: include only trials which do not overlap with other trials (i.e., do not have a start time before the end time of any previous trials)?
 - **good_cells_only**: include only spike clusters which passed hand curation?
@@ -131,7 +136,7 @@ Finally, if **verbose** is set to TRUE, the function will print out information 
 
 <h3>Raster format</h3>
 
-The output of [preprocess.kilo4](../reference/preprocess.kilo4.html), in this case **spike.rasters**, is a list with three elements: **spikes**, **timeXtrial**, and **cluster.key**. The first element, **spikes**, is a single dataframe giving a compact spike-indexed representation of the spike rasters (plus covariates) from all recordings. Each row is a spike, with columns giving information such as cell number, time, and genotype. 
+The output of [preprocess.kilo4()](../reference/preprocess.kilo4.html), in this case **spike.rasters**, is a list with three elements: **spikes**, **timeXtrial**, and **cluster.key**. The first element, **spikes**, is a single dataframe giving a compact spike-indexed representation of the spike rasters (plus covariates) from all recordings. Each row is a spike, with columns giving information such as cell number, time, and genotype. 
 
 ```{r}
 print(head(spike.rasters$spikes))
@@ -154,7 +159,7 @@ n_cells <- nrow(spike.rasters$cluster.key)
 cat("Number of cells included:", n_cells)
 ```
 
-The number of cells and summary statistics, such as mean spike and trial count, can be pulled for each covariate combination with the function [summarize.cluster.key](../reference/summarize.cluster.key.html).
+The number of cells and summary statistics, such as mean spike and trial count, can be pulled for each covariate combination with the function [summarize.cluster.key()](../reference/summarize.cluster.key.html).
 
 ```{r summary_info_advanced}
 # Print results 
@@ -169,7 +174,7 @@ Thus, for Mecp2 HET mice, 26 clusters from the right hemisphere of females passe
 
 <h2>Converting to neurons</h2>
 
-With the kilosort4 data preprocessed into spike rasters, the next step is to use the function [load.rasters.as.neurons](../reference/load.rasters.as.neurons.html) to convert these rasters into a special class of object from the neuron package, **neuron**. This function will convert all clusters appearing in the raster into individual **neuron** objects and return them in a list.
+With the kilosort4 data preprocessed into spike rasters, the next step is to use the function [load.rasters.as.neurons()](../reference/load.rasters.as.neurons.html) to convert these rasters into a special class of object from the neuron package, **neuron**. This function will convert all clusters appearing in the raster into individual **neuron** objects and return them in a list.
 
 ```{r create_neuron_objects}
 neurons <- load.rasters.as.neurons(
@@ -183,7 +188,7 @@ The **neuron** object class is native to C++ and integrated into neurons (an R p
 
 <h3>Visualizing autocorrelation</h3>
 
-For example, here is the raster from one cell, plotted with the [plot.raster](../reference/plot.raster.html) function: 
+For example, here is the raster from one cell, plotted with the [plot.raster()](../reference/plot.raster.html) function: 
 
 ```{r plot_raster_high_autocor}
 cell_high <- 25
@@ -201,7 +206,7 @@ Notice how the raster for this cell shows more randomly scattered spikes, with f
 
 <h3>Empirical autocorrelation and exponential decay fits</h3>
 
-Beyond visualizing it as streaks in a raster, autocorrelation can be quantified both by using the raster data to compute the empirical correlation between spikes separated by different lag times (empirical autocorrelation), and by fitting an exponential decay model to those empirically estimated spike correlations. The empirical autocorrelation can be computed with centering-and-normalization (i.e., Pearson correlation), or without (i.e., raw correlation). The [tutorial on estimating network time constants](tutorial_tau_est_DG.html) provides a comparison between empirical vs population autocorrelation, and Pearson vs raw autocorrelation. The class **neuron** provides a method for computing both versions of empirical autocorrelation, and the neurons package provides a wrapper [compute.autocorr](../reference/compute.autocorr.html) with default parameters to access it. Similarly, there is a method and corresponding wrapper [fit.edf.autocorr](../reference/fit.edf.autocorr.html) for fitting a decay model to the empirical estimate. Here, for example, these wrappers applied to the above cells:
+Beyond visualizing it as streaks in a raster, autocorrelation can be quantified both by using the raster data to compute the empirical correlation between spikes separated by different lag times (empirical autocorrelation), and by fitting an exponential decay model to those empirically estimated spike correlations. The empirical autocorrelation can be computed with centering-and-normalization (i.e., Pearson correlation), or without (i.e., raw correlation). The [tutorial on estimating network time constants](tutorial_tau_est_DG.html) provides a comparison between empirical vs population autocorrelation, and Pearson vs raw autocorrelation. The class **neuron** provides a method for computing both versions of empirical autocorrelation, and the neurons package provides a wrapper [compute.autocorr()](../reference/compute.autocorr.html) with default parameters to access it. Similarly, there is a method and corresponding wrapper [fit.edf.autocorr()](../reference/fit.edf.autocorr.html) for fitting a decay model to the empirical estimate. Here, for example, these wrappers applied to the above cells:
 
 ```{r quantify_autocor}
 # High autocorrelation cell
@@ -213,7 +218,7 @@ compute.autocorr(neurons[[cell_low]])
 fit.edf.autocorr(neurons[[cell_low]])
 ```
 
-The results can be visualized by using the [plot.autocorrelation](../reference/plot.autocorrelation.html) function to plot both the computed empirical autocorrelation and fitted exponential decay in empirical autocorrelation. Here is the high-autocorrelation cell:
+The results can be visualized by using the [plot.autocorrelation()](../reference/plot.autocorrelation.html) function to plot both the computed empirical autocorrelation and fitted exponential decay in empirical autocorrelation. Here is the high-autocorrelation cell:
 
 ```{r plot_autocor_high}
 plot.autocorrelation(neurons[[cell_high]])
@@ -237,7 +242,7 @@ print(neurons[[cell_low]]$fetch_EDF_parameters())
 
 The amplitude, $A$, gives the autocorrelation at lag time 1 (minus the bias), while the time constant, $\tau$ (tau), gives the rate of decay in autocorrelation as lag time increases. Notice how the high-autocorrelation cell has a time constant of `r round(neurons[[cell_high]]$fetch_EDF_parameters()["tau"],1)`ms and an amplitude of `r round(neurons[[cell_high]]$fetch_EDF_parameters()["A"],3)`, while the low-autocorrelation cell has a time constant of only `r round(neurons[[cell_low]]$fetch_EDF_parameters()["tau"],1)`ms and an amplitude of `r round(neurons[[cell_low]]$fetch_EDF_parameters()["A"],3)`. 
 
-In practice, the individual steps shown above do not need to be run with separate method calls. The neurons package provides a function, [process.autocorr](../reference/process.autocorr.html), which does all of these steps in one call for a list of neurons. Here is the function run on the current set of neurons, with full print out of results: 
+In practice, the individual steps shown above do not need to be run with separate method calls. The neurons package provides a function, [process.autocorr()](../reference/process.autocorr.html), which does all of these steps in one call for a list of neurons. Here is the function run on the current set of neurons, with full print out of results: 
 
 ```{r process_autocorr_as_batch}
 autocor.results.batch <- process.autocorr(neurons)
@@ -252,11 +257,11 @@ neurons <- neurons[-37]
 
 <h2>Estimating population autocorrelation</h2>
 
-Recall that the aim is to estimate the network time constant for covariates of interest, e.g., $\tau$ in the right vs left hemisphere of C57 (wildtype) mice, or $\tau$ in the right hemisphere of C57 vs Shank3 KO mice. That is, the aim is not only to compute the empirical autocorrelation of a finite sample, but to estimate population values. At first glance, the output of [process.autocorr](../reference/process.autocorr.html) appears to provide all that's needed for this estimation. Why not simply take the covariate means of the $\tau$ values listed in the output of [process.autocorr](../reference/process.autocorr.html)? The problem is that recurrence is very noisy, the amount of data available from which to extract a signal through all that noise is low, and $\tau$ itself is an imperfect measure of the network time constant. For example, a relatively flat empirical autocorrelation curve is ambiguous between high $A$ with low $\tau$ and low $A$ with high $\tau$. Similarly, empirical autocorrelation values are highly sensitive to relatively arbitrary choices in data processing, as discussed in the [tutorial on estimating network time constants](tutorial_tau_est_DG.html).
+Recall that the aim is to estimate the network time constant for covariates of interest, e.g., $\tau$ in the right vs left hemisphere of C57 (wildtype) mice, or $\tau$ in the right hemisphere of C57 vs Shank3 KO mice. That is, the aim is not only to compute the empirical autocorrelation of a finite sample, but to estimate population values. At first glance, the output of [process.autocorr()](../reference/process.autocorr.html) appears to provide all that's needed for this estimation. Why not simply take the covariate means of the $\tau$ values listed in the output of [process.autocorr()](../reference/process.autocorr.html)? The problem is that recurrence is very noisy, the amount of data available from which to extract a signal through all that noise is low, and $\tau$ itself is an imperfect measure of the network time constant. For example, a relatively flat empirical autocorrelation curve is ambiguous between high $A$ with low $\tau$ and low $A$ with high $\tau$. Similarly, empirical autocorrelation values are highly sensitive to relatively arbitrary choices in data processing, as discussed in the [tutorial on estimating network time constants](tutorial_tau_est_DG.html).
 
 <h3>Dichotomized Gaussians</h3>
 
-Thus, exponential decay fits to computed empirical autocorrelation are often not reliable estimates of the network time constant, even for individual neurons. Any statistical method for estimating the population network time constant for a covariate of interest based on these unreliable individual estimates (e.g., bootstrapping) will only amplify the noise. The solution is to estimate the network time constant from simulations, not the observed data itself. Specifically, [dichotomized Gaussians](tutorial_tau_est_DG.html) can be used to simulate spike trains consistent with the observed data. The function [estimate.autocorr.params](../reference/estimate.autocorr.params.html) takes a list of neurons and:
+Thus, exponential decay fits to computed empirical autocorrelation are often not reliable estimates of the network time constant, even for individual neurons. Any statistical method for estimating the population network time constant for a covariate of interest based on these unreliable individual estimates (e.g., bootstrapping) will only amplify the noise. The solution is to estimate the network time constant from simulations, not the observed data itself. Specifically, [dichotomized Gaussians](tutorial_tau_est_DG.html) can be used to simulate spike trains consistent with the observed data. The function [estimate.autocorr.params()](../reference/estimate.autocorr.params.html) takes a list of neurons and:
 
 1. Computes the empirical autocorrelation of each neuron.
 2. Fits an exponential decay model to that empirical autocorrelation.
@@ -275,7 +280,7 @@ autocor.ests <- estimate.autocorr.params(
 print(head(autocor.ests$estimates))
 ```
 
-With the simulations run, the final step is to estimate the network time constant for covariates of interest. The function [analyze.autocorr](../reference/analyze.autocorr.html) does this by bootstrapping over the tau values obtained from the simulations. If there are $n$ neurons in a covariate level, $m$ simulations have been run per neuron, then each bootstrap resample consists of the mean of $n$ draws with replacement from the pool of $nm$ values for $\tau$. For this tutorial, 10k bootstrap resamples are used.
+With the simulations run, the final step is to estimate the network time constant for covariates of interest. The function [analyze.autocorr()](../reference/analyze.autocorr.html) does this by bootstrapping over the tau values obtained from the simulations. If there are $n$ neurons in a covariate level, $m$ simulations have been run per neuron, then each bootstrap resample consists of the mean of $n$ draws with replacement from the pool of $nm$ values for $\tau$. For this tutorial, 10k bootstrap resamples are used.
 
 ```{r stat_analysis}
 # Run analysis
@@ -286,7 +291,7 @@ autocor.results.bootstraps <- analyze.autocorr(
 )
 ```
 
-The function [analyze.autocorr](../reference/analyze.autocorr.html) returns a list with two objects. The first is **resamples**, a dataframe holding the tau values for each covariate from each simulation. 
+The function [analyze.autocorr()](../reference/analyze.autocorr.html) returns a list with two objects. The first is **resamples**, a dataframe holding the tau values for each covariate from each simulation. 
 
 ```{r resamples}
 print(head(autocor.results.bootstraps$resamples))

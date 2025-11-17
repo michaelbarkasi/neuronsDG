@@ -813,7 +813,7 @@ void network::set_network_structure(
     
     // Resize network coordinate components 
     coordinates_spatial = MatrixXd::Zero(n_neurons, 2); 
-    coordinates_node = MatrixXi::Zero(n_neurons, 2); // layer, column
+    coordinates_node = MatrixXi::Zero(n_neurons, 2); // column (x), layer (y) 
     
   };
 
@@ -969,7 +969,7 @@ void network::apply_circuit_motif(
     const motif& cmot
   ) {
    
-    if (edge_types.size() != 1) {
+    if (edge_types.size() < 1) {
       Rcpp::Rcout << "Must set local edges before applying any circuit motifs; returning." << std::endl;
       return;
     }
@@ -992,8 +992,17 @@ void network::apply_circuit_motif(
       double pruning_threshold = pruning_threshold_factor * proj_strength;
       
       // Grab pre and post cell types 
-      int type_pre = Rwhich(eq_left_broadcast(neuron_types, proj.pre_type))[0];
-      int type_post = Rwhich(eq_left_broadcast(neuron_types, proj.post_type))[0];
+      std::string pre_type = proj.pre_type;
+      std::string post_type = proj.post_type;
+      if (pre_type == "default") {
+        pre_type = neuron_types[0];
+      }
+      if (post_type == "default") {
+        post_type = neuron_types[0];
+      }
+      // Get type indices
+      int type_pre = Rwhich(eq_left_broadcast(neuron_types, pre_type))[0];
+      int type_post = Rwhich(eq_left_broadcast(neuron_types, post_type))[0];
       // ... and make masks 
       LogicalVector pre_type_mask = eq_left_broadcast(neuron_type_num, type_pre);
       LogicalVector post_type_mask = eq_left_broadcast(neuron_type_num, type_post);
@@ -1017,8 +1026,8 @@ void network::apply_circuit_motif(
       int max_down = cmot.max_col_shift_down[p];
       
       // Build column range
-      VectorXi col_range(max_down - max_down + 1);
-      for (int i = 0; i < col_range.size(); i++) col_range[i] = max_down + i;
+      VectorXi col_range(max_up + max_down + 1);
+      for (int i = 0; i < col_range.size(); i++) col_range[i] = -max_down + i;
       
       // Pre-make all column masks 
       LogicalMatrix column_masks(n_neurons, n_columns);
@@ -1039,40 +1048,51 @@ void network::apply_circuit_motif(
         for (int tc : col_range_shifted) {
           
           // Check if target column is valid
-          if (tc < 0 || tc >= n_columns) {continue;}
-          
-          // Get post-synaptic column mask
-          LogicalVector post_column_mask = column_masks(_, tc);
-          
-          // Sample pre-synaptic cells 
-          LogicalVector pre_mask = pre_type_mask & pre_layer_mask & pre_column_mask;
-          IntegerVector pre_indices = Rwhich(pre_mask);
-          int n_pre = R::rpois(pre_indices.size() * density_pre);
-          n_pre = std::min(n_pre, 1);
-          IntegerVector pre_sampled = Rcpp::sample(pre_indices, n_pre, false);
-          
-          // Prepare for repeated sampling of post-synaptic cells
-          LogicalVector post_mask = post_type_mask & post_layer_mask & post_column_mask;
-          IntegerVector post_indices = Rwhich(post_mask);
-          
-          for (int pre_c : pre_sampled) {
+          if (tc >= 0 && tc < n_columns) {
             
-            // Sample post-synaptic cells
-            int n_post = R::rpois(post_indices.size() * density_post);
-            n_post = std::min(n_post, 1);
-            IntegerVector post_sampled = Rcpp::sample(post_indices, n_post, false);
-            
-            // Set transductances 
-            for (int post_c : post_sampled) {
-              double trans = std::abs(R::rnorm(0.0, proj_strength));
-              if (trans > pruning_threshold) {
-                motif_transconductances(post_c, pre_c) = val_pre * trans;
-                // Save edge coordinate
-                motif_edges_pre.push_back(pre_c);
-                motif_edges_post.push_back(post_c);
+            // Don't make local connections 
+            if (layer_pre != layer_post || c != tc) {
+              
+              // Find distance off home column 
+              int col_offset = std::abs(tc - c);
+              double offset_factor = 1.0 / (double)(col_offset + 1.0);
+              
+              // Get post-synaptic column mask
+              LogicalVector post_column_mask = column_masks(_, tc);
+              
+              // Sample pre-synaptic cells 
+              LogicalVector pre_mask = pre_type_mask & pre_layer_mask & pre_column_mask;
+              IntegerVector pre_indices = Rwhich(pre_mask);
+              int n_pre = R::rpois(pre_indices.size() * density_pre * offset_factor);
+              n_pre = std::min(n_pre, 1);
+              IntegerVector pre_sampled = Rcpp::sample(pre_indices, n_pre, false);
+              
+              // Prepare for repeated sampling of post-synaptic cells
+              LogicalVector post_mask = post_type_mask & post_layer_mask & post_column_mask;
+              IntegerVector post_indices = Rwhich(post_mask);
+              
+              for (int pre_c : pre_sampled) {
+                
+                // Sample post-synaptic cells
+                int n_post = R::rpois(post_indices.size() * density_post * offset_factor);
+                n_post = std::min(n_post, 1);
+                IntegerVector post_sampled = Rcpp::sample(post_indices, n_post, false);
+                
+                // Set transductances 
+                for (int post_c : post_sampled) {
+                  double trans = std::abs(R::rnorm(0.0, proj_strength));
+                  if (trans > pruning_threshold) {
+                    motif_transconductances(post_c, pre_c) = val_pre * trans;
+                    // Save edge coordinate
+                    motif_edges_pre.push_back(pre_c);
+                    motif_edges_post.push_back(post_c);
+                  }
+                  
+                }
+                
               }
               
-            }
+            } 
             
           }
           
@@ -1270,21 +1290,35 @@ List network::fetch_network_components() const {
     for (int eti = 0; eti < edge_types.size(); eti++) {
       MatrixXi et = edge_types[eti];
       NumericMatrix et_r = to_NumMat(et);
+      for (double &v : et_r) v++; // put into 1-indexed form for R
       colnames(et_r) = emn;
       edge_type_matrices[eti] = et_r;
     }
     
+    // Add labels 
+    NumericMatrix coordinates_node_R = to_NumMat(coordinates_node);
+    colnames(coordinates_node_R) = CharacterVector::create("column_idx", "layer_idx");
+    NumericMatrix coordinates_spatial_R = to_NumMat(coordinates_spatial);
+    colnames(coordinates_spatial_R) = CharacterVector::create("x", "y");
+    NumericMatrix node_coordinates_spatial_R = to_NumMat(node_coordinates_spatial);
+    colnames(node_coordinates_spatial_R) = CharacterVector::create("x", "y");
+    
+    // Put into 1-indexed form
+    for (double &v : coordinates_node_R) v++;
+    
     return List::create(
+      _["network_name"] = network_name,
       _["n_neurons"] = n_neurons,
       _["n_neuron_types"] = n_neuron_types,
+      _["layer_names"] = layer_names, 
       _["transconductances"] = transconductance_matrices,
-      _["node_coordinates_spatial"] = to_NumMat(node_coordinates_spatial),
-      _["coordinates_spatial"] = to_NumMat(coordinates_spatial),
-      _["coordinates_node"] = to_NumMat(coordinates_node),
+      _["node_coordinates_spatial"] = node_coordinates_spatial_R,
+      _["coordinates_spatial"] = coordinates_spatial_R,
+      _["coordinates_node"] = coordinates_node_R,
       _["neuron_type_name"] = neuron_type_name,
       _["neuron_type_num"] = neuron_type_num,
       _["node_range_ends"] = node_range_ends,
-      _["edge_types"] = edge_type_matrices, 
+      _["edge_idx_by_type"] = edge_type_matrices, 
       _["edge_type_names"] = edge_type_names
     );
    

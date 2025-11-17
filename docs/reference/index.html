@@ -24,6 +24,7 @@
     <li><a class="dropdown-item" href="../articles/install.html">Installation instructions</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Tutorials</h6></li>
+    <li><a class="dropdown-item" href="../articles/tutorial_network_topology.html">Network topology from circuit motifs</a></li>
     <li><a class="dropdown-item" href="../articles/tutorial_synchrony_crosscorr.html">Spike synchrony via cross-correlation</a></li>
     <li><a class="dropdown-item" href="../articles/tutorial_tau_est_DG.html">Network time constants via dichotomized Gaussians</a></li>
     <li><a class="dropdown-item" href="../articles/tutorial_tau_est_kilosort.html">Network time constants from KiloSort4 data</a></li>
@@ -47,7 +48,135 @@
     </div>
 
     <div class="section level2">
-      <h2 id="all-functions">All functions<a class="anchor" aria-label="anchor" href="#all-functions"></a></h2>
+      <h2 id="initialization-functions">Initialization functions<a class="anchor" aria-label="anchor" href="#initialization-functions"></a></h2>
+
+
+
+
+    </div><div class="section level2">
+
+
+
+
+      <dl><dt>
+
+          <code><a href="new.motif.html">new.motif()</a></code>
+
+        </dt>
+        <dd>Initialize network (circuit) motif</dd>
+      </dl><dl><dt>
+
+          <code><a href="new.network.html">new.network()</a></code>
+
+        </dt>
+        <dd>Initialize neuron network</dd>
+      </dl><dl><dt>
+
+          <code><a href="new.neuron.html">new.neuron()</a></code>
+
+        </dt>
+        <dd>Initialize neuron</dd>
+      </dl><dl><dt>
+
+          <code><a href="load.rasters.as.neurons.html">load.rasters.as.neurons()</a></code>
+
+        </dt>
+        <dd>Load neuron data from raster file</dd>
+      </dl></div><div class="section level2">
+      <h2 id="neuron-method-wrappers">Neuron method wrappers<a class="anchor" aria-label="anchor" href="#neuron-method-wrappers"></a></h2>
+
+
+
+
+    </div><div class="section level2">
+
+
+
+
+      <dl><dt>
+
+          <code><a href="fit.edf.autocorr.html">fit.edf.autocorr()</a></code>
+
+        </dt>
+        <dd>Fit exponential decay function to autocorrelation of single neuron object</dd>
+      </dl><dl><dt>
+
+          <code><a href="compute.autocorr.html">compute.autocorr()</a></code>
+
+        </dt>
+        <dd>Compute autocorrelation of single neuron object</dd>
+      </dl><dl><dt>
+
+          <code><a href="estimate.autocorr.params.html">estimate.autocorr.params()</a></code>
+
+        </dt>
+        <dd>Function to estimate autocorrelation parameters using dichotomized Gaussian simulations</dd>
+      </dl><dl><dt>
+
+          <code><a href="process.autocorr.html">process.autocorr()</a></code>
+
+        </dt>
+        <dd>Function to process autocorrelation of neuron list</dd>
+      </dl><dl><dt>
+
+          <code><a href="plot-raster.html">plot.raster()</a></code>
+
+        </dt>
+        <dd>Function to plot spike raster of neuron</dd>
+      </dl><dl><dt>
+
+          <code><a href="plot-autocorrelation.html">plot.autocorrelation()</a></code>
+
+        </dt>
+        <dd>Function to plot autocorrelation of neuron</dd>
+      </dl></div><div class="section level2">
+      <h2 id="motif-method-wrappers">Motif method wrappers<a class="anchor" aria-label="anchor" href="#motif-method-wrappers"></a></h2>
+
+
+
+
+    </div><div class="section level2">
+
+
+
+
+      <dl><dt>
+
+          <code><a href="load.projection.into.motif.html">load.projection.into.motif()</a></code>
+
+        </dt>
+        <dd>Load projection into motif</dd>
+      </dl></div><div class="section level2">
+      <h2 id="network-method-wrappers">Network method wrappers<a class="anchor" aria-label="anchor" href="#network-method-wrappers"></a></h2>
+
+
+
+
+    </div><div class="section level2">
+
+
+
+
+      <dl><dt>
+
+          <code><a href="set.network.structure.html">set.network.structure()</a></code>
+
+        </dt>
+        <dd>Set network structure</dd>
+      </dl><dl><dt>
+
+          <code><a href="apply.circuit.motif.html">apply.circuit.motif()</a></code>
+
+        </dt>
+        <dd>Apply circuit motif to network</dd>
+      </dl><dl><dt>
+
+          <code><a href="plot-network.html">plot.network()</a></code>
+
+        </dt>
+        <dd>Plot network as directed graph</dd>
+      </dl></div><div class="section level2">
+      <h2 id="analysis-functions">Analysis functions<a class="anchor" aria-label="anchor" href="#analysis-functions"></a></h2>
 
 
 
@@ -65,52 +194,27 @@
         <dd>Function to analyze autocorrelation estimates with bootstrapping</dd>
       </dl><dl><dt>
 
-          <code><a href="compute.autocorr.html">compute.autocorr()</a></code>
+          <code><a href="test.sigma.assumption.html">test.sigma.assumption()</a></code>
 
         </dt>
-        <dd>Compute autocorrelation of single neuron object</dd>
-      </dl><dl><dt>
+        <dd>Helper function for testing assumption of autocorrelation processing</dd>
+      </dl></div><div class="section level2">
+      <h2 id="preprocessing-functions">Preprocessing functions<a class="anchor" aria-label="anchor" href="#preprocessing-functions"></a></h2>
 
-          <code><a href="estimate.autocorr.params.html">estimate.autocorr.params()</a></code>
 
-        </dt>
-        <dd>Function to estimate autocorrelation parameters using dichotomized Gaussian simulations</dd>
-      </dl><dl><dt>
 
-          <code><a href="fit.edf.autocorr.html">fit.edf.autocorr()</a></code>
 
-        </dt>
-        <dd>Fit exponential decay function to autocorrelation of single neuron object</dd>
-      </dl><dl><dt>
+    </div><div class="section level2">
+
+
+
+
+      <dl><dt>
 
           <code><a href="import.kilo4.html">import.kilo4()</a></code>
 
         </dt>
         <dd>Import raw kilosort4 data</dd>
-      </dl><dl><dt>
-
-          <code><a href="load.rasters.as.neurons.html">load.rasters.as.neurons()</a></code>
-
-        </dt>
-        <dd>Load neuron data from raster file</dd>
-      </dl><dl><dt>
-
-          <code><a href="new_neuron.html">new_neuron()</a></code>
-
-        </dt>
-        <dd>Initialize neuron object</dd>
-      </dl><dl><dt>
-
-          <code><a href="plot-autocorrelation.html">plot.autocorrelation()</a></code>
-
-        </dt>
-        <dd>Function to plot autocorrelation of neuron</dd>
-      </dl><dl><dt>
-
-          <code><a href="plot-raster.html">plot.raster()</a></code>
-
-        </dt>
-        <dd>Function to plot spike raster of neuron</dd>
       </dl><dl><dt>
 
           <code><a href="preprocess.kilo4.html">preprocess.kilo4()</a></code>
@@ -119,24 +223,13 @@
         <dd>Preprocess kilosort4 data</dd>
       </dl><dl><dt>
 
-          <code><a href="process.autocorr.html">process.autocorr()</a></code>
-
-        </dt>
-        <dd>Function to process autocorrelation of neuron list</dd>
-      </dl><dl><dt>
-
           <code><a href="summarize.cluster.key.html">summarize.cluster.key()</a></code>
 
         </dt>
         <dd>Summarize cluster key by covariates</dd>
-      </dl><dl><dt>
-
-          <code><a href="test.sigma.assumption.html">test.sigma.assumption()</a></code>
-
-        </dt>
-        <dd>Helper function for testing assumption of autocorrelation processing</dd>
       </dl></div>
-  </main></div>
+  </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
+    </nav></aside></div>
 
 
     <footer><div class="pkgdown-footer-left">

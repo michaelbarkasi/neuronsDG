@@ -82,7 +82,7 @@ new.neuron <- function(
     return(neuron)
   }
 
-#' Initialize motif
+#' Initialize network (circuit) motif
 #' 
 #' This function initializes a new motif object with specified parameters. Motifs are used for building networks of interconnected neurons. They are recipes for building internode projections within a neural network. They are "columnar", in the sense that they are repeated across cortical columns. 
 #' 
@@ -99,7 +99,7 @@ new.motif <- function(
     return(motif)
   }
 
-#' Initialize network
+#' Initialize neuron network
 #' 
 #' This function initializes a new network object with specified parameters. Networks are used to simulate two-dimensional cortical patches (of layers and columns) using Growth Transform dynamical systems. 
 #' 
@@ -178,45 +178,58 @@ new.network <- function(
 #' This function loads a projection schema into a motif object. Projections define internode connectivity within a network built using the motif.
 #' 
 #' @param motif Motif object into which to load the projection.
-#' @param presynaptic_type Character string giving type of presynaptic neuron, e.g. "excitatory", "inhibitory", etc.
 #' @param presynaptic_layer Character string giving layer of presynaptic neuron, e.g. "L2/3", "L4", "L5", "L6", etc.
-#' @param presynaptic_density Numeric giving density of presynaptic neuron type in presynaptic layer (e.g., ratio of neurons per node).
-#' @param postsynaptic_type Character string giving type of postsynaptic neuron, e.g. "excitatory", "inhibitory", etc.
-#' @param postsynaptic_layer Character string giving layer of postsynaptic neuron, e.g. "L2/3", "L4", "L5", "L6", etc.
-#' @param postsynaptic_density Numeric giving density of postsynaptic neuron type in postsynaptic layer (e.g., ratio of neurons per node).
-#' @param max_col_shift_up Maximum number of columns upwards (increasing columnar indexes) that the projection can reach (default: 0).
-#' @param max_col_shift_down Maximum number of columns downwards (decreasing columnar indexes) that the projection can reach (default: 0).
+#' @param postsynaptic_layer Character string, or vector of character strings, giving layer of postsynaptic neuron, e.g. "L2/3", "L4", "L5", "L6", etc.
+#' @param density Numeric giving density of the projection; if left NULL, will use presynaptic_density and postsynaptic_density; if set, will use this value for both presynaptic_density and postsynaptic_density.
+#' @param presynaptic_density Numeric giving density of presynaptic neuron type in presynaptic layer (e.g., ratio of neurons per node, default: 0.5).
+#' @param postsynaptic_density Numeric giving density of postsynaptic neuron type in postsynaptic layer (e.g., ratio of neurons per node, default: 0.5).
+#' @param presynaptic_type Character string giving type of presynaptic neuron, e.g. "excitatory", "inhibitory", etc. (default: "principal").
+#' @param postsynaptic_type Character string giving type of postsynaptic neuron, e.g. "excitatory", "inhibitory", etc. (default: "principal").
+#' @param max_col_shift_up Maximum number of columns upwards (increasing columnar indexes) that the projection can reach (default: 0, should be positive integer).
+#' @param max_col_shift_down Maximum number of columns downwards (decreasing columnar indexes) that the projection can reach (default: 0, should be positive integer).
 #' @param connection_strength Numeric giving overall strength of the projection (default: 1.0).
 #' @return The updated motif object with the new projection loaded.
 #' @export
 load.projection.into.motif <- function(
     motif,
-    presynaptic_type,
     presynaptic_layer,
-    presynaptic_density,
-    postsynaptic_type,
     postsynaptic_layer,
-    postsynaptic_density,
+    density = NULL,
+    presynaptic_density = 0.5,
+    postsynaptic_density = 0.5,
+    presynaptic_type = "default",
+    postsynaptic_type = "default",
     max_col_shift_up = 0,
     max_col_shift_down = 0,
     connection_strength = 1.0
   ) {
-    # Initialize new projection object
-    proj <- new(Projection)
-    # Load projection parameters 
-    proj$pre_type <- presynaptic_type
-    proj$pre_layer <- presynaptic_layer
-    proj$pre_density <- max(min(presynaptic_density, 1), 0)
-    proj$post_type <- postsynaptic_type
-    proj$post_layer <- postsynaptic_layer
-    proj$post_density <- max(min(postsynaptic_density, 1), 0)
-    # Add projection to motif
-    motif$load_projection(
-      proj,
-      as.integer(max_col_shift_up),
-      as.integer(max_col_shift_down),
-      connection_strength
-    )
+    if (length(presynaptic_layer) != 1) {
+      stop("presynaptic_layer must be a single layer name.")
+    }
+    # ... for each target layer
+    for (psl in postsynaptic_layer) {
+      # Initialize new projection object
+      proj <- new(Projection)
+      # Check density 
+      if (!is.null(density)) {
+        presynaptic_density <- density
+        postsynaptic_density <- density
+      }
+      # Load projection parameters 
+      proj$pre_type <- presynaptic_type
+      proj$pre_layer <- presynaptic_layer
+      proj$pre_density <- max(min(presynaptic_density, 1), 0)
+      proj$post_type <- postsynaptic_type
+      proj$post_layer <- psl
+      proj$post_density <- max(min(postsynaptic_density, 1), 0)
+      # Add projection to motif
+      motif$load_projection(
+        proj,
+        as.integer(max_col_shift_up),
+        as.integer(max_col_shift_down),
+        connection_strength
+      )
+    }
     return(motif)
   }
 
@@ -232,8 +245,8 @@ load.projection.into.motif <- function(
 #' @param n_columns Integer giving number of columns in the network.
 #' @param layer_height Numeric giving height of each layer (in units specified at network creation, default unit is microns, default value is 1.0).
 #' @param column_width Numeric giving width of each column (in units specified at network creation, default unit is microns, default value is 1.0).
-#' @param layer_separation_factor Numeric giving mean distance between layers as a fraction of layer height (default: 1.25).
-#' @param column_separation_factor Numeric giving mean distance between columns as a fraction of column width (default: 1.5).
+#' @param layer_separation_factor Numeric giving mean distance between layers as a fraction of layer height (default: 3.0).
+#' @param column_separation_factor Numeric giving mean distance between columns as a fraction of column width (default: 3.5).
 #' @param neurons_per_node Matrix giving number of neurons of each type per node in each layer; dimensions must match n_layers (rows) and length of neuron_types (columns).
 #' @param recurrence_factors List of matrices giving local recurrence factors for each layer; each matrix must have dimensions matching length of neuron_types (rows and columns).
 #' @param pruning_threshold_factor Numeric giving factor for pruning weak connections within nodes; connections with strength below this factor times the maximum connection strength in the node will be pruned (default: 0.1).
@@ -248,28 +261,69 @@ set.network.structure <- function(
     n_columns = 1,
     layer_height = 1.0,
     column_width = 1.0,
-    layer_separation_factor = 1.25,
-    column_separation_factor = 1.5,
-    neurons_per_node = matrix(10, nrow = 1, ncol = 1),
-    recurrence_factors = list(matrix(0.5, nrow = 1, ncol = 1)),
+    layer_separation_factor = 3.0,
+    column_separation_factor = 3.5,
+    neurons_per_node = 10,
+    recurrence_factors = 0.5,
     pruning_threshold_factor = 0.1
   ) {
     # Run checks 
     if (length(neuron_types) != length(neuron_type_valences)) {
-      stop("Length of neuron_types must match length of neuron_type_valences.")
+      if (length(neuron_type_valences) == 1) {
+        neuron_type_valences <- rep(neuron_type_valences, length(neuron_types))
+      } else {
+        stop("Length of neuron_types must match length of neuron_type_valences, or neuron_type_valences must be a single value.")
+      }
     }
     if (length(layer_names) != n_layers) {
-      stop("Length of layer_names must match n_layers.")
+      if (n_layers > length(layer_names) && length(layer_names) == 1) {
+        layer_names <- paste0(layer_names, "_", seq_len(n_layers))
+      } else if (n_layers < length(layer_names) && n_layers == 1) {
+        n_layers <- length(layer_names)
+      } else {
+        stop("Length of layer_names does not match n_layers, and neither is inferable from the other.")
+      }
     }
-    npn_dim <- c(1, length(neurons_per_node))
-    if (n_layers > 1 && length(neurons_per_node) > 1) {
+    if (!is.null(dim(neurons_per_node))) {
       npn_dim <- dim(neurons_per_node)
-    } 
+    } else {
+      if (length(neurons_per_node) == 1) {
+        if (n_layers > 1) {
+          neurons_per_node <- matrix(neurons_per_node, nrow = n_layers, ncol = length(neuron_types))
+          npn_dim <- dim(neurons_per_node)
+        } else {
+          neurons_per_node <- matrix(rep(neurons_per_node, length(neuron_types)), nrow = 1, ncol = length(neuron_types))
+          npn_dim <- c(1, length(neurons_per_node))
+        }
+      } else if (length(neurons_per_node) == length(neuron_types)) {
+        neurons_per_node <- matrix(rep(neurons_per_node, n_layers), nrow = n_layers, ncol = length(neuron_types), byrow = TRUE)
+        npn_dim <- dim(neurons_per_node)
+      } else {
+        stop("Dimensions of neurons_per_node must match n_layers and length of neuron_types, or be inferable from them.")
+      }
+    }
     if (any(npn_dim != c(n_layers, length(neuron_types)))) {
       stop("Dimensions of neurons_per_node must match n_layers and length of neuron_types.")
     }
     if (!("list" %in% class(recurrence_factors))) {
-      stop("recurrence_factors must be a list of matrices.")
+      if ("matrix" %in% class(recurrence_factors) || "numeric" %in% class(recurrence_factors)) {
+        recurrence_factors_matrix <- as.matrix(recurrence_factors)
+        if (length(recurrence_factors_matrix) != length(neuron_types)^2) {
+          if (length(recurrence_factors_matrix) == 1) {
+            recurrence_factors_matrix <- matrix(
+              recurrence_factors_matrix, 
+              nrow = length(neuron_types), 
+              ncol = length(neuron_types)
+            )
+          } else {
+            stop("Dimensions of recurrence_factors matrix must match length of neuron_types, or be a single scalar.")
+          }
+        }
+        recurrence_factors <- list()
+        for (l in seq_len(n_layers)) recurrence_factors[[l]] <- recurrence_factors_matrix
+      } else {
+        stop("recurrence_factors must be a list of matrices or a single matrix.")
+      }
     } else if (length(recurrence_factors) != n_layers) {
       stop("Length of recurrence_factors list must match n_layers.") 
     } else {
@@ -323,24 +377,50 @@ apply.circuit.motif <- function(
 #' 
 #' This function plots a network object as a directed graph using ggplot2. Nodes represent neurons, and directed edges represent connections between them. The plot can be customized by selecting which motif to display and how to color the edges.
 #' 
+#' @name plot.network
+#' @rdname plot-network
+#' @usage plot.network(network, title = NULL, plot_motif = "local connections", edge_color = "pre_type", cell_color = "layer", cell_size_factor = 5.0, arrow_size_factor = 0.5, return_plot = FALSE)
 #' @param network Network object to plot.
-#' @param title Title for the plot (default: "Cortical Patch").
-#' @param plot_motif Character string specifying which motif to plot; options include "local" for local connections within each node or the name of a long-range projection motif (default: "local").
+#' @param title Title for the plot (default: "Cortical Patch" or network name (if provided), plus plot motif name(s)).
+#' @param plot_motif Character string specifying which motif to plot; options include "local" for local connections within each node or the name of a long-range projection motif (default: "local connections").
 #' @param edge_color Character string specifying how to color the edges; options include "pre_type" to color by presynaptic neuron type, "post_type" to color by postsynaptic neuron type, or "motif" to color by motif type (default: "pre_type").
+#' @param cell_color Character string specifying how to color the nodes; options include "layer" to color by layer index or "type" to color by neuron type (default: "layer").
+#' @param cell_size_factor Numeric value controlling how cell size in the plot scales to the number of cells. 
+#' @param arrow_size Numeric value indicating the size of the arrows representing edges (default: 0.05).
+#' @param return_plot Logical indicating whether to return the ggplot object (TRUE) or print the plot directly (FALSE) (default: FALSE).
+#' @return Either prints the plot directly or returns the ggplot object, depending on the value of return_plot.
+#' @export
 plot.network <- function(
     network,
-    title = "Cortical Patch",
-    plot_motif = "local",
+    title = NULL,
+    plot_motif = "local connections",
     edge_color = "pre_type",
+    cell_color = "layer",
+    cell_size_factor = 5.0,
+    arrow_size_factor = 0.5,
     return_plot = FALSE
   ) {
     
     # Get network components
     ntw <- network$fetch_network_components()
+   
+    # Set plot title 
+    if (is.null(title)) {
+      if (ntw$network_name == "not_provided") {
+        title <- "Cortical Patch"
+      } else {
+        title <- ntw$network_name
+      }
+      title <- paste0(title, ", ", paste0(plot_motif, collapse = ", "))
+    }
     
     # Get cell coordinates and types 
     neuron_coordinates <- ntw$coordinates_spatial
     neuron_types <- ntw$neuron_type_name
+    
+    # Get layer information 
+    layer_names <- ntw$layer_names
+    neuron_layer <- as.factor(layer_names[ntw$coordinates_node[,"layer_idx"]])
     
     # Get cell edge pairs
     edges <- matrix(0, nrow = 0, ncol = 5)
@@ -348,29 +428,27 @@ plot.network <- function(
     edge_type_mask <- edge_type_names %in% plot_motif
     edge_type_names <- edge_type_names[edge_type_mask]
     n_edge_types <- length(edge_type_names)
+    et_masked <- which(edge_type_mask)
     for (et in seq_along(edge_type_names)) {
       et_name <- edge_type_names[et]
-      et_edges <- ntw$edge_types[[et]]
+      et_edges <- ntw$edge_idx_by_type[[et_masked[et]]]
       et_edges <- cbind(
         et_edges, 
         rep(et_name, nrow(et_edges)),
-        neuron_types[et_edges[,1] + 1],
-        neuron_types[et_edges[,2] + 1]
+        neuron_types[et_edges[,"pre_neuron_idx"]],
+        neuron_types[et_edges[,"post_neuron_idx"]]
       )
       edges <- rbind(edges, et_edges)
     }
     edges <- as.data.frame(edges)
     colnames(edges) <- c("pre_idx", "post_idx", "motif", "pre_type", "post_type")
     
-    # Adjust for zero-index of C++
-    edges$pre_idx <- as.integer(edges$pre_idx) + 1
-    edges$post_idx <- as.integer(edges$post_idx) + 1
-    
     # Create cells dataframe
     cells <- data.frame(
       idx = c(1:nrow(neuron_coordinates)), 
-      x = neuron_coordinates[,1], 
-      y = neuron_coordinates[,2],
+      x = neuron_coordinates[,"x"], 
+      y = neuron_coordinates[,"y"],
+      layer = neuron_layer,
       type = neuron_types
     )
     
@@ -380,25 +458,86 @@ plot.network <- function(
     edges$x_end <- cells[edges$post_idx, "x"]
     edges$y_end <- cells[edges$post_idx, "y"]
     
+    # Set point size to scale with number of cells
+    n_cells <- nrow(cells)
+    cell_size <- cell_size_factor * 100 / n_cells
+    
+    # Set arrow size to scale with number of edges
+    n_edges <- nrow(edges)
+    arrow_size <- arrow_size_factor / n_edges
+    
+    # Scake alpha by number of edges 
+    edge_alpha <- max(0.1, min(1, n_cells / (n_edges + 1)))
+    
+    # Make colors 
+    colored_labels <- unique(
+      c(unique(as.character(edges[,edge_color])), 
+        unique(as.character(cells[,cell_color])))
+      )
+    known_label_colors <- list(
+      "L1" = "gray95",
+      "L2" = "lightskyblue3",
+      "L2/3" = "lightskyblue2",
+      "L23" = "lightskyblue2",
+      "L3" = "lightskyblue1",
+      "L4" = "slateblue1",
+      "L5" = "skyblue1",
+      "L6" = "royalblue1",
+      "principal" = "green3",
+      "PN" = "green3", 
+      "excitatory" = "green3",
+      "interneuron" = "red",
+      "inhibitory" = "red", 
+      "PV" = "darkred",
+      "SOM" = "darkorchid",
+      "SST" = "darkorchid",
+      "VIP" = "darkorange"
+    )
+    unknown_label_colors <- c("aquamarine1", "gray95", "gray55", "gray75", "cyan", "cornflowerblue", "coral", "burlywood", "darkolivegreen")
+    label_colors <- rep("white", length(colored_labels))
+    names(label_colors) <- colored_labels
+    for (cl in seq_along(colored_labels)) {
+      label <- colored_labels[cl]
+      hit_mask <- grepl(label, names(known_label_colors))
+      if (any(hit_mask)) {
+        hit_idx <- which(hit_mask)[1]
+        label_colors[cl] <- known_label_colors[[hit_idx]]
+      } else {
+        label_colors[cl] <- sample(unknown_label_colors, 1)
+      }
+    }
+    
     # Plot
+    title_size <- 14 
+    axis_size <- 12 
+    legend_size <- 10
     plt <- ggplot2::ggplot() +
+      # cells as points
+      ggplot2::geom_point(data = cells, size = cell_size, ggplot2::aes(x = x, y = y, color = .data[[cell_color]])) +
       # edges as arrows
       ggplot2::geom_segment(
         data = edges,
         ggplot2::aes(x = x_start, y = y_start, xend = x_end, yend = y_end, color = .data[[edge_color]]),
-        arrow = ggplot2::arrow(length = ggplot2::unit(0.05, "inches"), type = "closed"),
+        arrow = ggplot2::arrow(length = ggplot2::unit(arrow_size, "npc"), type = "closed"),
+        alpha = edge_alpha
       ) +
-      # nodes as points
-      ggplot2::geom_point(data = cells, ggplot2::aes(x = x, y = y, color = type)) +
       ggplot2::theme_minimal() +
       ggplot2::labs(title = title, x = "columnar coordinate", y = "laminar coordinate") + 
-      ggplot2::guides(size = "none")  +
+      ggplot2::scale_colour_manual(
+        name = "Types",
+        values = label_colors
+      ) +
+      ggplot2::guides(color = ggplot2::guide_legend(override.aes = list(alpha = 1))) +
       ggplot2::theme(
-        plot.title = ggplot2::element_text(size = 20, hjust = 0.5),       # Title size
-        axis.title.x = ggplot2::element_text(size = 16),     # X-axis label size
-        axis.title.y = ggplot2::element_text(size = 16),     # Y-axis label size
-        axis.text.x = ggplot2::element_text(size = 14),      # X-axis tick label size
-        axis.text.y = ggplot2::element_text(size = 14)       # Y-axis tick label size
+        panel.background = ggplot2::element_rect(fill = "gray10", colour = NA),
+        plot.background  = ggplot2::element_rect(fill = "gray10", colour = NA),
+        panel.grid = ggplot2::element_line(color = "gray80", linewidth = 0.25),
+        plot.title = ggplot2::element_text(color = "white", hjust = 0.5, size = title_size),
+        axis.title = ggplot2::element_text(color = "white", size = axis_size),
+        axis.text = ggplot2::element_text(color = "white", size = axis_size),
+        legend.title = ggplot2::element_text(color = "white", size = legend_size),
+        legend.text = ggplot2::element_text(color = "white", size = legend_size) #,
+        #legend.position = "bottom"
       )
     
     if (return_plot) {
@@ -549,7 +688,7 @@ make.plot.title <- function(
 #' 
 #' @name plot.autocorrelation 
 #' @rdname plot-autocorrelation
-#' @usage plot.autocorrelation(nrn, plot_title = "Est. autocorr", bias_term = 0, plot_time_cutoff = Inf)
+#' @usage plot.autocorrelation(nrn, plot_title = "Est. autocorr", bias_term = 0, plot_time_cutoff = Inf, return_plot = FALSE)
 #' @param nrn Neuron object for which to plot autocorrelation.
 #' @param plot_title Title for the plot (default: "Est. autocorr").
 #' @param bias_term Bias term to plot as a horizontal line (default: NULL).
@@ -583,6 +722,9 @@ plot.autocorrelation <- function(
     df_temp <- df_temp[df_temp$bin <= plot_time_cutoff,]
     
     # Make plot
+    title_size <- 14 
+    axis_size <- 12 
+    legend_size <- 10
     plt <- ggplot2::ggplot(df_temp) +
       ggplot2::geom_line(ggplot2::aes(x = bin, y = autocorrelation), color = "blue") + 
       ggplot2::labs(
@@ -593,7 +735,13 @@ plot.autocorrelation <- function(
       ggplot2::theme_minimal() + 
       ggplot2::theme(
         panel.background = ggplot2::element_rect(fill = "white", colour = NA),
-        plot.background  = ggplot2::element_rect(fill = "white", colour = NA)
+        plot.background  = ggplot2::element_rect(fill = "white", colour = NA),
+        plot.title = ggplot2::element_text(hjust = 0.5, size = title_size),
+        axis.title = ggplot2::element_text(size = axis_size),
+        axis.text = ggplot2::element_text(size = axis_size),
+        legend.title = ggplot2::element_text(size = legend_size),
+        legend.text = ggplot2::element_text(size = legend_size),
+        legend.position = "bottom"
       )
     if (!is.null(bias_term)) {
       plt <- plt + ggplot2::geom_hline(yintercept = bias_term, linewidth = 2, linetype = "dotted", color = "darkgray")
@@ -616,7 +764,7 @@ plot.autocorrelation <- function(
 #' 
 #' @name plot.raster
 #' @rdname plot-raster
-#' @usage plot.raster(nrn, plot_title = "Spike raster", zero_as_onset = TRUE)
+#' @usage plot.raster(nrn, plot_title = "Spike raster", zero_as_onset = TRUE, return_plot = FALSE)
 #' @param nrn Neuron object for which to plot spike raster.
 #' @param plot_title Title for the plot (default: "Spike raster").
 #' @param zero_as_onset Logical indicating whether to plot a vertical line at time zero to indicate stimulus onset (default: TRUE).
@@ -636,6 +784,9 @@ plot.raster <- function(
     dx <- total_time * 0.0025
     
     # Make plot
+    title_size <- 14 
+    axis_size <- 12 
+    legend_size <- 10
     plt <- ggplot2::ggplot(spike.raster) +
       ggplot2::geom_segment(
         ggplot2::aes(x = time - dx, xend = time + dx, y = trial, yend = trial), 
@@ -653,7 +804,13 @@ plot.raster <- function(
     plt <- plt + 
       ggplot2::theme(
         panel.background = ggplot2::element_rect(fill = "white", colour = NA),
-        plot.background  = ggplot2::element_rect(fill = "white", colour = NA)
+        plot.background  = ggplot2::element_rect(fill = "white", colour = NA),
+        plot.title = ggplot2::element_text(hjust = 0.5, size = title_size),
+        axis.title = ggplot2::element_text(size = axis_size),
+        axis.text = ggplot2::element_text(size = axis_size),
+        legend.title = ggplot2::element_text(size = legend_size),
+        legend.text = ggplot2::element_text(size = legend_size),
+        legend.position = "bottom"
       )
     
     if (return_plot) {
@@ -1044,7 +1201,7 @@ analyze.autocorr <- function(
     )
     
     # Plot
-    title_size <- 20 
+    title_size <- 14 
     axis_size <- 12 
     legend_size <- 10
     distribution_plot <- ggplot2::ggplot(df, ggplot2::aes(x = value, fill = group)) +
@@ -1053,16 +1210,15 @@ analyze.autocorr <- function(
       ggplot2::labs(title = "Expected Time Constant", x = "ms", y = "Density") +
       ggplot2::theme_minimal() + 
       ggplot2::theme(
+        panel.background = ggplot2::element_rect(fill = "white", colour = NA),
+        plot.background  = ggplot2::element_rect(fill = "white", colour = NA),
         plot.title = ggplot2::element_text(hjust = 0.5, size = title_size),
         axis.title = ggplot2::element_text(size = axis_size),
         axis.text = ggplot2::element_text(size = axis_size),
         legend.title = ggplot2::element_text(size = legend_size),
         legend.text = ggplot2::element_text(size = legend_size),
         legend.position = "bottom"
-      ) + ggplot2::theme(
-        panel.background = ggplot2::element_rect(fill = "white", colour = NA),
-        plot.background  = ggplot2::element_rect(fill = "white", colour = NA)
-      )
+      ) 
     
     return(
       list(

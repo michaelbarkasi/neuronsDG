@@ -13,10 +13,10 @@ set.network.structure(
   n_columns = 1,
   layer_height = 1,
   column_width = 1,
-  layer_separation_factor = 1.25,
-  column_separation_factor = 1.5,
-  neurons_per_node = matrix(10, nrow = 1, ncol = 1),
-  recurrence_factors = list(matrix(0.5, nrow = 1, ncol = 1)),
+  layer_separation_factor = 3,
+  column_separation_factor = 3.5,
+  neurons_per_node = 10,
+  recurrence_factors = 0.5,
   pruning_threshold_factor = 0.1
 )
 }
@@ -37,9 +37,9 @@ set.network.structure(
 
 \item{column_width}{Numeric giving width of each column (in units specified at network creation, default unit is microns, default value is 1.0).}
 
-\item{layer_separation_factor}{Numeric giving mean distance between layers as a fraction of layer height (default: 1.25).}
+\item{layer_separation_factor}{Numeric giving mean distance between layers as a fraction of layer height (default: 3.0).}
 
-\item{column_separation_factor}{Numeric giving mean distance between columns as a fraction of column width (default: 1.5).}
+\item{column_separation_factor}{Numeric giving mean distance between columns as a fraction of column width (default: 3.5).}
 
 \item{neurons_per_node}{Matrix giving number of neurons of each type per node in each layer; dimensions must match n_layers (rows) and length of neuron_types (columns).}
 

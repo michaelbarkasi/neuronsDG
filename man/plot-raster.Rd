@@ -4,7 +4,7 @@
 \alias{plot.raster}
 \title{Function to plot spike raster of neuron}
 \usage{
-plot.raster(nrn, plot_title = "Spike raster", zero_as_onset = TRUE)
+plot.raster(nrn, plot_title = "Spike raster", zero_as_onset = TRUE, return_plot = FALSE)
 }
 \arguments{
 \item{nrn}{Neuron object for which to plot spike raster.}

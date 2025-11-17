@@ -40,6 +40,7 @@
     <li><a class="dropdown-item" href="../articles/install.html">Installation instructions</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Tutorials</h6></li>
+    <li><a class="dropdown-item" href="../articles/tutorial_network_topology.html">Network topology from circuit motifs</a></li>
     <li><a class="dropdown-item" href="../articles/tutorial_synchrony_crosscorr.html">Spike synchrony via cross-correlation</a></li>
     <li><a class="dropdown-item" href="../articles/tutorial_tau_est_DG.html">Network time constants via dichotomized Gaussians</a></li>
     <li><a class="dropdown-item" href="../articles/tutorial_tau_est_kilosort.html">Network time constants from KiloSort4 data</a></li>
@@ -69,7 +70,10 @@
   <main id="main" class="col-md-9"><div class="page-header">
 
       <h1>Spike synchrony via cross-correlation</h1>
+                        <h4 data-toc-skip class="author">Michael
+Barkasi</h4>
             
+            <h4 data-toc-skip class="date">2025-11-18</h4>
       
 
       <div class="d-none name"><code>tutorial_synchrony_crosscorr.Rmd</code></div>
@@ -77,6 +81,9 @@
 
     
     
+<h2>
+Introduction
+</h2>
 <p>Synchronous firing between two neurons can be detected by computing
 the cross-correlation of their spike trains. The
 <em>cross-correlation</em> between two time series
@@ -127,7 +134,7 @@ recording session and covariates, such as genotype.</p>
 <span>    <span class="op">)</span></span>
 <span>  <span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">spike.rasters</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">##   time_in_ms genotype recording_name cell cluster</span></span>
+<pre class="scroll-output"><code><span><span class="co">##   time_in_ms genotype recording_name cell cluster</span></span>
 <span><span class="co">## 1     79.035       WT  penetration_1    1       1</span></span>
 <span><span class="co">## 2    211.563       WT  penetration_1    1       1</span></span>
 <span><span class="co">## 3    254.331       WT  penetration_1    1       1</span></span>
@@ -254,7 +261,7 @@ Visualizing cross-correlation
 <span>  postspike_time <span class="op">=</span> <span class="va">trial_duration</span><span class="op">*</span><span class="op">(</span><span class="fl">1</span> <span class="op">-</span> <span class="va">pre_ratio</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">raster_demo</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">##        time_in_ms genotype recording_name cell cluster trial</span></span>
+<pre class="scroll-output"><code><span><span class="co">##        time_in_ms genotype recording_name cell cluster trial</span></span>
 <span><span class="co">## 259359          0   Msh2KO  penetration_4   13       1     1</span></span>
 <span><span class="co">## 260113          0   Msh2KO  penetration_4   13       1     2</span></span>
 <span><span class="co">## 260600          0   Msh2KO  penetration_4   13       1     3</span></span>
@@ -264,7 +271,8 @@ Visualizing cross-correlation
 <p>The neurons package includes functions for computing both <a href="tutorial_tau_est_DG.html">raw and Pearson cross-correlations</a>
 from a raster like <strong>raster_demo</strong>. The first step is to
 convert <strong>raster_demo</strong> into a list of neuron objects using
-the <code>load.rasters.as.neurons</code> function.</p>
+the <a href="../reference/load.rasters.as.neurons.html">load.rasters.as.neurons()</a>
+function.</p>
 <div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">neurons</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/load.rasters.as.neurons.html">load.rasters.as.neurons</a></span><span class="op">(</span></span>
 <span>    <span class="va">raster_demo</span>, </span>
@@ -274,7 +282,7 @@ the <code>load.rasters.as.neurons</code> function.</p>
 <span>  <span class="op">)</span></span></code></pre></div>
 <p>The next step is to compute the cross-correlation between the
 reference cell and the comparison cell. The
-<strong>compute_crosscorrelation_R</strong> method of a neuron object
+<strong>compute_crosscorrelation_R()</strong> method of a neuron object
 computes the cross-correlation (raw or Pearson) between that neuron and
 another neuron. The method returns a vector of cross-correlation values
 at lags from zero to the specified max lag.</p>
@@ -291,7 +299,7 @@ at lags from zero to the specified max lag.</p>
 <span>    <span class="cn">TRUE</span>,                       <span class="co"># Use raw correlation? If FALSE, use Pearson correlation</span></span>
 <span>    <span class="cn">TRUE</span>                        <span class="co"># Verbose?</span></span>
 <span>  <span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## Computing cross-correlation between neuron 13 (ref) and neuron 15 (comparison)</span></span>
+<pre class="scroll-output"><code><span><span class="co">## Computing cross-correlation between neuron 13 (ref) and neuron 15 (comparison)</span></span>
 <span><span class="co">## Both neurons have unit_time = ms</span></span>
 <span><span class="co">## Both neurons have t_per_bin = 1 ms</span></span>
 <span><span class="co">## Reference neuron trial length: 100 ms</span></span>
@@ -320,11 +328,11 @@ at lags from zero to the specified max lag.</p>
 <span>  <span class="fu">ggplot2</span><span class="fu">::</span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/theme.html" class="external-link">theme</a></span><span class="op">(</span></span>
 <span>    panel.background <span class="op">=</span> <span class="fu">ggplot2</span><span class="fu">::</span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/element.html" class="external-link">element_rect</a></span><span class="op">(</span>fill <span class="op">=</span> <span class="st">"white"</span>, colour <span class="op">=</span> <span class="cn">NA</span><span class="op">)</span>,</span>
 <span>    plot.background  <span class="op">=</span> <span class="fu">ggplot2</span><span class="fu">::</span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/element.html" class="external-link">element_rect</a></span><span class="op">(</span>fill <span class="op">=</span> <span class="st">"white"</span>, colour <span class="op">=</span> <span class="cn">NA</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
-<p><img src="tutorial_synchrony_crosscorr_files/figure-html/cross_corr_demo-1.png" width="700">
-Unfortunately, these two neurons seem to have no obvious peak in their
-cross-correlation, suggesting that they do not fire synchronously. To
-get a sense of what the cross-correlation plot would look like for two
-synchronously firing neurons, let’s artificially load the comparison
+<p><img src="tutorial_synchrony_crosscorr_files/figure-html/cross_corr_demo-1.png" width="700"></p>
+<p>Unfortunately, these two neurons seem to have no obvious peak in
+their cross-correlation, suggesting that they do not fire synchronously.
+To get a sense of what the cross-correlation plot would look like for
+two synchronously firing neurons, let’s artificially load the comparison
 neuron with lagged copies of spikes from the reference neuron.</p>
 <div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Make function to load lagged spikes</span></span>
@@ -363,7 +371,7 @@ neuron with lagged copies of spikes from the reference neuron.</p>
 <span>    <span class="cn">TRUE</span>,</span>
 <span>    <span class="cn">TRUE</span></span>
 <span>  <span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## Computing cross-correlation between neuron 13 (ref) and neuron 15 (comparison)</span></span>
+<pre class="scroll-output"><code><span><span class="co">## Computing cross-correlation between neuron 13 (ref) and neuron 15 (comparison)</span></span>
 <span><span class="co">## Both neurons have unit_time = ms</span></span>
 <span><span class="co">## Both neurons have t_per_bin = 1 ms</span></span>
 <span><span class="co">## Reference neuron trial length: 100 ms</span></span>
