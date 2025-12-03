@@ -240,6 +240,7 @@ load.projection.into.motif <- function(
 #' @param network Network object to configure.
 #' @param neuron_types Character vector giving types of neurons in the network, e.g. c("principal", "interneuron").
 #' @param neuron_type_valences Numeric vector giving valences of each neuron type, e.g. c(1, -1) for excitatory and inhibitory neurons.
+#' @param neuron_type_temporal_modulation Numeric matrix giving temporal modulation time components (for modulation time in the unit_time of the network) for each neuron type: bias, step size, and count threshold B (rows as neuron types, columns as components). Will example a single value or a vector of length three. 
 #' @param layer_names Character vector giving names of layers in the network, e.g. c("L2/3", "L4", "L5", "L6").
 #' @param n_layers Integer giving number of layers in the network.
 #' @param n_columns Integer giving number of columns in the network.
@@ -256,6 +257,7 @@ set.network.structure <- function(
     network,
     neuron_types = c("principal"),
     neuron_type_valences = c(1),
+    neuron_type_temporal_modulation = matrix(c(0,1,1), nrow = 1, ncol = 3),
     layer_names = c("layer"),
     n_layers = 1,
     n_columns = 1,
@@ -273,6 +275,38 @@ set.network.structure <- function(
         neuron_type_valences <- rep(neuron_type_valences, length(neuron_types))
       } else {
         stop("Length of neuron_types must match length of neuron_type_valences, or neuron_type_valences must be a single value.")
+      }
+    }
+    if (class(neuron_type_temporal_modulation) != "matrix") {
+      if (length(neuron_type_temporal_modulation) == 1) {
+        neuron_type_temporal_modulation <- matrix(
+          neuron_type_temporal_modulation, 
+          nrow = length(neuron_types),
+          ncol = 3
+        )
+      } else if (length(neuron_type_temporal_modulation) == 3) {
+        neuron_type_temporal_modulation <- matrix(
+          neuron_type_temporal_modulation, 
+          nrow = length(neuron_types),
+          ncol = 3,
+          byrow = TRUE
+        )
+      } else {
+        stop("neuron_type_temporal_modulation must be a matrix with 3 columns (for bias, step size, and count threshold B), or a single value or vector of length 3 to be expanded.")
+      }
+    } else if (ncol(neuron_type_temporal_modulation) != 3) {
+      stop("neuron_type_temporal_modulation must have 3 columns (for bias, step size, and count threshold B).")
+    }
+    if (length(neuron_types) != nrow(neuron_type_temporal_modulation)) {
+      if (nrow(neuron_type_temporal_modulation) == 1) {
+        neuron_type_temporal_modulation <- matrix(
+            neuron_type_temporal_modulation, 
+            nrow = length(neuron_types),
+            ncol = 3,
+            byrow = TRUE
+          )
+      } else {
+        stop("Nrow of neuron_types must match length of neuron_type_temporal_modulation, or neuron_type_temporal_modulation must be a single-row matrix.")
       }
     }
     if (length(layer_names) != n_layers) {
@@ -341,6 +375,7 @@ set.network.structure <- function(
     network$set_network_structure_R(
       neuron_types,
       as.integer(neuron_type_valences),
+      as.numeric(neuron_type_temporal_modulation), 
       layer_names,
       as.integer(n_layers),
       as.integer(n_columns),
@@ -547,6 +582,42 @@ plot.network <- function(
       return(invisible(NULL))
     }
     
+  }
+
+#' Run Growth-Transform network simulation
+#' 
+#' This function runs a Growth-Transform network simulation on a given network object for a specified matrix of input currents over time and specified network electrical constants.
+#' 
+#' @param network Network object on which to run the simulation.
+#' @param stimulus_current_matrix Matrix of input currents, with rows representing neurons and columns representing sample times.
+#' @param dt Time step length in the unit_time of the network (default: 0.1).
+#' @param v_ceiling Potential ceiling in the unit_potential of the network (default: 1.0).
+#' @param I_ceiling Current ceiling in the unit_current of the network (default: 1.0).
+#' @param I_spike Spike current in the unit_current of the network (default: 5.0).
+#' @param transimpedance Transimpedance value determining the magnitude of each spike (default: 1.0).
+#' @param threshold Spike threshold in the unit_potential of the network (default: 0.0).
+#' @return A matrix containing the spike_traces of all neurons over time after the simulation (neurons as rows, sample times as columns).
+#' @export
+run.GTsim <- function(
+    network,
+    stimulus_current_matrix,    # matrix of input currents (rows: neurons, columns: time bins)
+    dt = 1e-1,                  # time step length, in unit_time
+    v_ceiling = 1.0,            # potential ceiling, in unit_potential
+    I_ceiling = 1.0,            # current ceiling, in unit_current
+    I_spike = 5.0,              # spike current, in unit_current
+    transimpedance = 1.0,       # determines magnitude of each spikes
+    threshold = 0.0             # spike threshold, in unit_potential
+  ) {
+    network$GTsim_R(
+      input_current_matrix,
+      dt,
+      v_ceiling,
+      I_ceiling,
+      I_spike,
+      transimpedance,
+      threshold
+    )
+    return(network)
   }
 
 # Functions for neuron analysis ########################################################################################

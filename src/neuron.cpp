@@ -3,6 +3,21 @@
 #include "neuron.h"
 
 /*
+ * Sections: 
+ * - Helper functions
+ * - Functions for computing correlations
+ * - Probability distribution functions
+ * - Dichotomized Gaussian helper functions
+ * - Growth-transform helper functions
+ * - Matrix and vector operations
+ * - Neuron and network classes
+ * - Neuron and network member function implementations, adjust settings
+ * - Network member function implementations, build network
+ * - Neuron member function implementations, basic data handling, loading
+ * - Neuron and network member function implementations, analysis and simulation
+ */
+
+/*
  * ***********************************************************************************
  * Helper functions
  */
@@ -138,11 +153,11 @@ std::vector<double> to_dVec(
 VectorXd to_eVec(
     const std::vector<double>& vec
   ) {
-    VectorXd eVec(vec.size());
+    VectorXd VectorXd(vec.size());
     for (int i = 0; i < vec.size(); i++) {
-      eVec(i) = vec[i];
+      VectorXd(i) = vec[i];
     }
-    return eVec;
+    return VectorXd;
   }
 
 // Convert to NumericVector 
@@ -236,6 +251,26 @@ IntegerMatrix to_IntMat(
     return X;
   }
 
+// Make random walk
+NumericVector random_walk(
+  const int& n_steps,
+  const double& step_size,
+  const unsigned int& seed
+  ) {
+    // Set up the random number generator
+    pcg32 rng(seed);
+    // Initialize vector to hold walk
+    NumericVector walk(n_steps);
+    // Start at zero
+    walk(0) = 0; 
+    // Take steps in walk
+    for (int i = 1; i < n_steps; i++) {
+      walk(i) = pcg_rnorm(walk(i - 1), step_size, rng);
+    }
+    // Return the random walk
+    return walk;
+  }
+
 /*
  * ***********************************************************************************
  * Functions for computing correlations
@@ -301,7 +336,7 @@ double empirical_corr_multisample(
     
   }
 
-// Estimate Pearson correlation across lags
+// Estimate correlation across lags
 VectorXd empirical_corr_lagged(
     const MatrixXd& TS_ref,       // Reference time series, rows as time points, columns as trials
     const MatrixXd& TS_cmp,       // Comparison time series (to be lagged), rows as time points, columns as trials
@@ -325,7 +360,7 @@ VectorXd empirical_corr_lagged(
       TS_cmp_padded = TS_cmp; 
     }
     
-    // Initialize vector to hold autocorrelation values
+    // Initialize vector to hold correlation values
     VectorXd lagged_corr(max_lag);
     lagged_corr.setZero();
     
@@ -475,6 +510,35 @@ NumericMatrix mvnorm_random(
     
   } 
 
+// Better normal distribution function, with PCG and Box-Muller
+double pcg_rnorm(
+    double mean, 
+    double sd,
+    pcg32& rng
+  ) {
+   
+    // Sample from a uniform random distribution between 0 and 1
+    int u_max = 1e9; 
+    int u1i, u2i;
+    do {u1i = rng(u_max);} // randomly select integer between 0 and u_max
+    while (u1i == 0);
+    double u1 = (double)u1i/(double)u_max; // normalize to (0, 1)
+    u2i = rng(u_max);
+    double u2 = (double)u2i/(double)u_max; // normalize to (0, 1)
+    
+    const double two_pi = 2.0 * M_PI;
+    
+    //compute z0 and z1
+    double mag = sd * sqrt(-2.0 * log(u1));
+    double z0  = mag * cos(two_pi * u2) + mean;
+    //double z1  = mag * sin(two_pi * u2) + mean;
+   
+    //return std::make_pair(z0, z1);
+    return z0; // return only one value, for now
+    
+  } 
+
+
 /*
  * ***********************************************************************************
  * Dichotomized Gaussian helper functions
@@ -593,6 +657,51 @@ double dg_find_sigma_RootBisection(
     
     return sigma_mid; 
     
+  }
+
+/*
+ * ***********************************************************************************
+ * Growth-transform helper functions
+ */
+
+// Membrane potential barrier function
+VectorXd v_barrier(
+    const VectorXd& v_input,      // Column vector of membrane potentials for a network of neurons at one time step
+    const double& threshold,      // Spike threshold, in unit_potential
+    const double& I_out           // Spike current, in unit_current
+  ) {
+    // Initialize output vector
+    VectorXd output(v_input.size());
+    // Loop through each neuron in the network
+    for (int i = 0; i < v_input.size(); i++) {
+      if (v_input[i] < threshold) { 
+        // If v_input is below the threshold, return zero
+        output[i] = 0.0;
+      } else {
+        // Otherwise, return output current
+        output[i] = I_out;
+      }
+    }
+    return output;
+  } 
+
+// Gradient of total dissipated metabolic power in network, w.r.t. membrane potential. 
+VectorXd network_power_dissipation_gradient(
+  const int& n,                     // time step n at which to calculate the derivative
+  const MatrixXd& v_traces,         // n_neuron x n_steps matrix of membrane potentials, in unit_potential, from which to calculate derivative
+  const MatrixXd& stimulus_current, // n_neuron x n_steps matrix of stimulus currents, in unit_current, from which to calculate derivative
+  const MatrixXd& transconductance, // n_neuron x n_neuron transconductance matrix, giving connections between neurons
+  const double& I_spike,            // spike current, in unit_current
+  const double& threshold           // spike threshold, in unit_potential
+  ) {  
+    // Change dH in total dissipated metabolic power in network (a current) from small change dv in membrane potential, 
+    //  given the membrane potential at time step n, for each neuron in network
+    //  ... Notice that this function implies that row indices represent post-synaptic neurons, column indices represent pre-synaptic neurons
+    VectorXd dH_dv = 
+      transconductance * v_traces.col(n) -             // power dissipation (current) from coupling between neurons
+      stimulus_current.col(n) +                        // power injected into the system (current) from external stimulation
+      v_barrier(v_traces.col(n), threshold, I_spike);  // power dissipated (current) from neural responses (namely, spikes)
+    return dH_dv;
   }
 
 /*
@@ -751,6 +860,7 @@ void neuron::set_edf_termination(
 void network::set_network_structure(
     CharacterVector nrn_types,
     std::vector<int> nrn_type_valences,
+    MatrixXd nrn_type_temporal_modulation,
     CharacterVector lyr_names,
     int n_lyr,
     int n_cls,
@@ -772,6 +882,7 @@ void network::set_network_structure(
     // Set parameters
     neuron_types = nrn_types;
     neuron_type_valences = nrn_type_valences;
+    neuron_type_temporal_modulation = nrn_type_temporal_modulation;
     layer_names = lyr_names;
     n_layers = n_lyr;
     n_columns = n_cls;
@@ -789,6 +900,9 @@ void network::set_network_structure(
     n_neurons = 0; // Compute total number of neurons as we go
     node_range_ends.assign(n_nodes, 0);
     node_coordinates_spatial.resize(n_nodes, 2);
+    std::vector<double> neuron_temporal_modulation_bias;
+    std::vector<double> neuron_temporal_modulation_step;
+    std::vector<double> neuron_temporal_modulation_B;
     for (int l = 0; l < n_layers; l++) {
       for (int c = 0; c < n_columns; c++) {
         int node_idx = l * n_columns + c;
@@ -800,16 +914,24 @@ void network::set_network_structure(
           int n = (int)R::rpois(neurons_per_node(l,t));
           // Keep track of the number of cells assigned so far
           n_neurons += n; 
-          // Keep track of the types of these cells
+          // Keep track of the types of these cells and their temporal modulation
           for (int i = 0; i < n; i++) {
             neuron_type_name.push_back(neuron_types[t]);
             neuron_type_num.push_back(t);
+            neuron_temporal_modulation_bias.push_back(neuron_type_temporal_modulation(t, 0));
+            neuron_temporal_modulation_step.push_back(neuron_type_temporal_modulation(t, 1));
+            neuron_temporal_modulation_B.push_back(neuron_type_temporal_modulation(t, 2));
           }
         }
         // Save end-point index for this node
         node_range_ends[node_idx] = n_neurons - 1;
       }
     }
+    
+    // Convert neuron temporal modulation to Eigen matrix
+    neuron_temporal_modulation.col(0) = Map<VectorXd>(neuron_temporal_modulation_bias.data(), neuron_temporal_modulation_bias.size());
+    neuron_temporal_modulation.col(1) = Map<VectorXd>(neuron_temporal_modulation_step.data(), neuron_temporal_modulation_step.size());
+    neuron_temporal_modulation.col(2) = Map<VectorXd>(neuron_temporal_modulation_B.data(), neuron_temporal_modulation_B.size());
     
     // Resize network coordinate components 
     coordinates_spatial = MatrixXd::Zero(n_neurons, 2); 
@@ -820,6 +942,7 @@ void network::set_network_structure(
 void network::set_network_structure_R(
     CharacterVector neuron_types,
     std::vector<int> neuron_type_valences,
+    NumericMatrix neuron_type_temporal_modulation,
     CharacterVector layer_names,
     int n_layers,
     int n_columns,
@@ -844,6 +967,7 @@ void network::set_network_structure_R(
     set_network_structure(
       neuron_types,
       neuron_type_valences,
+      to_eMat(neuron_type_temporal_modulation),
       layer_names,
       n_layers,
       n_columns,
@@ -1324,11 +1448,6 @@ List network::fetch_network_components() const {
    
   }
 
-/*
- * ***********************************************************************************
- * Neuron member function implementations, basic data handling, misc
- */
-
 // Infer trial data from spike raster
 void neuron::infer_trial(
     const int& min_duration,
@@ -1380,11 +1499,6 @@ void neuron::infer_raster() {
     
   }
 
-/*
- * ***********************************************************************************
- * Neuron member function implementations, fetch analysis results
- */
-
 // Fetching autocorrelation 
 VectorXd neuron::fetch_autocorr() const {return autocorr;}
 
@@ -1402,7 +1516,7 @@ NumericVector neuron::fetch_EDF_parameters() const {
 
 /*
  * ***********************************************************************************
- * Neuron member function implementations, analysis
+ * Neuron and network member function implementations, analysis and simulation
  */
 
 // Compute cross-correlation of this neuron with another neuron
@@ -1924,6 +2038,130 @@ NumericMatrix neuron::estimate_autocorr_params(
     
   }
 
+// Simulate network responses to input current using Growth Transform model
+MatrixXd network::GTsim(
+    const MatrixXd& stimulus_current,         // matrix of stimulus currents, in unit_current, n_neurons x n_steps
+    const double& dt,                         // time step length, in unit_time
+    const double& v_ceiling,                  // potential ceiling, in unit_potential
+    const double& I_ceiling,                  // current ceiling, in unit_current
+    const double& I_spike,                    // spike current, in unit_current
+    const double& transimpedance,             // determines magnitude of each spikes
+    const double& threshold                   // spike threshold, in unit_potential
+  ) {
+   
+    // Check size of stimulus current matrix 
+    if (stimulus_current.rows() != n_neurons) {Rcpp::stop("stimulus_current must have n_neurons rows");}
+    
+    // Find number of time steps to simulate
+    const int n_steps = stimulus_current.cols();
+    
+    // Collapse the transconductances into a single matrix
+    MatrixXd transconductances_sum = MatrixXd::Zero(transconductances[0].rows(), transconductances[0].cols());
+    for (const auto& m : transconductances) {transconductances_sum += m;}
+    
+    // Extract temporal modulation values 
+    VectorXd neuron_temporal_modulation_bias = neuron_temporal_modulation.col(0);
+    VectorXd neuron_temporal_modulation_step = neuron_temporal_modulation.col(1);
+    VectorXd neuron_temporal_modulation_B = neuron_temporal_modulation.col(2);
+    
+    // Initialize matrices to hold simulated membrane potentials and spike traces
+    MatrixXd v_traces = MatrixXd::Zero(n_neurons, n_steps);
+    MatrixXd spike_traces = MatrixXd::Zero(n_neurons, n_steps);
+    VectorXd spike_counts_thresholded = VectorXd::Zero(n_neurons);
+   
+    // Simulate each time step after the initial
+    for (int t = 1; t < n_steps; t++) {
+      
+      // Compute rate of change for total metabolic power dissipation in the network, w.r.t. each neuron
+      // ... units of dH_dv are power/voltage, i.e., Watts/mV = mA
+      // ... key idea? if a change dv in voltage in any one cell causes a spike, then this number spikes up as well
+      VectorXd dH_dv = network_power_dissipation_gradient(
+        t - 1, 
+        v_traces, 
+        stimulus_current, 
+        transconductances_sum, 
+        I_spike, 
+        threshold
+      );
+      
+      // For each neuron in network, at this time step, 
+      // ... compute net power at current ceiling:
+      VectorXd neuronal_current_ceiling_power_requirement = I_ceiling * v_traces.col(t - 1);       // power needed to maintain instantaneous membrane potential at max current
+      VectorXd marginal_linear_max_power_dissipation = dH_dv * v_ceiling;                          // power dissipated if neuron is at max membrane potential while rest of network is fixed, assuming linear voltage-power relationship
+      VectorXd net_power_at_current_ceiling_by_neuron = neuronal_current_ceiling_power_requirement - marginal_linear_max_power_dissipation;  
+      // ... compute net power at max power:
+      double max_power = I_ceiling * v_ceiling;                                                    // power needed to maintain voltage ceiling at current ceiling
+      VectorXd marginal_linear_power_dissipation = dH_dv.array() * v_traces.col(t - 1).array();    // power dissipated by neuron while rest of network is fixed, assuming linear voltage-power relationship
+      VectorXd net_power_at_max_by_neuron = max_power - marginal_linear_power_dissipation.array(); 
+      // ... estimate voltage at max net power as a proportion of the voltage ceiling, for each neuron:
+      VectorXd max_net_power_voltage_factor = net_power_at_current_ceiling_by_neuron.array()/net_power_at_max_by_neuron.array(); 
+      
+      // Estimate voltage at max net power ... units: mV * W/W = mV
+      VectorXd max_net_power_voltage = v_ceiling * max_net_power_voltage_factor;
+      
+      // Set dv_dt to achieve max net-power
+      VectorXd dv_dt_max = max_net_power_voltage - v_traces.col(t - 1);
+      
+      // Find temporal modulation for this time step
+      // ... if B = 0, count is always zero, so always >= B, so the bias is always used (means tonic spiking)
+      // ... if B > 0, potential for bursting
+      VectorXd neuron_temporal_modulation = VectorXd::Zero(n_neurons);
+      neuron_temporal_modulation = (spike_counts_thresholded.array() >= neuron_temporal_modulation_B.array()).select(
+        neuron_temporal_modulation_bias.array(), // use this value if >= neuron_temporal_modulation_B, else use:
+        neuron_temporal_modulation_bias.array() + neuron_temporal_modulation_step.array()
+        );
+      VectorXd temporal_modulation_dt = neuron_temporal_modulation/dt; 
+      
+      // Find dv_dt by dividing by the temporal modulation
+      VectorXd dv_dt = dv_dt_max.array() / temporal_modulation_dt.array();
+      
+      // Find new subthreshold membrane potential
+      VectorXd v_subthreshold = v_traces.col(t - 1) + dv_dt; 
+      // ... save for next step
+      v_traces.col(t) = v_subthreshold;
+      
+      // Normalize transimpedance by spike current so that transimpedance value gives voltage amplitude of spike
+      double transimpedance_normalized = transimpedance/I_spike;
+      
+      // Find spike value
+      VectorXd barrier_values = v_barrier(v_subthreshold, threshold, I_spike);
+      VectorXd spike = transimpedance_normalized * barrier_values.array(); 
+      // ... update spike counts
+      spike_counts_thresholded += (barrier_values.array() / I_spike).matrix();
+      spike_counts_thresholded = (spike_counts_thresholded.array() < neuron_temporal_modulation_B.array()).select(spike_counts_thresholded.array(), 0.0);
+      
+      // Add spike to raw membrane potential and save to spike traces
+      spike_traces.col(t) = v_subthreshold + spike; 
+      
+    }
+    
+    // Return spike traces
+    return spike_traces;
+    
+  }
+
+// wrapper 
+NumericMatrix network::GTsim_R(
+    const NumericMatrix& stimulus_current_R,    // matrix of stimulus currents, in unit_current, n_neurons x n_steps
+    const double& dt,                         // time step length, in unit_time
+    const double& v_ceiling,                  // potential ceiling, in unit_potential
+    const double& I_ceiling,                  // current ceiling, in unit_current
+    const double& I_spike,                    // spike current, in unit_current
+    const double& transimpedance,             // determines magnitude of each spikes
+    const double& threshold                   // spike threshold, in unit_potential
+  ) {
+    MatrixXd spike_traces = GTsim(
+      to_eMat(stimulus_current_R),
+      dt,
+      v_ceiling,
+      I_ceiling,
+      I_spike,
+      transimpedance,
+      threshold
+    );
+    return to_NumMat(spike_traces);
+  }
+
 /*
  * RCPP_MODULE to expose class to R
  */
@@ -1963,11 +2201,11 @@ RCPP_EXPOSED_CLASS(network)
 RCPP_MODULE(network) {
   class_<network>("network")
   .constructor<std::string, std::string, std::string, std::string, std::string, std::string, std::string, std::string, std::string, std::string, std::string, std::string, std::string, std::string, double, double>()
-  .method("set_network_structure", &network::set_network_structure)
   .method("set_network_structure_R", &network::set_network_structure_R)
   .method("make_local_nodes", &network::make_local_nodes)
   .method("apply_circuit_motif", &network::apply_circuit_motif)
-  .method("fetch_network_components", &network::fetch_network_components);
+  .method("fetch_network_components", &network::fetch_network_components)
+  .method("GTsim_R", &network::GTsim_R);
 }
 
 RCPP_EXPOSED_CLASS(Projection)

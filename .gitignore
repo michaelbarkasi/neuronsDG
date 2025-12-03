@@ -13,3 +13,4 @@ neurons.Rcheck/*
 .Rhistory
 !.gitattributes
 .DS_Store
+*.tar.gz

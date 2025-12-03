@@ -16,7 +16,7 @@ The simplest mathematical models of neural networks are built from homogeneous M
 
 Computational neuroscientists standardly model biological neural networks as [dynamical systems](https://philpapers.org/rec/ELIMBM-3). The [growth-transform](https://doi.org/10.3389/fnins.2020.00425) (GT) models used in this package are one such example. Instead of a one-dimensional weight between two homogeneous neurons, GT models use both a transconductance parameter and a temporal modulation factor to determine network behavior. Roughly, the transconductance parameter is the inverse of a traditional weight, while the temporal modulation factor allows for capturing the different electrodynamics of different neuron types. 
 
-GT models thus allow for network topologies that not only capture connection strengths between neurons, but also the different types of neurons and their electrodynamics. A separate tutorial will explain GT models in more detail. This tutorial demonstrates how to build network topologies for these models from circuit motifs.
+GT models thus allow for network topologies that not only capture connection strengths between neurons, but also the different types of neurons and their electrodynamics. A [separate tutorial](tutorial_GTsim.html) explains GT models in more detail. This tutorial demonstrates how to build network topologies for these models from circuit motifs.
 
 <h2>Initialize network</h2>
 

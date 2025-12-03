@@ -10,6 +10,7 @@
 #include <RcppEigen.h>
 #include <nlopt.hpp>
 #include <boost/math/distributions/normal.hpp>
+#include "pcg_random.hpp"
 using namespace Rcpp;
 using namespace Eigen;
 
@@ -61,6 +62,13 @@ MatrixXi to_eiMat(const IntegerMatrix& X);
 NumericMatrix to_NumMat(const MatrixXd& M);
 NumericMatrix to_NumMat(const MatrixXi& M);
 IntegerMatrix to_IntMat(const MatrixXi& M);
+
+// Make random walk
+NumericVector random_walk(
+    const int& n_steps,
+    const double& step_size,
+    const unsigned int& seed
+  );
 
 /*
  * ***********************************************************************************
@@ -130,6 +138,13 @@ MatrixXd mvnorm_random(
     MatrixXd sigma
   );
 
+// Better normal distribution function, with PCG and Box-Muller
+double pcg_rnorm(
+    double mean, 
+    double sd,
+    pcg32& rng
+  );
+
 /*
  * ***********************************************************************************
  * Dichotomized Gaussian helper functions
@@ -173,7 +188,7 @@ NumericMatrix makePositiveDefinite(
 
 /*
  * ***********************************************************************************
- * Neuron class
+ * Neuron and network classes
  */
 
 class neuron {
@@ -323,11 +338,6 @@ class neuron {
     
   };
 
-/*
- * ***********************************************************************************
- * Network class
- */
-
 struct Projection {
   std::string pre_type;
   std::string pre_layer;
@@ -384,7 +394,7 @@ class network {
   
   /*
    * Networks are points (representing neurons) connected by directed edges. Within the growth-transform (GT) model
-   *   framework, these edges are transconductance values representing synaptic connections between neurons.
+   *   framework, these edges have transconductance values representing synaptic connections between neurons.
    * 
    * Point types: Points can be grouped by types, which affect 
    *   their behavior and connectivity. Within the GT model framework, these types each have their own 
@@ -400,7 +410,7 @@ class network {
    *   points of each type. These edges are called "local". 
    *   
    * Long-range projections: Connections (edges) between points in different nodes are determined by a long-range projection motif and 
-   *   labelled with the same of that motif. 
+   *   labelled with the name of that motif. 
    * 
    */
   
@@ -437,6 +447,7 @@ class network {
     // Network structure
     CharacterVector neuron_types;                 // Types of neurons in network, e.g., "principal", "PV", "SST", "VIP"
     std::vector<int> neuron_type_valences;        // Vector giving the valence of each neuron type, +1 for excitatory, -1 for inhibitory
+    MatrixXd neuron_type_temporal_modulation;     // Nx3 matrix giving the temporal modulation time (in unit_time) bias, step, and B-parameter for each neuron type
     CharacterVector layer_names;                  // Names of layers in the network
     int n_layers = 1;                             // number of layers in the network
     int n_columns = 1;                            // number of columns in the network
@@ -455,6 +466,7 @@ class network {
     MatrixXd node_coordinates_spatial;            // Mx2 matrix giving the (x,y) spatial coordinates of each node in the network
     MatrixXd coordinates_spatial;                 // Nx2 matrix giving the (x,y) spatial coordinates of each neuron in the network
     MatrixXi coordinates_node;                    // Nx2 matrix giving the (column, layer) node coordinates of each neuron in the network
+    MatrixXd neuron_temporal_modulation;          // Nx3 matrix giving the temporal modulation time (in unit_time) bias, step, and B-parameter for each neuron in the network, based on its type
     CharacterVector neuron_type_name;             // Vector giving the type of each neuron in the network, as a string
     std::vector<int> neuron_type_num;             // Vector giving the type of each neuron in the network, as an integer index
     std::vector<int> node_range_ends;             // Vector giving the ending neuron index for each node in the network
@@ -489,32 +501,34 @@ class network {
     
     // Member functions for adjusting settings
     void set_network_structure(
-      CharacterVector nrn_types = {"principal"},
-      std::vector<int> nrn_type_valences = {1},
-      CharacterVector lyr_names = {"layer"},
-      int n_lyr = 1,
-      int n_cls = 1,
-      double lyr_height = 1.0,
-      double cls_width = 1.0,
-      double lyr_separation_factor = 1.25,
-      double cls_separation_factor = 1.5,
-      MatrixXi nrn_per_node = MatrixXi::Constant(1,1,10),
-      std::vector<MatrixXd> recur_factors = {MatrixXd::Constant(1,1,0.5)},
-      double pruning_thresh_factor = 0.1
+      CharacterVector nrn_types,
+      std::vector<int> nrn_type_valences,
+      MatrixXd nrn_type_temporal_modulation,
+      CharacterVector lyr_names,
+      int n_lyr,
+      int n_cls,
+      double lyr_height,
+      double cls_width,
+      double lyr_separation_factor,
+      double cls_separation_factor,
+      MatrixXi nrn_per_node,
+      std::vector<MatrixXd> recur_factors,
+      double pruning_thresh_factor
     );
     // ... wrapper 
     void set_network_structure_R(
-      CharacterVector neuron_types = {"principal"},
-      std::vector<int> neuron_type_valences = {1},
-      CharacterVector layer_names = {"layer"},
-      int n_layers = 1,
-      int n_columns = 1,
-      double layer_height = 1.0,
-      double column_width = 1.0,
-      double layer_separation_factor = 1.25,
-      double column_separation_factor = 1.5,
-      IntegerMatrix neurons_per_node = to_IntMat(MatrixXi::Constant(1,1,10)),
-      List recurrence_factors = List::create(to_NumMat(MatrixXd(MatrixXd::Constant(1,1,0.5)))),
+      CharacterVector neuron_types,
+      std::vector<int> neuron_type_valences,
+      NumericMatrix neuron_type_temporal_modulation,
+      CharacterVector layer_names,
+      int n_layers,
+      int n_columns,
+      double layer_height,
+      double column_width,
+      double layer_separation_factor,
+      double column_separation_factor,
+      IntegerMatrix neurons_per_node,
+      List recurrence_factors,
       double pruning_threshold_factor = 0.1
     );
     
@@ -524,6 +538,27 @@ class network {
     
     // Member functions for fetching data 
     List fetch_network_components() const;
+    
+    // Member functions for analysis and simulation 
+    MatrixXd GTsim(
+      const MatrixXd& stimulus_current,     // matrix of stimulus currents, in unit_current, n_neurons x n_steps
+      const double& dt,                     // time step length, in unit_time
+      const double& v_ceiling,              // potential ceiling, in unit_potential
+      const double& I_ceiling,              // current ceiling, in unit_current
+      const double& I_spike,                // spike current, in unit_current
+      const double& transimpedance,         // determines magnitude of each spikes
+      const double& threshold               // spike threshold, in unit_potential
+    );
+    // ... wrapper
+    NumericMatrix GTsim_R(
+      const NumericMatrix& stimulus_current_R,  // matrix of stimulus currents, in unit_current, n_neurons x n_steps
+      const double& dt,                         // time step length, in unit_time
+      const double& v_ceiling,                  // potential ceiling, in unit_potential
+      const double& I_ceiling,                  // current ceiling, in unit_current
+      const double& I_spike,                    // spike current, in unit_current
+      const double& transimpedance,             // determines magnitude of each spikes
+      const double& threshold                   // spike threshold, in unit_potential
+    );
     
   };
 

@@ -8,6 +8,7 @@ set.network.structure(
   network,
   neuron_types = c("principal"),
   neuron_type_valences = c(1),
+  neuron_type_temporal_modulation = matrix(c(0, 1, 1), nrow = 1, ncol = 3),
   layer_names = c("layer"),
   n_layers = 1,
   n_columns = 1,
@@ -26,6 +27,8 @@ set.network.structure(
 \item{neuron_types}{Character vector giving types of neurons in the network, e.g. c("principal", "interneuron").}
 
 \item{neuron_type_valences}{Numeric vector giving valences of each neuron type, e.g. c(1, -1) for excitatory and inhibitory neurons.}
+
+\item{neuron_type_temporal_modulation}{Numeric matrix giving temporal modulation time components (for modulation time in the unit_time of the network) for each neuron type: bias, step size, and count threshold B (rows as neuron types, columns as components). Will example a single value or a vector of length three.}
 
 \item{layer_names}{Character vector giving names of layers in the network, e.g. c("L2/3", "L4", "L5", "L6").}
 
