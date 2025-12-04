@@ -14,3 +14,4 @@ neurons.Rcheck/*
 !.gitattributes
 .DS_Store
 *.tar.gz
+Untitled*.R

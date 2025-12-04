@@ -7,16 +7,14 @@
 set.network.structure(
   network,
   neuron_types = c("principal"),
-  neuron_type_valences = c(1),
-  neuron_type_temporal_modulation = matrix(c(0, 1, 1), nrow = 1, ncol = 3),
   layer_names = c("layer"),
   n_layers = 1,
   n_columns = 1,
-  layer_height = 1,
-  column_width = 1,
+  layer_height = 250,
+  column_width = 130,
   layer_separation_factor = 3,
   column_separation_factor = 3.5,
-  neurons_per_node = 10,
+  neurons_per_node = 30,
   recurrence_factors = 0.5,
   pruning_threshold_factor = 0.1
 )
@@ -26,19 +24,15 @@ set.network.structure(
 
 \item{neuron_types}{Character vector giving types of neurons in the network, e.g. c("principal", "interneuron").}
 
-\item{neuron_type_valences}{Numeric vector giving valences of each neuron type, e.g. c(1, -1) for excitatory and inhibitory neurons.}
-
-\item{neuron_type_temporal_modulation}{Numeric matrix giving temporal modulation time components (for modulation time in the unit_time of the network) for each neuron type: bias, step size, and count threshold B (rows as neuron types, columns as components). Will example a single value or a vector of length three.}
-
 \item{layer_names}{Character vector giving names of layers in the network, e.g. c("L2/3", "L4", "L5", "L6").}
 
 \item{n_layers}{Integer giving number of layers in the network.}
 
 \item{n_columns}{Integer giving number of columns in the network.}
 
-\item{layer_height}{Numeric giving height of each layer (in units specified at network creation, default unit is microns, default value is 1.0).}
+\item{layer_height}{Numeric giving height of each layer (in units specified at network creation, default unit is microns, default value is 250.0).}
 
-\item{column_width}{Numeric giving width of each column (in units specified at network creation, default unit is microns, default value is 1.0).}
+\item{column_width}{Numeric giving width of each column (in units specified at network creation, default unit is microns, default value is 130.0).}
 
 \item{layer_separation_factor}{Numeric giving mean distance between layers as a fraction of layer height (default: 3.0).}
 
@@ -49,6 +43,10 @@ set.network.structure(
 \item{recurrence_factors}{List of matrices giving local recurrence factors for each layer; each matrix must have dimensions matching length of neuron_types (rows and columns).}
 
 \item{pruning_threshold_factor}{Numeric giving factor for pruning weak connections within nodes; connections with strength below this factor times the maximum connection strength in the node will be pruned (default: 0.1).}
+
+\item{neuron_type_valences}{Numeric vector giving valences of each neuron type, e.g. c(1, -1) for excitatory and inhibitory neurons.}
+
+\item{neuron_type_temporal_modulation}{Numeric matrix giving temporal modulation time components (for modulation time in the unit_time of the network) for each neuron type: bias, step size, and count cutoff (rows as neuron types, columns as components). Will example a single value or a vector of length three.}
 }
 \value{
 The updated network object with the specified structure and local nodes generated.

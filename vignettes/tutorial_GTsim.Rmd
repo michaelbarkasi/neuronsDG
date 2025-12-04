@@ -53,11 +53,38 @@ With a network initialized, both low and high-level structure is set with the [s
 ), with a mean count of 10, 5, and 5, respectively. (Mean cell counts can be set to vary by both type and layer, but for simplicity we leave the counts constant across layers.) To mimic the major functional areas of the auditory cortex, we create a cortical patch with 4 layers (L6, L5, L4, and L2/3). For demonstration purposes, we choose 5 columns.
 
 ```{r build_cortical_patch}
+init_known_celltypes()
+temporal_modulation_bias <- 1e1
+temporal_modulation_step <- 1.0
+temporal_modulation_cutoff <- 0.0
+transmission_velocity <- 30e3
+set_cell_type_params(
+  "principal", 
+  1,
+  temporal_modulation_bias,
+  temporal_modulation_step,
+  temporal_modulation_cutoff,
+  transmission_velocity
+)
+set_cell_type_params(
+  "PV", 
+  -1,
+  temporal_modulation_bias,
+  temporal_modulation_step,
+  temporal_modulation_cutoff,
+  transmission_velocity
+)
+set_cell_type_params(
+  "SST", 
+  -1,
+  temporal_modulation_bias,
+  temporal_modulation_step,
+  temporal_modulation_cutoff,
+  transmission_velocity
+)
 cortical.patch <- set.network.structure(
     cortical.patch,
     neuron_types = c("principal", "PV", "SST"),
-    neuron_type_valences = c(1, -1, -1),
-    neuron_type_temporal_modulation = c(0.1, 0.05, 0.05),
     neurons_per_node = c(10, 5, 5)
   )
 ```
@@ -71,6 +98,20 @@ plot.network(cortical.patch)
 ```
 
 Now we have a network of four cortical layers and five columns, but with only local connections between neighboring neurons. Next, we will add long-range connections between layers using circuit motifs. 
+
+```{r fetch_network_components}
+cortical.patch.comps <- cortical.patch$fetch_network_components()
+n_neurons <- cortical.patch.comps$n_neurons
+principal_mask <- cortical.patch.comps$neuron_type_name == "principal"
+stimulus_current_matrix <- matrix(0, nrow = n_neurons, ncol = 1e5)
+stimulus_current_matrix[principal_mask, 1:5000] <- 1e-3
+spike_traces <- run.GTsim(cortical.patch, stimulus_current_matrix)
+for (i in 1:nrow(spike_traces)) {
+  #lines(spike_traces[i,], col=i)
+  plot(spike_traces[i,1:10000], type='l', col = i)
+}
+```
+
 
 <h2>Define and load motifs</h2>
 

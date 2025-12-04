@@ -11,8 +11,8 @@ load.projection.into.motif(
   density = NULL,
   presynaptic_density = 0.5,
   postsynaptic_density = 0.5,
-  presynaptic_type = "default",
-  postsynaptic_type = "default",
+  presynaptic_type = "principal",
+  postsynaptic_type = "principal",
   max_col_shift_up = 0,
   max_col_shift_down = 0,
   connection_strength = 1

@@ -54,9 +54,8 @@ With a network initialized, both low and high-level structure is set with the [s
 cortical.patch <- set.network.structure(
     cortical.patch,
     neuron_types = c("principal", "PV", "SST"),
-    neuron_type_valences = c(1, -1, -1),
     layer_names = c("L6", "L5", "L4", "L2/3"),
-    n_columns = 5,
+    n_columns = 8,
     neurons_per_node = c(10, 5, 5)
   )
 ```

@@ -4,23 +4,14 @@
 \alias{run.GTsim}
 \title{Run Growth-Transform network simulation}
 \usage{
-run.GTsim(
-  network,
-  stimulus_current_matrix,
-  dt = 0.1,
-  v_ceiling = 1,
-  I_ceiling = 1,
-  I_spike = 5,
-  transimpedance = 1,
-  threshold = 0
-)
+run.GTsim(network, stimulus_current_matrix, dt = 0.001)
 }
 \arguments{
 \item{network}{Network object on which to run the simulation.}
 
 \item{stimulus_current_matrix}{Matrix of input currents, with rows representing neurons and columns representing sample times.}
 
-\item{dt}{Time step length in the unit_time of the network (default: 0.1).}
+\item{dt}{Time step length in the unit_time of the network (default: 1e-3, or 1-micron time steps).}
 
 \item{v_ceiling}{Potential ceiling in the unit_potential of the network (default: 1.0).}
 
@@ -28,7 +19,9 @@ run.GTsim(
 
 \item{I_spike}{Spike current in the unit_current of the network (default: 5.0).}
 
-\item{transimpedance}{Transimpedance value determining the magnitude of each spike (default: 1.0).}
+\item{spike_potential}{Magnitude of each spike (default: 1.0).}
+
+\item{resting_potential}{Resting potential in the unit_potential of the network (default: -70.0).}
 
 \item{threshold}{Spike threshold in the unit_potential of the network (default: 0.0).}
 }

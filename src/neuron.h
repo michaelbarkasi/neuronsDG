@@ -55,6 +55,7 @@ IntegerVector Rwhich(const LogicalVector& x);
 std::vector<double> to_dVec(const VectorXd& vec);
 std::vector<double> to_dVec(const NumericVector& vec);
 VectorXd to_eVec(const std::vector<double>& vec);
+VectorXd to_eVec(const NumericVector& vec);
 NumericVector to_NumVec(const VectorXd& vec);
 NumericVector to_NumVec(const std::vector<double>& vec);
 MatrixXd to_eMat(const NumericMatrix& X);
@@ -172,6 +173,35 @@ double dg_find_sigma_RootBisection(
 
 /*
  * ***********************************************************************************
+ * Growth-transform helper functions
+ */
+
+// Membrane potential barrier function
+VectorXd v_barrier(
+    const VectorXd& v_input,      // Column vector of membrane potentials for a network of neurons at one time step
+    const VectorXd& threshold,    // Spike threshold, in unit_potential
+    const VectorXd& I_out         // Spike current, in unit_current
+  );
+
+// Create lagged voltage trace matrix to simulate transmission delays
+MatrixXd lagged_traces(
+    int n,
+    const MatrixXi& lag,
+    const MatrixXd& v
+  );
+
+// Gradient of total dissipated metabolic power in network, w.r.t. membrane potential
+VectorXd network_power_dissipation_gradient(
+    const MatrixXd& v_traces_lagged,  // n_neuron x n_steps matrix of membrane potentials, in unit_potential, from which to calculate derivative
+    const VectorXd& v_traces_current, // n_neuron x 1 matrix (column vector) of membrane potentials, in unit_potential, from which to calculate derivative
+    const VectorXd& stimulus_current, // n_neuron x 1 matrix (column vector) of stimulus currents, in unit_current, from which to calculate derivative
+    const MatrixXd& transconductance, // n_neuron x n_neuron transconductance matrix, giving connections between neurons
+    const double& I_spike,            // spike current, in unit_current
+    const double& threshold           // spike threshold, in unit_potential
+  );
+
+/*
+ * ***********************************************************************************
  * Matrix and vector operations
  */
 
@@ -184,6 +214,11 @@ NumericMatrix toeplitz(
 // Function to make a matrix positive definite
 NumericMatrix makePositiveDefinite(
     const NumericMatrix& NumX
+  );
+
+// Find pairwise Euclidean distances for a set of points
+MatrixXd pairwise_distances(
+    const MatrixXd& points   // Rows as points, columns as dimensions
   );
 
 /*
@@ -338,14 +373,30 @@ class neuron {
     
   };
 
+struct cell_type {
+    std::string type_name;
+    int valence;                         // valence of each neuron type, +1 for excitatory, -1 for inhibitory
+    double temporal_modulation_bias;     // temporal modulation time (in unit_time) bias for each neuron type
+    double temporal_modulation_timeconstant;     // temporal modulation time (in unit_time) step for each neuron type
+    double temporal_modulation_amplitude;   // temporal modulation time (in unit_time) cutoff for each neuron type
+    double transmission_velocity;        // transmission velocity (in unit_distance/unit_time) for each neuron type
+    double v_ceiling;                    // potential ceiling, in unit_potential
+    double I_ceiling;                    // current ceiling, in unit_current
+    double I_spike;                      // spike current, in unit_current
+    double coupling_scaling_factor;      // Controls how energy used in synaptic transmission compares to that used in spiking
+    double spike_potential;              // Magnitude of each spike, in unit_potential
+    double resting_potential;            // resting potential, in unit_potential
+    double threshold;                    // spike threshold, in unit_potential
+  };
+
 struct Projection {
-  std::string pre_type;
-  std::string pre_layer;
-  double pre_density;
-  std::string post_type;
-  std::string post_layer;
-  double post_density;
-};
+    std::string pre_type;
+    std::string pre_layer;
+    double pre_density;
+    std::string post_type;
+    std::string post_layer;
+    double post_density;
+  };
 
 class motif {
   
@@ -445,9 +496,7 @@ class network {
     double sample_rate = 1e4;                     // Sample rate (in above units), e.g., 10000 Hz
     
     // Network structure
-    CharacterVector neuron_types;                 // Types of neurons in network, e.g., "principal", "PV", "SST", "VIP"
-    std::vector<int> neuron_type_valences;        // Vector giving the valence of each neuron type, +1 for excitatory, -1 for inhibitory
-    MatrixXd neuron_type_temporal_modulation;     // Nx3 matrix giving the temporal modulation time (in unit_time) bias, step, and B-parameter for each neuron type
+    std::vector<cell_type> neuron_types;          // Types of neurons in network, e.g., "principal", "PV", "SST", "VIP"
     CharacterVector layer_names;                  // Names of layers in the network
     int n_layers = 1;                             // number of layers in the network
     int n_columns = 1;                            // number of columns in the network
@@ -466,7 +515,8 @@ class network {
     MatrixXd node_coordinates_spatial;            // Mx2 matrix giving the (x,y) spatial coordinates of each node in the network
     MatrixXd coordinates_spatial;                 // Nx2 matrix giving the (x,y) spatial coordinates of each neuron in the network
     MatrixXi coordinates_node;                    // Nx2 matrix giving the (column, layer) node coordinates of each neuron in the network
-    MatrixXd neuron_temporal_modulation;          // Nx3 matrix giving the temporal modulation time (in unit_time) bias, step, and B-parameter for each neuron in the network, based on its type
+    MatrixXd neuron_temporal_modulation;          // Nx3 matrix giving the temporal modulation time (in unit_time) bias, step, and cutoff for each neuron in the network, based on its type
+    VectorXd neuron_transmission_velocity;        // Vector giving the transmission delay (in unit_time) for each neuron in the network, based on its type
     CharacterVector neuron_type_name;             // Vector giving the type of each neuron in the network, as a string
     std::vector<int> neuron_type_num;             // Vector giving the type of each neuron in the network, as an integer index
     std::vector<int> node_range_ends;             // Vector giving the ending neuron index for each node in the network
@@ -502,8 +552,6 @@ class network {
     // Member functions for adjusting settings
     void set_network_structure(
       CharacterVector nrn_types,
-      std::vector<int> nrn_type_valences,
-      MatrixXd nrn_type_temporal_modulation,
       CharacterVector lyr_names,
       int n_lyr,
       int n_cls,
@@ -511,25 +559,9 @@ class network {
       double cls_width,
       double lyr_separation_factor,
       double cls_separation_factor,
-      MatrixXi nrn_per_node,
-      std::vector<MatrixXd> recur_factors,
+      IntegerMatrix nrn_per_node,
+      List recur_factors,
       double pruning_thresh_factor
-    );
-    // ... wrapper 
-    void set_network_structure_R(
-      CharacterVector neuron_types,
-      std::vector<int> neuron_type_valences,
-      NumericMatrix neuron_type_temporal_modulation,
-      CharacterVector layer_names,
-      int n_layers,
-      int n_columns,
-      double layer_height,
-      double column_width,
-      double layer_separation_factor,
-      double column_separation_factor,
-      IntegerMatrix neurons_per_node,
-      List recurrence_factors,
-      double pruning_threshold_factor = 0.1
     );
     
     // Member functions for building network
@@ -540,24 +572,9 @@ class network {
     List fetch_network_components() const;
     
     // Member functions for analysis and simulation 
-    MatrixXd GTsim(
-      const MatrixXd& stimulus_current,     // matrix of stimulus currents, in unit_current, n_neurons x n_steps
-      const double& dt,                     // time step length, in unit_time
-      const double& v_ceiling,              // potential ceiling, in unit_potential
-      const double& I_ceiling,              // current ceiling, in unit_current
-      const double& I_spike,                // spike current, in unit_current
-      const double& transimpedance,         // determines magnitude of each spikes
-      const double& threshold               // spike threshold, in unit_potential
-    );
-    // ... wrapper
-    NumericMatrix GTsim_R(
-      const NumericMatrix& stimulus_current_R,  // matrix of stimulus currents, in unit_current, n_neurons x n_steps
-      const double& dt,                         // time step length, in unit_time
-      const double& v_ceiling,                  // potential ceiling, in unit_potential
-      const double& I_ceiling,                  // current ceiling, in unit_current
-      const double& I_spike,                    // spike current, in unit_current
-      const double& transimpedance,             // determines magnitude of each spikes
-      const double& threshold                   // spike threshold, in unit_potential
+    NumericMatrix GTsim(
+      const NumericMatrix& stimulus_current,     // matrix of stimulus currents, in unit_current, n_neurons x n_steps
+      const double& dt                           // time step length, in unit_time
     );
     
   };

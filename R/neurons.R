@@ -197,8 +197,8 @@ load.projection.into.motif <- function(
     density = NULL,
     presynaptic_density = 0.5,
     postsynaptic_density = 0.5,
-    presynaptic_type = "default",
-    postsynaptic_type = "default",
+    presynaptic_type = "principal",
+    postsynaptic_type = "principal",
     max_col_shift_up = 0,
     max_col_shift_down = 0,
     connection_strength = 1.0
@@ -240,12 +240,12 @@ load.projection.into.motif <- function(
 #' @param network Network object to configure.
 #' @param neuron_types Character vector giving types of neurons in the network, e.g. c("principal", "interneuron").
 #' @param neuron_type_valences Numeric vector giving valences of each neuron type, e.g. c(1, -1) for excitatory and inhibitory neurons.
-#' @param neuron_type_temporal_modulation Numeric matrix giving temporal modulation time components (for modulation time in the unit_time of the network) for each neuron type: bias, step size, and count threshold B (rows as neuron types, columns as components). Will example a single value or a vector of length three. 
+#' @param neuron_type_temporal_modulation Numeric matrix giving temporal modulation time components (for modulation time in the unit_time of the network) for each neuron type: bias, step size, and count cutoff (rows as neuron types, columns as components). Will example a single value or a vector of length three. 
 #' @param layer_names Character vector giving names of layers in the network, e.g. c("L2/3", "L4", "L5", "L6").
 #' @param n_layers Integer giving number of layers in the network.
 #' @param n_columns Integer giving number of columns in the network.
-#' @param layer_height Numeric giving height of each layer (in units specified at network creation, default unit is microns, default value is 1.0).
-#' @param column_width Numeric giving width of each column (in units specified at network creation, default unit is microns, default value is 1.0).
+#' @param layer_height Numeric giving height of each layer (in units specified at network creation, default unit is microns, default value is 250.0).
+#' @param column_width Numeric giving width of each column (in units specified at network creation, default unit is microns, default value is 130.0).
 #' @param layer_separation_factor Numeric giving mean distance between layers as a fraction of layer height (default: 3.0).
 #' @param column_separation_factor Numeric giving mean distance between columns as a fraction of column width (default: 3.5).
 #' @param neurons_per_node Matrix giving number of neurons of each type per node in each layer; dimensions must match n_layers (rows) and length of neuron_types (columns).
@@ -256,59 +256,18 @@ load.projection.into.motif <- function(
 set.network.structure <- function(
     network,
     neuron_types = c("principal"),
-    neuron_type_valences = c(1),
-    neuron_type_temporal_modulation = matrix(c(0,1,1), nrow = 1, ncol = 3),
     layer_names = c("layer"),
     n_layers = 1,
     n_columns = 1,
-    layer_height = 1.0,
-    column_width = 1.0,
+    layer_height = 250.0,
+    column_width = 130.0,
     layer_separation_factor = 3.0,
     column_separation_factor = 3.5,
-    neurons_per_node = 10,
+    neurons_per_node = 30,
     recurrence_factors = 0.5,
     pruning_threshold_factor = 0.1
   ) {
     # Run checks 
-    if (length(neuron_types) != length(neuron_type_valences)) {
-      if (length(neuron_type_valences) == 1) {
-        neuron_type_valences <- rep(neuron_type_valences, length(neuron_types))
-      } else {
-        stop("Length of neuron_types must match length of neuron_type_valences, or neuron_type_valences must be a single value.")
-      }
-    }
-    if (class(neuron_type_temporal_modulation) != "matrix") {
-      if (length(neuron_type_temporal_modulation) == 1) {
-        neuron_type_temporal_modulation <- matrix(
-          neuron_type_temporal_modulation, 
-          nrow = length(neuron_types),
-          ncol = 3
-        )
-      } else if (length(neuron_type_temporal_modulation) == 3) {
-        neuron_type_temporal_modulation <- matrix(
-          neuron_type_temporal_modulation, 
-          nrow = length(neuron_types),
-          ncol = 3,
-          byrow = TRUE
-        )
-      } else {
-        stop("neuron_type_temporal_modulation must be a matrix with 3 columns (for bias, step size, and count threshold B), or a single value or vector of length 3 to be expanded.")
-      }
-    } else if (ncol(neuron_type_temporal_modulation) != 3) {
-      stop("neuron_type_temporal_modulation must have 3 columns (for bias, step size, and count threshold B).")
-    }
-    if (length(neuron_types) != nrow(neuron_type_temporal_modulation)) {
-      if (nrow(neuron_type_temporal_modulation) == 1) {
-        neuron_type_temporal_modulation <- matrix(
-            neuron_type_temporal_modulation, 
-            nrow = length(neuron_types),
-            ncol = 3,
-            byrow = TRUE
-          )
-      } else {
-        stop("Nrow of neuron_types must match length of neuron_type_temporal_modulation, or neuron_type_temporal_modulation must be a single-row matrix.")
-      }
-    }
     if (length(layer_names) != n_layers) {
       if (n_layers > length(layer_names) && length(layer_names) == 1) {
         layer_names <- paste0(layer_names, "_", seq_len(n_layers))
@@ -372,10 +331,8 @@ set.network.structure <- function(
       }
     }
     # Set structure
-    network$set_network_structure_R(
+    network$set_network_structure(
       neuron_types,
-      as.integer(neuron_type_valences),
-      as.numeric(neuron_type_temporal_modulation), 
       layer_names,
       as.integer(n_layers),
       as.integer(n_columns),
@@ -505,11 +462,13 @@ plot.network <- function(
     edge_alpha <- max(0.1, min(1, n_cells / (n_edges + 1)))
     
     # Make colors 
+    if (length(unique(as.character(cells[,cell_color]))) == 1) cells[,cell_color] <- "cell"
     colored_labels <- unique(
       c(unique(as.character(edges[,edge_color])), 
         unique(as.character(cells[,cell_color])))
       )
     known_label_colors <- list(
+      "cell" = "gray95",
       "L1" = "gray95",
       "L2" = "lightskyblue3",
       "L2/3" = "lightskyblue2",
@@ -590,34 +549,25 @@ plot.network <- function(
 #' 
 #' @param network Network object on which to run the simulation.
 #' @param stimulus_current_matrix Matrix of input currents, with rows representing neurons and columns representing sample times.
-#' @param dt Time step length in the unit_time of the network (default: 0.1).
+#' @param dt Time step length in the unit_time of the network (default: 1e-3, or 1-micron time steps).
 #' @param v_ceiling Potential ceiling in the unit_potential of the network (default: 1.0).
 #' @param I_ceiling Current ceiling in the unit_current of the network (default: 1.0).
 #' @param I_spike Spike current in the unit_current of the network (default: 5.0).
-#' @param transimpedance Transimpedance value determining the magnitude of each spike (default: 1.0).
+#' @param spike_potential Magnitude of each spike (default: 1.0).
+#' @param resting_potential Resting potential in the unit_potential of the network (default: -70.0).
 #' @param threshold Spike threshold in the unit_potential of the network (default: 0.0).
 #' @return A matrix containing the spike_traces of all neurons over time after the simulation (neurons as rows, sample times as columns).
 #' @export
 run.GTsim <- function(
     network,
     stimulus_current_matrix,    # matrix of input currents (rows: neurons, columns: time bins)
-    dt = 1e-1,                  # time step length, in unit_time
-    v_ceiling = 1.0,            # potential ceiling, in unit_potential
-    I_ceiling = 1.0,            # current ceiling, in unit_current
-    I_spike = 5.0,              # spike current, in unit_current
-    transimpedance = 1.0,       # determines magnitude of each spikes
-    threshold = 0.0             # spike threshold, in unit_potential
+    dt = 1e-3                   # time step length, in ms
   ) {
-    network$GTsim_R(
-      input_current_matrix,
-      dt,
-      v_ceiling,
-      I_ceiling,
-      I_spike,
-      transimpedance,
-      threshold
+    spike_traces <- network$GTsim(
+      stimulus_current_matrix,
+      dt
     )
-    return(network)
+    return(spike_traces)
   }
 
 # Functions for neuron analysis ########################################################################################
