@@ -49,3 +49,19 @@ math[display="block"] {
   overflow-y: auto;
   display: block;
 }
+img.r-plt {
+  filter: none !important;
+}
+div.sourceCode pre {
+  max-height: 400px;
+  overflow-y: auto;
+}
+.function {
+  font-weight: bold;
+}
+.code_variable {
+  font-weight: bold;
+}
+.gene {
+  text-transform: uppercase;
+}

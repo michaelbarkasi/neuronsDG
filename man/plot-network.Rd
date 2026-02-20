@@ -4,7 +4,16 @@
 \alias{plot.network}
 \title{Plot network as directed graph}
 \usage{
-plot.network(network, title = NULL, plot_motif = "local connections", edge_color = "pre_type", cell_color = "layer", cell_size_factor = 5.0, arrow_size_factor = 0.5, return_plot = FALSE)
+plot.network(
+ network, 
+ title = NULL, 
+ plot_motif = "local connections", 
+ edge_color = "pre_type", 
+ cell_color = "layer", 
+ cell_size_factor = 5.0, 
+ arrow_size_factor = 0.5, 
+ return_plot = FALSE
+)
 }
 \arguments{
 \item{network}{Network object to plot.}

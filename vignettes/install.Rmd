@@ -14,4 +14,12 @@ rm -f neurons_*.tar.gz
 ./build_install.sh
 ```
 
-To build pkgdown site: pkgdown::build_site()
+## Build documentation
+
+In R, run:  
+
+```{r, eval = FALSE}
+devtools::document()
+pkgdown::build_site()
+pkgdown::build_article("<article name>")
+```

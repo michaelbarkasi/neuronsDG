@@ -7,7 +7,7 @@ date: "`r Sys.Date()`"
 ```{r Rmdsetup, echo=FALSE}
 # Set max width of markdown code outputs
 options(width = 10000)
-knitr::opts_chunk$set(class.output = "scroll-output")
+knitr::opts_chunk$set(class.output = "scroll-output", cache = TRUE)
 ```
 
 <h2>Introduction</h2>
@@ -77,8 +77,8 @@ While only the Pearson correlation will return values constrained to the range $
 
 The above equations are for theoretical *population* values, given in terms of the expected value operator. Both definitions have empirical analogues which can be used to calculate a value directly from a finite sample. If $\vec{X}=\langle X_1,\ldots,X_T\rangle$ and $\vec{Y}=\langle Y_1,\ldots,Y_T\rangle$ are each a series of observations collected from $X$ and $Y$, then the empirical raw correlation is given in terms of the dot product: 
 \[R_{XY} = \frac{\vec{X}\cdot\vec{Y}}{T} = \frac{1}{T}\sum_{i=1}^T X_i Y_i\]
-If $\mu_{\vec{XY}}$ is the empirical mean of the vector $\vec{XY}$ of products $X_iY_i$, the raw correlation can also be computed as $R_{XY} = \mu_{\vec{XY}}$. The empirical Pearson correlation between $\vec{X}$ and $\vec{Y}$ with means $\mu_\vec{X}$ and $\mu_\vec{Y}$ and standard deviations $\sigma_\vec{X}$ and $\sigma_\vec{Y}$ is given by:
-\[R_{XY} = \frac{\mu_{\vec{XY}} - \mu_\vec{X}\mu_\vec{Y}}{\sigma_\vec{X} \sigma_\vec{Y}}\]
+If $\mu_{\vec{XY}}$ is the empirical mean of the vector $\vec{XY}$ of products $X_iY_i$, the raw correlation can also be computed as $R_{XY} = \mu_{\vec{XY}}$. The empirical Pearson correlation between $\vec{X}$ and $\vec{Y}$ with means $\mu_{\vec{X}}$ and $\mu_{\vec{Y}}$ and standard deviations $\sigma_{\vec{X}}$ and $\sigma_{\vec{Y}}$ is given by:
+\[R_{XY} = \frac{\mu_{\vec{XY}} - \mu_{\vec{X}}\mu_{\vec{Y}}}{\sigma_{\vec{X}} \sigma_{\vec{Y}}}\]
 For ease of reading, the vector notation will hereafter be dropped and capital letters will be used to refer to both the random variables and their empirical samples, with the understanding that the context will make clear which is meant.
 
 <h3>Time series and repeated observations</h3>
@@ -149,11 +149,15 @@ plot.autocorrelation(neurons[[cell_high]])
 
 The fitted model is plotted as the red line. The parameters of the exponential decay fit can be fetched directly with a neuron method and provide succinct quantification of the empirical autocorrelation. 
 
+```{r cache_vals, echo = FALSE}
+cached_tau <- round(neurons[[cell_high]]$fetch_EDF_parameters()["tau"],1)
+cached_A <- round(neurons[[cell_high]]$fetch_EDF_parameters()["A"],3)
+```
 ```{r fetch_fit_parameters_high}
 print(neurons[[cell_high]]$fetch_EDF_parameters())
 ```
 
-In this case, the time constant tau is estimated to be `r round(neurons[[cell_high]]$fetch_EDF_parameters()["tau"],1)`ms and the initial autocorrelation $A$ is estimated to be `r round(neurons[[cell_high]]$fetch_EDF_parameters()["A"],3)`. 
+In this case, the time constant tau is estimated to be `r cached_tau`ms and the initial autocorrelation $A$ is estimated to be `r cached_A`. 
 
 The above shows empirical autocorrelation and model fit being performed in separate steps and for only one neuron at a time. The function [process.autocorr()](../reference/process.autocorr.html) will perform both steps at once for an entire list of neurons and return the results in a data frame. 
 
@@ -254,12 +258,12 @@ For all $i$,
 Further, notice that the expected value of the product $X_{i_1}X_{i_2}$ is given by the upper-tail cumulative distribution function of a bivariate normal distribution with covariance $K_{V_{i_1}V_{i_2}}$, evaluated at $\gamma$ for both components: 
 \[\text{E}[X_{i_1}X_{i_2}] = \Phi_2^+(\gamma,K_{V_{i_1}V_{i_2}})\]
 For a threshold $x$, $\Phi_2^+(x,K_{V_{i_1}V_{i_2}})$ is the probability that both components of a bivariate normal distribution with covariance $K_{V_{i_1}V_{i_2}}$ are greater than $x$:
-\begin{align}
-  \Phi_2^+(x,K_{V_{i_1}V_{i_2}}) 
-    &= P(V_1>x, V_2>x \;|\; V_1, V_2\sim \text{MVN}(\mu=0,\sigma=1,K=K_{V_{i_1}V_{i_2}})) \\
-    &= \frac{1}{\sqrt{(2\pi)^2\mathbf{det}(K_{V_{i_1}V_{i_2}})}} 
-      \int_{x}^\infty \int_{x}^\infty \exp(-\frac{1}{2}\langle V_{i_1}V_{i_2}\rangle^\text{T}K_{V_{i_1}V_{i_2}}^{-1}\langle V_{i_1}V_{i_2}\rangle) d\langle V_{i_1}V_{i_2}\rangle
-\end{align}
+\begin{aligned}
+  &\Phi_2^+(x,K_{V_{i_1}V_{i_2}}) \\
+    &\;\;\;= P(V_1>x, V_2>x \;|\; V_1, V_2\sim \text{MVN}(\mu=0,\sigma=1,K=K_{V_{i_1}V_{i_2}})) \\
+    &\;\;\;= \frac{1}{\sqrt{(2\pi)^2\mathbf{det}(K_{V_{i_1}V_{i_2}})}} 
+      \int_{x}^\infty \int_{x}^\infty \exp(-\frac{1}{2}\langle V_{i_1}V_{i_2}\rangle^\text{T}K_{V_{i_1}V_{i_2}}^{-1}\langle V_{i_1}V_{i_2}\rangle) \langle V_{i_1}V_{i_2}\rangle
+\end{aligned}
 Putting it all together: 
 \[K_{X_{i_1}X_{i_2}} = \Phi_2^+(\gamma,K_{V_{i_1}V_{i_2}}) - (1-\Phi(\gamma))^2\]
 Thus, the covariance $K_{V_{i_1}V_{i_2}}$ between $V_{i_1}$ and $V_{i_2}$ which, after dichotomization, yields covariance $K_{X_{i_1}X_{i_2}}$, can be found by solving for $K_{V_{i_1}V_{i_2}}$ in the equation:

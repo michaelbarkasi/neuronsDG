@@ -7,7 +7,7 @@ date: "`r Sys.Date()`"
 ```{r Rmdsetup, echo=FALSE}
 # Set max width of markdown code outputs
 options(width = 10000)
-knitr::opts_chunk$set(class.output = "scroll-output")
+knitr::opts_chunk$set(class.output = "scroll-output", cache = TRUE)
 ```
 
 <h2>Introduction</h2>
@@ -240,7 +240,14 @@ print(neurons[[cell_high]]$fetch_EDF_parameters())
 print(neurons[[cell_low]]$fetch_EDF_parameters())
 ```
 
-The amplitude, $A$, gives the autocorrelation at lag time 1 (minus the bias), while the time constant, $\tau$ (tau), gives the rate of decay in autocorrelation as lag time increases. Notice how the high-autocorrelation cell has a time constant of `r round(neurons[[cell_high]]$fetch_EDF_parameters()["tau"],1)`ms and an amplitude of `r round(neurons[[cell_high]]$fetch_EDF_parameters()["A"],3)`, while the low-autocorrelation cell has a time constant of only `r round(neurons[[cell_low]]$fetch_EDF_parameters()["tau"],1)`ms and an amplitude of `r round(neurons[[cell_low]]$fetch_EDF_parameters()["A"],3)`. 
+```{r cache_vals, echo = FALSE}
+cached_tau_high <- round(neurons[[cell_high]]$fetch_EDF_parameters()["tau"],1)
+cached_A_high <- round(neurons[[cell_high]]$fetch_EDF_parameters()["A"],3)
+cached_tau_low <- round(neurons[[cell_low]]$fetch_EDF_parameters()["tau"],1)
+cached_A_low <- round(neurons[[cell_low]]$fetch_EDF_parameters()["A"],3)
+```
+
+The amplitude, $A$, gives the autocorrelation at lag time 1 (minus the bias), while the time constant, $\tau$ (tau), gives the rate of decay in autocorrelation as lag time increases. Notice how the high-autocorrelation cell has a time constant of `r cached_tau_high`ms and an amplitude of `r cached_A_high`, while the low-autocorrelation cell has a time constant of only `r cached_tau_low`ms and an amplitude of `r cached_A_low`. 
 
 In practice, the individual steps shown above do not need to be run with separate method calls. The neurons package provides a function, [process.autocorr()](../reference/process.autocorr.html), which does all of these steps in one call for a list of neurons. Here is the function run on the current set of neurons, with full print out of results: 
 

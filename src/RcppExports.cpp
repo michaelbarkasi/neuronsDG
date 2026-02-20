@@ -20,9 +20,29 @@ BEGIN_RCPP
     return R_NilValue;
 END_RCPP
 }
-// set_cell_type_params
-void set_cell_type_params(const std::string& type_name, const int& valence, const double& temporal_modulation_bias, const double& temporal_modulation_timeconstant, const double& temporal_modulation_amplitude, const double& transmission_velocity, const double& v_ceiling, const double& I_ceiling, const double& I_spike, const double& coupling_scaling_factor, const double& spike_potential, const double& resting_potential, const double& threshold);
-RcppExport SEXP _neurons_set_cell_type_params(SEXP type_nameSEXP, SEXP valenceSEXP, SEXP temporal_modulation_biasSEXP, SEXP temporal_modulation_timeconstantSEXP, SEXP temporal_modulation_amplitudeSEXP, SEXP transmission_velocitySEXP, SEXP v_ceilingSEXP, SEXP I_ceilingSEXP, SEXP I_spikeSEXP, SEXP coupling_scaling_factorSEXP, SEXP spike_potentialSEXP, SEXP resting_potentialSEXP, SEXP thresholdSEXP) {
+// print_known_celltypes
+void print_known_celltypes();
+RcppExport SEXP _neurons_print_known_celltypes() {
+BEGIN_RCPP
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    print_known_celltypes();
+    return R_NilValue;
+END_RCPP
+}
+// fetch_cell_type_params
+List fetch_cell_type_params(const std::string& type_name);
+RcppExport SEXP _neurons_fetch_cell_type_params(SEXP type_nameSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const std::string& >::type type_name(type_nameSEXP);
+    rcpp_result_gen = Rcpp::wrap(fetch_cell_type_params(type_name));
+    return rcpp_result_gen;
+END_RCPP
+}
+// add_cell_type
+void add_cell_type(const std::string& type_name, const int& valence, const double& temporal_modulation_bias, const double& temporal_modulation_timeconstant, const double& temporal_modulation_amplitude, const double& transmission_velocity, const double& v_bound, const double& dHdv_bound, const double& I_spike, const double& coupling_scaling_factor, const double& spike_potential, const double& resting_potential, const double& threshold);
+RcppExport SEXP _neurons_add_cell_type(SEXP type_nameSEXP, SEXP valenceSEXP, SEXP temporal_modulation_biasSEXP, SEXP temporal_modulation_timeconstantSEXP, SEXP temporal_modulation_amplitudeSEXP, SEXP transmission_velocitySEXP, SEXP v_boundSEXP, SEXP dHdv_boundSEXP, SEXP I_spikeSEXP, SEXP coupling_scaling_factorSEXP, SEXP spike_potentialSEXP, SEXP resting_potentialSEXP, SEXP thresholdSEXP) {
 BEGIN_RCPP
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< const std::string& >::type type_name(type_nameSEXP);
@@ -31,14 +51,36 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const double& >::type temporal_modulation_timeconstant(temporal_modulation_timeconstantSEXP);
     Rcpp::traits::input_parameter< const double& >::type temporal_modulation_amplitude(temporal_modulation_amplitudeSEXP);
     Rcpp::traits::input_parameter< const double& >::type transmission_velocity(transmission_velocitySEXP);
-    Rcpp::traits::input_parameter< const double& >::type v_ceiling(v_ceilingSEXP);
-    Rcpp::traits::input_parameter< const double& >::type I_ceiling(I_ceilingSEXP);
+    Rcpp::traits::input_parameter< const double& >::type v_bound(v_boundSEXP);
+    Rcpp::traits::input_parameter< const double& >::type dHdv_bound(dHdv_boundSEXP);
     Rcpp::traits::input_parameter< const double& >::type I_spike(I_spikeSEXP);
     Rcpp::traits::input_parameter< const double& >::type coupling_scaling_factor(coupling_scaling_factorSEXP);
     Rcpp::traits::input_parameter< const double& >::type spike_potential(spike_potentialSEXP);
     Rcpp::traits::input_parameter< const double& >::type resting_potential(resting_potentialSEXP);
     Rcpp::traits::input_parameter< const double& >::type threshold(thresholdSEXP);
-    set_cell_type_params(type_name, valence, temporal_modulation_bias, temporal_modulation_timeconstant, temporal_modulation_amplitude, transmission_velocity, v_ceiling, I_ceiling, I_spike, coupling_scaling_factor, spike_potential, resting_potential, threshold);
+    add_cell_type(type_name, valence, temporal_modulation_bias, temporal_modulation_timeconstant, temporal_modulation_amplitude, transmission_velocity, v_bound, dHdv_bound, I_spike, coupling_scaling_factor, spike_potential, resting_potential, threshold);
+    return R_NilValue;
+END_RCPP
+}
+// modify_cell_type
+void modify_cell_type(const std::string& type_name, const int& valence, const double& temporal_modulation_bias, const double& temporal_modulation_timeconstant, const double& temporal_modulation_amplitude, const double& transmission_velocity, const double& v_bound, const double& dHdv_bound, const double& I_spike, const double& coupling_scaling_factor, const double& spike_potential, const double& resting_potential, const double& threshold);
+RcppExport SEXP _neurons_modify_cell_type(SEXP type_nameSEXP, SEXP valenceSEXP, SEXP temporal_modulation_biasSEXP, SEXP temporal_modulation_timeconstantSEXP, SEXP temporal_modulation_amplitudeSEXP, SEXP transmission_velocitySEXP, SEXP v_boundSEXP, SEXP dHdv_boundSEXP, SEXP I_spikeSEXP, SEXP coupling_scaling_factorSEXP, SEXP spike_potentialSEXP, SEXP resting_potentialSEXP, SEXP thresholdSEXP) {
+BEGIN_RCPP
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const std::string& >::type type_name(type_nameSEXP);
+    Rcpp::traits::input_parameter< const int& >::type valence(valenceSEXP);
+    Rcpp::traits::input_parameter< const double& >::type temporal_modulation_bias(temporal_modulation_biasSEXP);
+    Rcpp::traits::input_parameter< const double& >::type temporal_modulation_timeconstant(temporal_modulation_timeconstantSEXP);
+    Rcpp::traits::input_parameter< const double& >::type temporal_modulation_amplitude(temporal_modulation_amplitudeSEXP);
+    Rcpp::traits::input_parameter< const double& >::type transmission_velocity(transmission_velocitySEXP);
+    Rcpp::traits::input_parameter< const double& >::type v_bound(v_boundSEXP);
+    Rcpp::traits::input_parameter< const double& >::type dHdv_bound(dHdv_boundSEXP);
+    Rcpp::traits::input_parameter< const double& >::type I_spike(I_spikeSEXP);
+    Rcpp::traits::input_parameter< const double& >::type coupling_scaling_factor(coupling_scaling_factorSEXP);
+    Rcpp::traits::input_parameter< const double& >::type spike_potential(spike_potentialSEXP);
+    Rcpp::traits::input_parameter< const double& >::type resting_potential(resting_potentialSEXP);
+    Rcpp::traits::input_parameter< const double& >::type threshold(thresholdSEXP);
+    modify_cell_type(type_name, valence, temporal_modulation_bias, temporal_modulation_timeconstant, temporal_modulation_amplitude, transmission_velocity, v_bound, dHdv_bound, I_spike, coupling_scaling_factor, spike_potential, resting_potential, threshold);
     return R_NilValue;
 END_RCPP
 }
@@ -50,7 +92,10 @@ RcppExport SEXP _rcpp_module_boot_Projection();
 
 static const R_CallMethodDef CallEntries[] = {
     {"_neurons_init_known_celltypes", (DL_FUNC) &_neurons_init_known_celltypes, 0},
-    {"_neurons_set_cell_type_params", (DL_FUNC) &_neurons_set_cell_type_params, 13},
+    {"_neurons_print_known_celltypes", (DL_FUNC) &_neurons_print_known_celltypes, 0},
+    {"_neurons_fetch_cell_type_params", (DL_FUNC) &_neurons_fetch_cell_type_params, 1},
+    {"_neurons_add_cell_type", (DL_FUNC) &_neurons_add_cell_type, 13},
+    {"_neurons_modify_cell_type", (DL_FUNC) &_neurons_modify_cell_type, 13},
     {"_rcpp_module_boot_neuron", (DL_FUNC) &_rcpp_module_boot_neuron, 0},
     {"_rcpp_module_boot_motif", (DL_FUNC) &_rcpp_module_boot_motif, 0},
     {"_rcpp_module_boot_network", (DL_FUNC) &_rcpp_module_boot_network, 0},

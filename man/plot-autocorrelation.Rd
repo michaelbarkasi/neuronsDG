@@ -4,7 +4,13 @@
 \alias{plot.autocorrelation}
 \title{Function to plot autocorrelation of neuron}
 \usage{
-plot.autocorrelation(nrn, plot_title = "Est. autocorr", bias_term = 0, plot_time_cutoff = Inf, return_plot = FALSE)
+plot.autocorrelation(
+ nrn, 
+ plot_title = "Est. autocorr", 
+ bias_term = 0, 
+ plot_time_cutoff = Inf, 
+ return_plot = FALSE
+)
 }
 \arguments{
 \item{nrn}{Neuron object for which to plot autocorrelation.}

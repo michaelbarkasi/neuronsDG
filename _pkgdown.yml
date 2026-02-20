@@ -62,7 +62,17 @@ reference:
   contents:
   - set.network.structure
   - apply.circuit.motif
+  - run.SGT
   - plot.network
+  - plot.network.traces
+  
+- title: Network cell type functions 
+  navbar: Network cell type functions 
+  contents:
+  - print.known.celltypes
+  - fetch.cell.type.params
+  - add.cell.type
+  - modify.cell.type
   
 - title: Analysis functions
   navbar: Analysis functions

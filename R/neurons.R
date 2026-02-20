@@ -19,22 +19,7 @@ NULL
     Rcpp::loadModule("motif", TRUE)
     Rcpp::loadModule("network", TRUE)
     Rcpp::loadModule("Projection", TRUE)
-  }
-
-core_num <- parallel::detectCores() - 2 # Set to 1 to disable parallel processing (e.g., on windows)
-
-runparallel <- function(
-    input, 
-    funct, 
-    ...
-  ) {
-    results <- parallel::mclapply( 
-      X = input, FUN = funct, ...,
-      mc.preschedule = TRUE, mc.set.seed = TRUE,
-      mc.silent = FALSE, mc.cores = core_num,
-      mc.cleanup = TRUE, mc.allow.recursive = TRUE 
-      )
-    return(results)
+    init_known_celltypes()
   }
 
 # Initialization for C++ object classes ################################################################################
@@ -171,6 +156,141 @@ new.network <- function(
     return(network)
   }
 
+# Functions for network cell types #####################################################################################
+
+#' Print known cell types 
+#' 
+#' This function prints names and all parameters for all cell types recognized in the current session. It's just a wrapper for the Rcpp-exported \code{print_known_celltypes} function. 
+#' 
+#' @rdname print-known-celltypes
+#' @usage print.known.celltypes()
+#' @return Nothing.
+#' @export
+print.known.celltypes <- function() print_known_celltypes()
+
+#' Fetch cell type parameters 
+#' 
+#' This function returns the parameters for a named cell type in a list. It's just a wrapper for the Rcpp-exported \code{fetch_cell_type_params} function.
+#' 
+#' @return List of parameters for the named cell type. 
+#' @export
+fetch.cell.type.params <- function(type_name) fetch_cell_type_params(type_name)
+
+#' Add new cell type
+#' 
+#' This function adds a user-defined cell type to the current session. It's just a wrapper for the Rcpp-exported \code{add_cell_type} function. Technically, \code{cell_type} is a \code{struc} defined in the Rcpp backend of the neurons package. They are essentially labeled lists with the following entries: \code{type_name}, \code{valence}, \code{temporal_modulation_bias}, \code{temporal_modulation_timeconstant}, \code{temporal_modulation_amplitude}, \code{transmission_velocity}, \code{v_bound}, \code{dHdv_bound}, \code{I_spike}, \code{coupling_scaling_factor}, \code{spike_potential}, \code{resting_potential}, and \code{threshold}. Each session stores cell types in the Rcpp backend in an \code{unordered_map} with \code{string} labels. All parameters come with biologically realistic (and mathematically workable) default values, except for \code{type_name} and \code{valence}. 
+#' 
+#' @param type_name Character string giving name of the cell type, e.g. "excitatory", "inhibitory", "PV", "SST", etc.
+#' @param valence Valence of each neuron type, +1 for excitatory, -1 for inhibitory
+#' @param temporal_modulation_bias Temporal modulation time (in ms) bias for each neuron type. Default value is 1e-3.
+#' @param temporal_modulation_timeconstant Temporal modulation time (in ms) step for each neuron type. Default value is 1e0.
+#' @param temporal_modulation_amplitude Temporal modulation time (in ms) cutoff for each neuron type. Default value is 5e-3.
+#' @param transmission_velocity Transmission velocity (in microns/ms) for each neuron type. Default value is 30e3.
+#' @param v_bound Potential bound, such that -v_bound <= v_traces <= v_bound, in unit_potential (mV), for each neuron in the network, based on its type. Default value is 85.0.
+#' @param dHdv_bound Bound on derivative of metabolic energy wrt potential, such that dHdv_bound > abs(dHdv), in mA, for each neuron in the network, based on its type. Default value is 1.05e-6.
+#' @param I_spike Spike current, in mA. Default value is 1e-6 (i.e., 1 nA).
+#' @param coupling_scaling_factor Controls how energy used in synaptic transmission compares to that used in spiking. Default value is 1e-7, meaning that synaptic transmission uses 0.00001 percent of the energy used in spiking.
+#' @param spike_potential Magnitude of each spike, in mV. Default value is 35.0.
+#' @param resting_potential Resting potential, in mV. Default value is -70.0.
+#' @param threshold Spike threshold, in mV. Default value is -55.0.
+#' @return Nothing.
+#' @export
+add.cell.type <- function(
+    type_name,
+    valence,
+    temporal_modulation_bias = 1e-3,
+    temporal_modulation_timeconstant = 1e0,
+    temporal_modulation_amplitude = 5e-3,
+    transmission_velocity = 30e3,
+    v_bound = 85.0,
+    dHdv_bound = 1.05e-6,
+    I_spike = 1e-6,
+    coupling_scaling_factor = 1e-7,
+    spike_potential = 35.0,
+    resting_potential = -70.0,
+    threshold = -55.0
+  ) {
+    add_cell_type(
+      type_name, 
+      valence, 
+      temporal_modulation_bias, 
+      temporal_modulation_timeconstant, 
+      temporal_modulation_amplitude, 
+      transmission_velocity, 
+      v_bound, 
+      dHdv_bound, 
+      I_spike, 
+      coupling_scaling_factor, 
+      spike_potential, 
+      resting_potential, 
+      threshold
+    )
+  }
+
+#' Modify existing cell type 
+#' 
+#' This function modifies parameters of an existing cell type in the current session. Parameters can be updated selectively. If the parameter is not specified at all or is specified as \code{NULL}, the existing parameter will be left in place. 
+#' 
+#' @param type_name Character string giving name of the cell type, e.g. "excitatory", "inhibitory", "PV", "SST", etc.
+#' @param valence Valence of each neuron type, +1 for excitatory, -1 for inhibitory
+#' @param temporal_modulation_bias Temporal modulation time (in ms) bias for each neuron type
+#' @param temporal_modulation_timeconstant Temporal modulation time (in ms) step for each neuron type
+#' @param temporal_modulation_amplitude Temporal modulation time (in ms) cutoff for each neuron type
+#' @param transmission_velocity Transmission velocity (in microns/ms) for each neuron type
+#' @param v_bound Potential bound, such that -v_bound <= v_traces <= v_bound, in mV, for each neuron in the network, based on its type
+#' @param dHdv_bound Bound on derivative of metabolic energy wrt potential, such that dHdv_bound > abs(dHdv), in mA, for each neuron in the network, based on its type
+#' @param I_spike Spike current, in mA
+#' @param coupling_scaling_factor Controls how energy used in synaptic transmission compares to that used in spiking
+#' @param spike_potential Magnitude of each spike, in mV
+#' @param resting_potential Resting potential, in mV
+#' @param threshold Spike threshold, in mV
+#' @return Nothing.
+#' @export
+modify.cell.type <- function(
+    type_name,
+    valence = NULL,
+    temporal_modulation_bias = NULL,
+    temporal_modulation_timeconstant = NULL,
+    temporal_modulation_amplitude = NULL,
+    transmission_velocity = NULL,
+    v_bound = NULL,
+    dHdv_bound = NULL,
+    I_spike = NULL,
+    coupling_scaling_factor = NULL,
+    spike_potential = NULL,
+    resting_potential = NULL,
+    threshold = NULL
+  ) {
+    existing_params <- fetch.cell.type.params(type_name)
+    if (is.null(valence)) valence <- existing_params$valence
+    if (is.null(temporal_modulation_bias)) temporal_modulation_bias <- existing_params$temporal_modulation_bias
+    if (is.null(temporal_modulation_timeconstant)) temporal_modulation_timeconstant <- existing_params$temporal_modulation_timeconstant
+    if (is.null(temporal_modulation_amplitude)) temporal_modulation_amplitude <- existing_params$temporal_modulation_amplitude
+    if (is.null(transmission_velocity)) transmission_velocity <- existing_params$transmission_velocity
+    if (is.null(v_bound)) v_bound <- existing_params$v_bound
+    if (is.null(dHdv_bound)) dHdv_bound <- existing_params$dHdv_bound
+    if (is.null(I_spike)) I_spike <- existing_params$I_spike
+    if (is.null(coupling_scaling_factor)) coupling_scaling_factor <- existing_params$coupling_scaling_factor
+    if (is.null(spike_potential)) spike_potential <- existing_params$spike_potential
+    if (is.null(resting_potential)) resting_potential <- existing_params$resting_potential
+    if (is.null(threshold)) threshold <- existing_params$threshold
+    modify_cell_type(
+      type_name, 
+      valence, 
+      temporal_modulation_bias, 
+      temporal_modulation_timeconstant, 
+      temporal_modulation_amplitude, 
+      transmission_velocity, 
+      v_bound, 
+      dHdv_bound, 
+      I_spike, 
+      coupling_scaling_factor, 
+      spike_potential, 
+      resting_potential, 
+      threshold
+    )
+  }
+
 # Functions for network ################################################################################################
 
 #' Load projection into motif
@@ -268,6 +388,7 @@ set.network.structure <- function(
     pruning_threshold_factor = 0.1
   ) {
     # Run checks 
+    n_neuron_types <- length(neuron_types)
     if (length(layer_names) != n_layers) {
       if (n_layers > length(layer_names) && length(layer_names) == 1) {
         layer_names <- paste0(layer_names, "_", seq_len(n_layers))
@@ -282,31 +403,31 @@ set.network.structure <- function(
     } else {
       if (length(neurons_per_node) == 1) {
         if (n_layers > 1) {
-          neurons_per_node <- matrix(neurons_per_node, nrow = n_layers, ncol = length(neuron_types))
+          neurons_per_node <- matrix(neurons_per_node, nrow = n_layers, ncol = n_neuron_types)
           npn_dim <- dim(neurons_per_node)
         } else {
-          neurons_per_node <- matrix(rep(neurons_per_node, length(neuron_types)), nrow = 1, ncol = length(neuron_types))
+          neurons_per_node <- matrix(rep(neurons_per_node, n_neuron_types), nrow = 1, ncol = n_neuron_types)
           npn_dim <- c(1, length(neurons_per_node))
         }
-      } else if (length(neurons_per_node) == length(neuron_types)) {
-        neurons_per_node <- matrix(rep(neurons_per_node, n_layers), nrow = n_layers, ncol = length(neuron_types), byrow = TRUE)
+      } else if (length(neurons_per_node) == n_neuron_types) {
+        neurons_per_node <- matrix(rep(neurons_per_node, n_layers), nrow = n_layers, ncol = n_neuron_types, byrow = TRUE)
         npn_dim <- dim(neurons_per_node)
       } else {
         stop("Dimensions of neurons_per_node must match n_layers and length of neuron_types, or be inferable from them.")
       }
     }
-    if (any(npn_dim != c(n_layers, length(neuron_types)))) {
+    if (any(npn_dim != c(n_layers, n_neuron_types))) {
       stop("Dimensions of neurons_per_node must match n_layers and length of neuron_types.")
     }
     if (!("list" %in% class(recurrence_factors))) {
       if ("matrix" %in% class(recurrence_factors) || "numeric" %in% class(recurrence_factors)) {
         recurrence_factors_matrix <- as.matrix(recurrence_factors)
-        if (length(recurrence_factors_matrix) != length(neuron_types)^2) {
+        if (length(recurrence_factors_matrix) != n_neuron_types^2) {
           if (length(recurrence_factors_matrix) == 1) {
             recurrence_factors_matrix <- matrix(
               recurrence_factors_matrix, 
-              nrow = length(neuron_types), 
-              ncol = length(neuron_types)
+              nrow = n_neuron_types, 
+              ncol = n_neuron_types
             )
           } else {
             stop("Dimensions of recurrence_factors matrix must match length of neuron_types, or be a single scalar.")
@@ -325,7 +446,7 @@ set.network.structure <- function(
         if (length(rf_dim) != 2) {
           stop(paste0("recurrence_factors[[", l, "]] must be a matrix."))
         }
-        if (any(rf_dim != c(length(neuron_types), length(neuron_types)))) {
+        if (any(rf_dim != c(n_neuron_types, n_neuron_types))) {
           stop(paste0("Dimensions of recurrence_factors[[", l, "]] must match length of neuron_types."))
         }
       }
@@ -371,7 +492,16 @@ apply.circuit.motif <- function(
 #' 
 #' @name plot.network
 #' @rdname plot-network
-#' @usage plot.network(network, title = NULL, plot_motif = "local connections", edge_color = "pre_type", cell_color = "layer", cell_size_factor = 5.0, arrow_size_factor = 0.5, return_plot = FALSE)
+#' @usage plot.network(
+#'  network, 
+#'  title = NULL, 
+#'  plot_motif = "local connections", 
+#'  edge_color = "pre_type", 
+#'  cell_color = "layer", 
+#'  cell_size_factor = 5.0, 
+#'  arrow_size_factor = 0.5, 
+#'  return_plot = FALSE
+#' )
 #' @param network Network object to plot.
 #' @param title Title for the plot (default: "Cortical Patch" or network name (if provided), plus plot motif name(s)).
 #' @param plot_motif Character string specifying which motif to plot; options include "local" for local connections within each node or the name of a long-range projection motif (default: "local connections").
@@ -405,6 +535,9 @@ plot.network <- function(
       }
       title <- paste0(title, ", ", paste0(plot_motif, collapse = ", "))
     }
+    
+    # Get unit information
+    network_units <- ntw$units
     
     # Get cell coordinates and types 
     neuron_coordinates <- ntw$coordinates_spatial
@@ -468,8 +601,8 @@ plot.network <- function(
         unique(as.character(cells[,cell_color])))
       )
     known_label_colors <- list(
-      "cell" = "gray95",
-      "L1" = "gray95",
+      "cell" = "gray50",
+      "L1" = "gray50",
       "L2" = "lightskyblue3",
       "L2/3" = "lightskyblue2",
       "L23" = "lightskyblue2",
@@ -516,21 +649,25 @@ plot.network <- function(
         alpha = edge_alpha
       ) +
       ggplot2::theme_minimal() +
-      ggplot2::labs(title = title, x = "columnar coordinate", y = "laminar coordinate") + 
+      ggplot2::labs(
+        title = title, 
+        x = paste0("columnar coordinate (", network_units$distance, ")"), 
+        y = paste0("laminar coordinate (", network_units$distance, ")")
+        ) + 
       ggplot2::scale_colour_manual(
         name = "Types",
         values = label_colors
       ) +
       ggplot2::guides(color = ggplot2::guide_legend(override.aes = list(alpha = 1))) +
       ggplot2::theme(
-        panel.background = ggplot2::element_rect(fill = "gray10", colour = NA),
-        plot.background  = ggplot2::element_rect(fill = "gray10", colour = NA),
-        panel.grid = ggplot2::element_line(color = "gray80", linewidth = 0.25),
-        plot.title = ggplot2::element_text(color = "white", hjust = 0.5, size = title_size),
-        axis.title = ggplot2::element_text(color = "white", size = axis_size),
-        axis.text = ggplot2::element_text(color = "white", size = axis_size),
-        legend.title = ggplot2::element_text(color = "white", size = legend_size),
-        legend.text = ggplot2::element_text(color = "white", size = legend_size) #,
+        panel.background = ggplot2::element_rect(fill = "white", colour = NA),
+        plot.background  = ggplot2::element_rect(fill = "white", colour = NA),
+        #panel.grid = ggplot2::element_line(color = "gray80", linewidth = 0.25),
+        plot.title = ggplot2::element_text(hjust = 0.5, size = title_size),
+        axis.title = ggplot2::element_text(size = axis_size),
+        axis.text = ggplot2::element_text(size = axis_size),
+        legend.title = ggplot2::element_text(size = legend_size),
+        legend.text = ggplot2::element_text(size = legend_size) #,
         #legend.position = "bottom"
       )
     
@@ -543,31 +680,96 @@ plot.network <- function(
     
   }
 
-#' Run Growth-Transform network simulation
+#' Plot spike traces for network from SGT simulation 
 #' 
-#' This function runs a Growth-Transform network simulation on a given network object for a specified matrix of input currents over time and specified network electrical constants.
+#' This function plots spike traces for a network object from a Spatial Growth-Transform (SGT) simulation. 
+#' 
+#' @name plot.network.traces
+#' @rdname plot-network-traces
+#' @usage plot.network.traces(network, return_plot)
+#' @param network Network object with SGT simulation traces to plot.
+#' @param return_plot Logical indicating whether to return the ggplot object (TRUE) or print it (FALSE) (default: FALSE).
+#' @return A ggplot object showing spike traces for all neurons in the network over time.
+#' @export
+plot.network.traces <- function(
+    network,
+    return_plot = FALSE
+  ) {
+    
+    # Get the traces to print
+    sim_traces <- network$fetch_sim_traces_R()
+    
+    # Get network components
+    ntw <- network$fetch_network_components()
+    
+    # Initialize R data frame for ggplot
+    sim_traces_long <- data.frame()
+    time_seq <- seq(1, by = ntw$sim_dt, length.out = ncol(sim_traces))
+    sim_steps <- c(1:ncol(sim_traces))
+    for (i in 1:nrow(sim_traces)) {
+      neuron_trace <- data.frame(
+        time = time_seq,
+        potential = sim_traces[i, sim_steps],
+        id = i,
+        type = ntw$neuron_type_name[i]
+      )
+      sim_traces_long <- rbind(sim_traces_long, neuron_trace)
+    }
+    sim_traces_long$id <- as.character(sim_traces_long$id)
+    
+    # Make plot
+    title_size <- 14 
+    axis_size <- 12 
+    legend_size <- 10
+    plt <- ggplot2::ggplot(sim_traces_long, ggplot2::aes(x = time, y = potential, group = id, color=id)) +
+      ggplot2::geom_line() +
+      ggplot2::facet_wrap(~ type, ncol = 1) +
+      ggplot2::theme_minimal() +
+      ggplot2::theme(
+        panel.background = ggplot2::element_rect(fill = "white", colour = NA),
+        plot.background  = ggplot2::element_rect(fill = "white", colour = NA),
+        plot.title = ggplot2::element_text(hjust = 0.5, size = title_size),
+        axis.title = ggplot2::element_text(size = axis_size),
+        axis.text = ggplot2::element_text(size = axis_size),
+        legend.title = ggplot2::element_text(size = legend_size),
+        legend.text = ggplot2::element_text(size = legend_size),
+        legend.position = "none") +
+      ggplot2::labs(
+        title = "SGT Simulation Traces",
+        x = paste0("Time (", ntw$units$time, ")"),
+        y = paste0("Membrane Potential (", ntw$units$potential, ")")
+      )
+    
+    if (return_plot) {
+      return(plt)
+    } else {
+      print(plt)
+      return(invisible(NULL))
+    }
+    
+  }
+
+#' Run Spatial Growth-Transform network simulation
+#' 
+#' This function uses a Spatial Growth-Transform (SGT) model to run a spike simulation on a given network object for a specified matrix of input currents over time. A matrix containing the spike traces of all neurons over time after the simulation (neurons as rows, sample times as columns) is saved in the network object, along with a vector of spike counts for each neuron in the network. Both are returned on the R side in a list.
 #' 
 #' @param network Network object on which to run the simulation.
 #' @param stimulus_current_matrix Matrix of input currents, with rows representing neurons and columns representing sample times.
-#' @param dt Time step length in the unit_time of the network (default: 1e-3, or 1-micron time steps).
-#' @param v_ceiling Potential ceiling in the unit_potential of the network (default: 1.0).
-#' @param I_ceiling Current ceiling in the unit_current of the network (default: 1.0).
-#' @param I_spike Spike current in the unit_current of the network (default: 5.0).
-#' @param spike_potential Magnitude of each spike (default: 1.0).
-#' @param resting_potential Resting potential in the unit_potential of the network (default: -70.0).
-#' @param threshold Spike threshold in the unit_potential of the network (default: 0.0).
-#' @return A matrix containing the spike_traces of all neurons over time after the simulation (neurons as rows, sample times as columns).
+#' @param dt Time step length in the unit_time of the network (default: 1e-3, or 1 micosecond time steps).
+#' @return List containing the following elements: \item{sim_traces}{Matrix of simulated spike traces for all neurons over time (neurons as rows, sample times as columns).} \item{spike_counts}{Vector of spike counts for each neuron in the network.} 
 #' @export
-run.GTsim <- function(
+run.SGT <- function(
     network,
     stimulus_current_matrix,    # matrix of input currents (rows: neurons, columns: time bins)
     dt = 1e-3                   # time step length, in ms
   ) {
-    spike_traces <- network$GTsim(
+    network$SGT(
       stimulus_current_matrix,
       dt
     )
-    return(spike_traces)
+    sim_traces <- network$fetch_sim_traces_R()
+    spike_counts <- network$fetch_spike_counts_R()
+    return(list(sim_traces = sim_traces, spike_counts = spike_counts))
   }
 
 # Functions for neuron analysis ########################################################################################
@@ -709,7 +911,13 @@ make.plot.title <- function(
 #' 
 #' @name plot.autocorrelation 
 #' @rdname plot-autocorrelation
-#' @usage plot.autocorrelation(nrn, plot_title = "Est. autocorr", bias_term = 0, plot_time_cutoff = Inf, return_plot = FALSE)
+#' @usage plot.autocorrelation(
+#'  nrn, 
+#'  plot_title = "Est. autocorr", 
+#'  bias_term = 0, 
+#'  plot_time_cutoff = Inf, 
+#'  return_plot = FALSE
+#' )
 #' @param nrn Neuron object for which to plot autocorrelation.
 #' @param plot_title Title for the plot (default: "Est. autocorr").
 #' @param bias_term Bias term to plot as a horizontal line (default: NULL).
@@ -1048,11 +1256,21 @@ estimate.autocorr.params <- function(
     # Initialize neuron id df
     neuron_id <- data.frame()
     
-    est_autocorr_params <- function(i) {
+    # Loop through neurons in the list
+    for (i in seq_along(neuron_list)) {
+      
       # Get neuron 
       nrn <- neuron_list[[i]]
-      # Run simulations to estimate value for this neuron
-      dg_estimates_nrn <- nrn$estimate_autocorr_params(
+      
+      # Get neuron id 
+      nrn_id <- as.data.frame(lapply(nrn$fetch_id_data(), rep, times = 1))
+      neuron_id <- rbind(neuron_id, nrn_id)
+      
+      # Run simulations to estimate value for this neuron and load into matrix
+      row_idx_initial <- (i - 1) * n_sims_per_neurons + 1
+      row_idx_final <- i * n_sims_per_neurons
+      row_idx <- row_idx_initial:row_idx_final
+      dg_estimates[row_idx,] <- nrn$estimate_autocorr_params(
         n_trials_per_sim,
         n_sims_per_neurons,
         max_lag,
@@ -1064,26 +1282,6 @@ estimate.autocorr.params <- function(
         use_raw,
         FALSE
       )
-      return(dg_estimates_nrn)
-    }
-    
-    dg_estimates_nrn_list <- runparallel(seq_along(neuron_list), est_autocorr_params)
-    
-    # Loop through neurons in the list
-    for (i in seq_along(neuron_list)) {
-      
-      # Get neuron 
-      nrn <- neuron_list[[i]]
-      
-      # Get neuron id 
-      nrn_id <- as.data.frame(lapply(nrn$fetch_id_data(), rep, times = 1))
-      neuron_id <- rbind(neuron_id, nrn_id)
-      
-      # Load estimates into matrix
-      row_idx_initial <- (i - 1) * n_sims_per_neurons + 1
-      row_idx_final <- i * n_sims_per_neurons
-      row_idx <- row_idx_initial:row_idx_final
-      dg_estimates[row_idx,] <- dg_estimates_nrn_list[[i]]
       
     }
     

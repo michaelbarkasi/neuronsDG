@@ -1,0 +1,88 @@
+# Function to process autocorrelation of neuron list
+
+First estimates autocorrelation of each neuron in the list, then fits an
+exponential decay function to the estimated autocorrelation, and finally
+collects and returns summary statistics for each neuron.
+
+## Usage
+
+``` r
+process.autocorr(
+  neuron_list,
+  bin_count_action = "sum",
+  max_lag = 0,
+  A0 = 0.001,
+  tau0 = 1,
+  ctol = 1e-08,
+  max_evals = 500,
+  check_autofiring_ratio = FALSE,
+  print_plots = FALSE,
+  plot_time_cutoff = Inf,
+  use_raw = TRUE
+)
+```
+
+## Arguments
+
+- neuron_list:
+
+  An R list of neuron objects.
+
+- bin_count_action:
+
+  Method for counting spikes in each bin when computing autocorrelation;
+  one of "boolean", "mean", or "sum" (default: "sum").
+
+- max_lag:
+
+  Maximum lag (in units of the trial data) to compute autocorrelation;
+  if 0, uses the number of time bins in the neuron's trial data
+  (default: 0).
+
+- A0:
+
+  Initial guess for amplitude parameter of exponential decay function
+  (default: 0.001).
+
+- tau0:
+
+  Initial guess for time constant parameter of exponential decay
+  function (default: 1.0).
+
+- ctol:
+
+  Convergence tolerance for fitting exponential decay function (default:
+  1e-8).
+
+- max_evals:
+
+  Maximum number of evaluations for fitting exponential decay function
+  (default: 500).
+
+- check_autofiring_ratio:
+
+  Logical indicating whether to check the assumption that
+  autocorrelation values are below the mean firing rate with
+  `test.sigma.assumption` function (default: FALSE).
+
+- print_plots:
+
+  Logical indicating whether to print autocorrelation plots for each
+  neuron (default: FALSE).
+
+- plot_time_cutoff:
+
+  Maximum lag (in bins) to display on the x-axis of plots (default:
+  Inf).
+
+- use_raw:
+
+  Logical indicating whether to use raw autocorrelation (true) or
+  standard centered and normalized correlation (false) (default: TRUE).
+
+## Value
+
+A data frame with one row per neuron and columns for lambda (mean spike
+rate per ms and per bin), amplitude (A), time constant (tau), bias term,
+first autocorrelation value, maximum autocorrelation value, mean
+autocorrelation value, and minimum autocorrelation value.

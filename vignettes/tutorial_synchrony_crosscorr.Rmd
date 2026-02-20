@@ -7,7 +7,7 @@ date: "`r Sys.Date()`"
 ```{r Rmdsetup, echo=FALSE}
 # Set max width of markdown code outputs
 options(width = 10000)
-knitr::opts_chunk$set(class.output = "scroll-output")
+knitr::opts_chunk$set(class.output = "scroll-output", cache = TRUE)
 ```
 
 <h2>Introduction</h2>

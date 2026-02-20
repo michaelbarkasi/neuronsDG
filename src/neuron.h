@@ -14,6 +14,10 @@
 using namespace Rcpp;
 using namespace Eigen;
 
+#ifdef _OPENMP
+#include <omp.h>
+#endif
+
 /*
  * ***********************************************************************************
  * Helper functions
@@ -378,10 +382,10 @@ struct cell_type {
     int valence;                         // valence of each neuron type, +1 for excitatory, -1 for inhibitory
     double temporal_modulation_bias;     // temporal modulation time (in unit_time) bias for each neuron type
     double temporal_modulation_timeconstant;     // temporal modulation time (in unit_time) step for each neuron type
-    double temporal_modulation_amplitude;   // temporal modulation time (in unit_time) cutoff for each neuron type
+    double temporal_modulation_amplitude;        // temporal modulation time (in unit_time) cutoff for each neuron type
     double transmission_velocity;        // transmission velocity (in unit_distance/unit_time) for each neuron type
-    double v_ceiling;                    // potential ceiling, in unit_potential
-    double I_ceiling;                    // current ceiling, in unit_current
+    double v_bound;                      // potential bound, in unit_potential
+    double dHdv_bound;                   // bound the derivative of metabolic energy wrt potential, in unit_current
     double I_spike;                      // spike current, in unit_current
     double coupling_scaling_factor;      // Controls how energy used in synaptic transmission compares to that used in spiking
     double spike_potential;              // Magnitude of each spike, in unit_potential
@@ -515,6 +519,12 @@ class network {
     MatrixXd node_coordinates_spatial;            // Mx2 matrix giving the (x,y) spatial coordinates of each node in the network
     MatrixXd coordinates_spatial;                 // Nx2 matrix giving the (x,y) spatial coordinates of each neuron in the network
     MatrixXi coordinates_node;                    // Nx2 matrix giving the (column, layer) node coordinates of each neuron in the network
+    VectorXd v_bound;                             // Vector giving potential bound, such that -v_bound <= v_traces <= v_bound, in unit_potential, for each neuron in the network, based on its type
+    VectorXd dHdv_bound;                          // Vector giving bound on derivative of metabolic energy wrt potential, such that dHdv_bound > abs(dHdv), in unit_current, for each neuron in the network, based on its type
+    VectorXd I_spike;                             // Vector giving spike current, in unit_current, for each neuron in the network, based on its type
+    VectorXd spike_potential;                     // Vector giving magnitude of each spike, in unit_potential, for each neuron in the network, based on its type
+    VectorXd resting_potential;                   // Vector giving resting potential, in unit_potential, for each neuron in the network, based on its type
+    VectorXd threshold;                           // Vector giving spike threshold, in unit_potential, for each neuron in the network, based on its type
     MatrixXd neuron_temporal_modulation;          // Nx3 matrix giving the temporal modulation time (in unit_time) bias, step, and cutoff for each neuron in the network, based on its type
     VectorXd neuron_transmission_velocity;        // Vector giving the transmission delay (in unit_time) for each neuron in the network, based on its type
     CharacterVector neuron_type_name;             // Vector giving the type of each neuron in the network, as a string
@@ -522,6 +532,11 @@ class network {
     std::vector<int> node_range_ends;             // Vector giving the ending neuron index for each node in the network
     std::vector<MatrixXi> edge_types;             // Vector of integer matrices giving all transconductance matrix coordinates for each edge type 
     CharacterVector edge_type_names = {"local connections"};  // Names of elements in edge_types
+    
+    // Data fields 
+    double sim_dt;                                // Time step for simulation, in unit_time
+    MatrixXd sim_traces;                          // NxT matrix of doubles, each column giving the simulated membrane potential of a neuron, each row giving a time-step in the simulation
+    VectorXd spike_counts;                        // Vector of length N, giving the number of spikes for each neuron in the network during a simulation
     
     // Functions *********************************
     
@@ -570,9 +585,11 @@ class network {
     
     // Member functions for fetching data 
     List fetch_network_components() const;
+    NumericMatrix fetch_sim_traces_R() const;
+    NumericVector fetch_spike_counts_R() const;
     
     // Member functions for analysis and simulation 
-    NumericMatrix GTsim(
+    void SGT(
       const NumericMatrix& stimulus_current,     // matrix of stimulus currents, in unit_current, n_neurons x n_steps
       const double& dt                           // time step length, in unit_time
     );
