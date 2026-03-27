@@ -14,10 +14,6 @@
 using namespace Rcpp;
 using namespace Eigen;
 
-#ifdef _OPENMP
-#include <omp.h>
-#endif
-
 /*
  * ***********************************************************************************
  * Helper functions
@@ -504,10 +500,12 @@ class network {
     CharacterVector layer_names;                  // Names of layers in the network
     int n_layers = 1;                             // number of layers in the network
     int n_columns = 1;                            // number of columns in the network
+    int n_patches = 1;                            // number of patches (rows of columns, i.e., n_layers x n_columns sheets) in the network
     double layer_height = 1.0;                    // sd of the normal distribution for local y coordinates of the neurons
-    double column_width = 1.0;                    // sd of the normal distribution for local x coordinates of the neurons
+    double column_diameter = 1.0;                 // sd of the normal distribution for local x coordinates of the neurons
     double layer_separation_factor = 1.25;        // factor to multiply layer height by to get the distance between layers
-    double column_separation_factor = 1.5;        // factor to multiply column width by to get the distance between columns
+    double column_separation_factor = 1.5;        // factor to multiply column diameter by to get the distance between columns
+    double patch_separation_factor = 1.5;         // factor to multiply column diameter by to get the distance between patches (rows of columns)
     MatrixXi neurons_per_node;                    // mean number of neurons in each layer (rows) by type (columns)
     std::vector<MatrixXd> recurrence_factors;     // Vector of matrices of sd of the normal distribution for local transconductances between neurons of each type, one matrix per layer
     double pruning_threshold_factor = 0.1;        // transconductances below this fraction of the recurrence factor set to zero
@@ -516,9 +514,9 @@ class network {
     int n_neurons;                                // Total number of neurons in the network
     int n_neuron_types;                           // Number of different neuron types in the network
     std::vector<MatrixXd> transconductances;      // Vector of square matrices, each giving the transconductance between each neuron in the network, rows are post-synaptic, columns are pre-synaptic
-    MatrixXd node_coordinates_spatial;            // Mx2 matrix giving the (x,y) spatial coordinates of each node in the network
-    MatrixXd coordinates_spatial;                 // Nx2 matrix giving the (x,y) spatial coordinates of each neuron in the network
-    MatrixXi coordinates_node;                    // Nx2 matrix giving the (column, layer) node coordinates of each neuron in the network
+    MatrixXd node_coordinates_spatial;            // Mx3 matrix giving the (x,y,z) spatial coordinates of each node in the network
+    MatrixXd coordinates_spatial;                 // Nx3 matrix giving the (x,y,z) spatial coordinates of each neuron in the network
+    MatrixXi coordinates_node;                    // Nx3 matrix giving the (column, layer, patch) node coordinates of each neuron in the network
     VectorXd v_bound;                             // Vector giving potential bound, such that -v_bound <= v_traces <= v_bound, in unit_potential, for each neuron in the network, based on its type
     VectorXd dHdv_bound;                          // Vector giving bound on derivative of metabolic energy wrt potential, such that dHdv_bound > abs(dHdv), in unit_current, for each neuron in the network, based on its type
     VectorXd I_spike;                             // Vector giving spike current, in unit_current, for each neuron in the network, based on its type
@@ -570,10 +568,12 @@ class network {
       CharacterVector lyr_names,
       int n_lyr,
       int n_cls,
+      int n_pch,
       double lyr_height,
-      double cls_width,
+      double cls_diameter,
       double lyr_separation_factor,
       double cls_separation_factor,
+      double pch_separation_factor,
       IntegerMatrix nrn_per_node,
       List recur_factors,
       double pruning_thresh_factor

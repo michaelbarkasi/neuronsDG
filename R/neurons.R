@@ -364,10 +364,12 @@ load.projection.into.motif <- function(
 #' @param layer_names Character vector giving names of layers in the network, e.g. c("L2/3", "L4", "L5", "L6").
 #' @param n_layers Integer giving number of layers in the network.
 #' @param n_columns Integer giving number of columns in the network.
+#' @param patch_depth Integer giving the number of "patches" (n_layers x n_columns sheets) in the network.
 #' @param layer_height Numeric giving height of each layer (in units specified at network creation, default unit is microns, default value is 250.0).
-#' @param column_width Numeric giving width of each column (in units specified at network creation, default unit is microns, default value is 130.0).
+#' @param column_diameter Numeric giving diameter of each column (in units specified at network creation, default unit is microns, default value is 130.0).
 #' @param layer_separation_factor Numeric giving mean distance between layers as a fraction of layer height (default: 3.0).
-#' @param column_separation_factor Numeric giving mean distance between columns as a fraction of column width (default: 3.5).
+#' @param column_separation_factor Numeric giving mean distance between columns as a fraction of column diameter (default: 3.5).
+#' @param patch_separation_factor Numeric giving mean distance between network patches as a fraction of column diameter (default: 3.5). 
 #' @param neurons_per_node Matrix giving number of neurons of each type per node in each layer; dimensions must match n_layers (rows) and length of neuron_types (columns).
 #' @param recurrence_factors List of matrices giving local recurrence factors for each layer; each matrix must have dimensions matching length of neuron_types (rows and columns).
 #' @param pruning_threshold_factor Numeric giving factor for pruning weak connections within nodes; connections with strength below this factor times the maximum connection strength in the node will be pruned (default: 0.1).
@@ -379,10 +381,12 @@ set.network.structure <- function(
     layer_names = c("layer"),
     n_layers = 1,
     n_columns = 1,
+    patch_depth = 1,
     layer_height = 250.0,
-    column_width = 130.0,
+    column_diameter = 130.0,
     layer_separation_factor = 3.0,
     column_separation_factor = 3.5,
+    patch_separation_factor = 3.5,
     neurons_per_node = 30,
     recurrence_factors = 0.5,
     pruning_threshold_factor = 0.1
@@ -457,10 +461,12 @@ set.network.structure <- function(
       layer_names,
       as.integer(n_layers),
       as.integer(n_columns),
+      as.integer(patch_depth),
       layer_height,
-      column_width,
+      column_diameter,
       layer_separation_factor,
       column_separation_factor,
+      patch_separation_factor,
       neurons_per_node,
       recurrence_factors,
       pruning_threshold_factor

@@ -1189,10 +1189,12 @@ void network::set_network_structure(
     CharacterVector lyr_names,
     int n_lyr,
     int n_cls,
+    int n_pch,
     double lyr_height,
-    double cls_width,
+    double cls_diameter,
     double lyr_separation_factor,
     double cls_separation_factor,
+    double pch_separation_factor,
     IntegerMatrix nrn_per_node,
     List recur_factors,
     double pruning_thresh_factor
@@ -1223,46 +1225,51 @@ void network::set_network_structure(
     layer_names = lyr_names;
     n_layers = n_lyr;
     n_columns = n_cls;
+    n_patches = n_pch;
     layer_height = lyr_height;
-    column_width = cls_width;
+    column_diameter = cls_diameter;
     layer_separation_factor = lyr_separation_factor;
     column_separation_factor = cls_separation_factor;
+    patch_separation_factor = pch_separation_factor;
     neurons_per_node = to_eiMat(nrn_per_node);
     pruning_threshold_factor = pruning_thresh_factor;
     
     // Set network components
     n_neuron_types = neuron_types.size();
-    int n_nodes = n_layers * n_columns;
+    int n_nodes = n_layers * n_columns * n_patches;
     n_neurons = 0; // Compute total number of neurons as we go
     node_range_ends.assign(n_nodes, 0);
-    node_coordinates_spatial.resize(n_nodes, 2);
+    node_coordinates_spatial.resize(n_nodes, 3);
     std::vector<double> neuron_temporal_modulation_bias;
     std::vector<double> neuron_temporal_modulation_timeconstant;
     std::vector<double> neuron_temporal_modulation_amplitude;
     std::vector<double> neuron_transmission_velocity_tmp;
-    for (int l = 0; l < n_layers; l++) {
-      for (int c = 0; c < n_columns; c++) {
-        int node_idx = l * n_columns + c;
-        // Set global spatial coordinates for this node
-        node_coordinates_spatial(node_idx, 0) = c * column_width/2.0 * column_separation_factor;
-        node_coordinates_spatial(node_idx, 1) = l * layer_height/2.0 * layer_separation_factor;
-        for (int t = 0; t < n_neuron_types; t++) {
-          // Randomly select neuron numbers for each node
-          int n = (int)R::rpois(neurons_per_node(l,t));
-          // Keep track of the number of cells assigned so far
-          n_neurons += n; 
-          // Keep track of the types of these cells and their intrinsic properties
-          for (int i = 0; i < n; i++) {
-            neuron_type_name.push_back(neuron_types[t].type_name);
-            neuron_type_num.push_back(t);
-            neuron_temporal_modulation_bias.push_back(neuron_types[t].temporal_modulation_bias);
-            neuron_temporal_modulation_timeconstant.push_back(neuron_types[t].temporal_modulation_timeconstant);
-            neuron_temporal_modulation_amplitude.push_back(neuron_types[t].temporal_modulation_amplitude);
-            neuron_transmission_velocity_tmp.push_back(neuron_types[t].transmission_velocity);
+    for (int p = 0; p < n_patches; p++) {
+      for (int l = 0; l < n_layers; l++) {
+        for (int c = 0; c < n_columns; c++) {
+          int node_idx = p * (n_layers * n_columns) + l * n_columns + c;
+          // Set global spatial coordinates for this node
+          node_coordinates_spatial(node_idx, 0) = c * column_diameter/2.0 * column_separation_factor;
+          node_coordinates_spatial(node_idx, 1) = l * layer_height/2.0 * layer_separation_factor;
+          node_coordinates_spatial(node_idx, 2) = p * column_diameter/2.0 * patch_separation_factor;
+          for (int t = 0; t < n_neuron_types; t++) {
+            // Randomly select neuron numbers for each node
+            int n = (int)R::rpois(neurons_per_node(l,t));
+            // Keep track of the number of cells assigned so far
+            n_neurons += n; 
+            // Keep track of the types of these cells and their intrinsic properties
+            for (int i = 0; i < n; i++) {
+              neuron_type_name.push_back(neuron_types[t].type_name);
+              neuron_type_num.push_back(t);
+              neuron_temporal_modulation_bias.push_back(neuron_types[t].temporal_modulation_bias);
+              neuron_temporal_modulation_timeconstant.push_back(neuron_types[t].temporal_modulation_timeconstant);
+              neuron_temporal_modulation_amplitude.push_back(neuron_types[t].temporal_modulation_amplitude);
+              neuron_transmission_velocity_tmp.push_back(neuron_types[t].transmission_velocity);
+            }
           }
+          // Save end-point index for this node
+          node_range_ends[node_idx] = n_neurons - 1;
         }
-        // Save end-point index for this node
-        node_range_ends[node_idx] = n_neurons - 1;
       }
     }
     
@@ -1293,8 +1300,8 @@ void network::set_network_structure(
     neuron_transmission_velocity = Map<VectorXd>(neuron_transmission_velocity_tmp.data(), neuron_transmission_velocity_tmp.size());
     
     // Resize network coordinate components 
-    coordinates_spatial = MatrixXd::Zero(n_neurons, 2); 
-    coordinates_node = MatrixXi::Zero(n_neurons, 2); // column (x), layer (y) 
+    coordinates_spatial = MatrixXd::Zero(n_neurons, 3); 
+    coordinates_node = MatrixXi::Zero(n_neurons, 3); // column (x), layer (y), patch (z)
     
   };
 
@@ -1353,7 +1360,7 @@ void network::make_local_nodes() {
         for (int idx_pre = node_range_start; idx_pre <= node_range_end; idx_pre++) {
           
           // Set spatial coordinates
-          coordinates_spatial(idx_pre, 0) = node_x + R::rnorm(0.0, column_width/2.0);
+          coordinates_spatial(idx_pre, 0) = node_x + R::rnorm(0.0, column_diameter/2.0);
           coordinates_spatial(idx_pre, 1) = node_y + R::rnorm(0.0, layer_height/2.0);
           
           // Set node coordinates
