@@ -13,11 +13,11 @@ fetch_cell_type_params <- function(type_name) {
     .Call(`_neurons_fetch_cell_type_params`, type_name)
 }
 
-add_cell_type <- function(type_name, valence, temporal_modulation_bias, temporal_modulation_timeconstant, temporal_modulation_amplitude, transmission_velocity, v_bound, dHdv_bound, I_spike, coupling_scaling_factor, spike_potential, resting_potential, threshold) {
-    invisible(.Call(`_neurons_add_cell_type`, type_name, valence, temporal_modulation_bias, temporal_modulation_timeconstant, temporal_modulation_amplitude, transmission_velocity, v_bound, dHdv_bound, I_spike, coupling_scaling_factor, spike_potential, resting_potential, threshold))
+add_cell_type <- function(type_name, valence, temporal_modulation_bias, temporal_modulation_timeconstant, temporal_modulation_amplitude, transmission_velocity, v_bound, dHdv_bound, I_spike, coupling_scaling_factor, spike_potential, resting_potential, threshold, process_node_count, axon_branch_count, dendrite_branch_count) {
+    invisible(.Call(`_neurons_add_cell_type`, type_name, valence, temporal_modulation_bias, temporal_modulation_timeconstant, temporal_modulation_amplitude, transmission_velocity, v_bound, dHdv_bound, I_spike, coupling_scaling_factor, spike_potential, resting_potential, threshold, process_node_count, axon_branch_count, dendrite_branch_count))
 }
 
-modify_cell_type <- function(type_name, valence, temporal_modulation_bias, temporal_modulation_timeconstant, temporal_modulation_amplitude, transmission_velocity, v_bound, dHdv_bound, I_spike, coupling_scaling_factor, spike_potential, resting_potential, threshold) {
-    invisible(.Call(`_neurons_modify_cell_type`, type_name, valence, temporal_modulation_bias, temporal_modulation_timeconstant, temporal_modulation_amplitude, transmission_velocity, v_bound, dHdv_bound, I_spike, coupling_scaling_factor, spike_potential, resting_potential, threshold))
+modify_cell_type <- function(type_name, valence, temporal_modulation_bias, temporal_modulation_timeconstant, temporal_modulation_amplitude, transmission_velocity, v_bound, dHdv_bound, I_spike, coupling_scaling_factor, spike_potential, resting_potential, threshold, process_node_count, axon_branch_count, dendrite_branch_count) {
+    invisible(.Call(`_neurons_modify_cell_type`, type_name, valence, temporal_modulation_bias, temporal_modulation_timeconstant, temporal_modulation_amplitude, transmission_velocity, v_bound, dHdv_bound, I_spike, coupling_scaling_factor, spike_potential, resting_potential, threshold, process_node_count, axon_branch_count, dendrite_branch_count))
 }
 

@@ -26,7 +26,7 @@ rm(list = ls())
 set.seed(12345) 
 
 # Load neurons package
-library(neurons) 
+library(neuronsDG, quietly = TRUE) 
 ```
 
 <h3>Spike and stimulus data</h3>

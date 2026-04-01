@@ -1,11 +1,11 @@
-Package: neurons
+Package: neuronsDG
 Type: Package
-Title: A Framework for Neuron Modelling, Simulation, and Analysis
+Title: Modelling neurons via dichotomized Gaussians
 Version: 1.0
-Date: 2024-12-20
+Date: 2026-04-01
 Author: Michael Barkasi
 Maintainer: Michael Barkasi <barkasi@wustl.edu>
-Description: Various tools for modeling neurons. Includes functions for making growth-transform spiking networks. Defines a Cpp class 'neuron' intended to model a single neuron, accessible through R functions. Provides analysis methods for autocorrelation. 
+Description: Various tools for modeling neurons with dichotomized Gaussians. Defines a Cpp class 'neuron' intended to model a single neuron, accessible through R functions. Provides analysis methods for autocorrelation and cross-correlation.  
 License: GPL 3
 Imports: Rcpp (>= 1.0.13), RcppEigen, R.matlab, hdf5r, reticulate
 LinkingTo: Rcpp, RcppEigen, BH, MASS

@@ -1,7 +1,7 @@
 # https://stackoverflow.com/a/38928678
 
-load_libs <- function(bundle = "neurons") {
-  if (length(bundle) == 1L && bundle == "neurons") {
+load_libs <- function(bundle = "neuronsDG") {
+  if (length(bundle) == 1L && bundle == "neuronsDG") {
     packages <- c(
       "Rcpp",
       "RcppEigen",
@@ -34,4 +34,4 @@ load_libs <- function(bundle = "neurons") {
 
 }
 
-load_libs("neurons")
+load_libs("neuronsDG")

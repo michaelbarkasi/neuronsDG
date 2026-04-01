@@ -26,7 +26,7 @@ rm(list = ls())
 set.seed(12345) 
 
 # Load neurons package
-library(neurons) 
+library(neuronsDG, quietly = TRUE) 
 ```
 
 The next step is to load data representing the spike trains to be analyzed. In this case, the data is in a csv file and formatted as a compact (spike-indexed) raster. That is, each row represents a spike, with a column for the time of the spike and a column for the cell that fired the spike. Additional columns provide information about the recording session and covariates, such as genotype.
