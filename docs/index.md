@@ -6,6 +6,11 @@ built around the core object class **neuron**, a C++ class accessible
 through R via Rcpp modules and wrappers. This class is meant for
 modeling the spiking of single neurons with dichotomized Gaussians.
 
-![Artistic rendering of a neuron](reference/figures/neurons_package.png)
+![Overlay of spike trains with autocorrelation and dichotomized
+Gaussian](reference/figures/DG_autocorr.png)
 
-Copyright (C) 2025, Michael Barkasi <barkasi@wustl.edu>
+Artistic overlay of spike trains with autocorrelation and a dichotomized
+Gaussian with covariance. This package uses the latter to generate
+simulations of the former.
+
+Copyright (C) 2026, Michael Barkasi <barkasi@wustl.edu>

@@ -1,5 +1,5 @@
 
-#' @useDynLib neurons, .registration = TRUE
+#' @useDynLib neuronsDG, .registration = TRUE
 #' @import R.matlab
 #' @import hdf5r
 #' @import reticulate

@@ -6,7 +6,7 @@ src/*.so
 src/*.dll
 Read-and-delete-me
 .Rproj.user
-neurons.Rcheck/*
+neuronsDG.Rcheck/*
 *.Rcheck/*
 .Rbuildignore
 .RData
