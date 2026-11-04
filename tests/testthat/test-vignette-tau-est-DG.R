@@ -1,17 +1,21 @@
-# Full-fidelity replay of vignettes/tutorial_tau_est_DG.Rmd: same data, same
-# seed, same parameters as the tutorial itself (not a scaled-down version).
-# Slow (~80s dominated by estimate.autocorr.params()'s 4,100 DG simulations),
-# so skipped on CRAN; run locally / in CI to catch regressions in either the
-# numbers or the narrative claims the tutorial makes about them.
+# Full-fidelity replay of vignettes/articles/tutorial_tau_est_DG.Rmd: same data, same seed,
+# same parameters as the tutorial itself (not a scaled-down version). Slow (~55s dominated by
+# estimate.autocorr.params()'s 4,100 DG simulations), so skipped on CRAN; run locally / in CI
+# to catch regressions in either the numbers or the narrative claims the tutorial makes about
+# them.
+#
+# estimate.autocorr.params()'s simulations are drawn by their own C++ random number generator,
+# not R's -- set.seed() below has no effect on them, only the seed argument passed to that call
+# does. analyze.autocorr()'s bootstrap, in contrast, is plain R sample(), so it's still
+# controlled by set.seed() as before.
 
 test_that("the DG tutorial's full pipeline reproduces its own narrative claims and pinned values", {
   skip_on_cran()
   skip_on_ci() # ~80s; keep CI fast, run this one locally / explicitly instead
 
   set.seed(12345)
-  spike.rasters <- read.csv(
-    system.file("extdata", "spike_rasters_2022data.csv", package = "neuronsDG")
-  )
+  spike.rasters <- get_spike_rasters_2022_data()
+  if (is.null(spike.rasters)) skip("spike_rasters_2022data.csv demo data unavailable (no internet?)")
   neurons <- load.rasters.as.neurons(spike.rasters, bin_size = 10.0)
   expect_length(neurons, 41)
 
@@ -45,11 +49,12 @@ test_that("the DG tutorial's full pipeline reproduces its own narrative claims a
     neuron_list = neurons,
     n_trials_per_sim = 500,
     n_sims_per_neurons = 100,
-    use_raw = TRUE
+    use_raw = TRUE,
+    seed = 12345
   )
   expect_equal(dim(autocor.ests$estimates), c(4100, 9))
-  expect_equal(autocor.ests$estimates$A[1],   0.01346531, tolerance = 1e-4)
-  expect_equal(autocor.ests$estimates$tau[1], 33.03992,   tolerance = 1e-1)
+  expect_equal(autocor.ests$estimates$A[1],   0.0116827377, tolerance = 1e-4)
+  expect_equal(autocor.ests$estimates$tau[1], 37.6241013621, tolerance = 1e-1)
 
   autocor.results.bootstraps <- analyze.autocorr(
     autocor.ests,
@@ -63,8 +68,8 @@ test_that("the DG tutorial's full pipeline reproduces its own narrative claims a
   # cortex has MORE recurrence (higher tau) than the left
   means <- colMeans(resamples)
   expect_gt(means[["RH_CBA/J"]], means[["LH_CBA/J"]])
-  expect_equal(means[["LH_CBA/J"]], 52.99951, tolerance = 1)
-  expect_equal(means[["RH_CBA/J"]], 57.08301, tolerance = 1)
+  expect_equal(means[["LH_CBA/J"]], 54.196845, tolerance = 1)
+  expect_equal(means[["RH_CBA/J"]], 57.963491, tolerance = 1)
 
   expect_s3_class(autocor.results.bootstraps$distribution_plot, "ggplot")
 })

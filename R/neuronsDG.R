@@ -9,12 +9,16 @@
 
 #' @useDynLib neuronsDG, .registration = TRUE
 #' @import Rcpp
-#' @import RcppEigen 
 #' @import ggplot2
 NULL
 
 .onLoad <- function(libname, pkgname) {
     Rcpp::loadModule("neuron", TRUE)
+    # Our compiled code calls NLopt only through nloptr's registered C routines
+    # (nloptrAPI.h, resolved via R_GetCCallable()), not a system libnlopt. Those routines are
+    # only registered once nloptr's own namespace has actually been loaded, which merely
+    # listing nloptr in Imports does not by itself trigger -- so force it here.
+    requireNamespace("nloptr", quietly = TRUE)
   }
 
 # Initialization for C++ object classes ################################################################################
@@ -514,19 +518,21 @@ process.autocorr <- function(
 #' @param ctol Convergence tolerance for fitting exponential decay function (default: 1e-8).
 #' @param max_evals Maximum number of evaluations for fitting exponential decay function (default: 500).
 #' @param use_raw Logical indicating whether to use raw autocorrelation (true) or standard centered and normalized correlation (false) (default: TRUE).
+#' @param seed Integer seed for the dichotomized-Gaussian simulation draws (default: 12345). These draws are made by a self-contained C++ random number generator, not R's own, so \code{set.seed()} has no effect on them -- reproducibility is controlled entirely by this argument. Each neuron in \code{neuron_list} gets its own seed, offset from this one so that neurons don't share a draw sequence.
 #' @return A list containing a data frame of autocorrelation parameter estimates (one row per simulation), a data frame of neuron identifiers (one row per neuron), and the number of simulations run per neuron.
 #' @export
 estimate.autocorr.params <- function(
     neuron_list,
-    n_trials_per_sim = 300, 
-    n_sims_per_neurons = 100, 
-    bin_count_action = "sum", # "boolean", "mean", or "sum" 
+    n_trials_per_sim = 300,
+    n_sims_per_neurons = 100,
+    bin_count_action = "sum", # "boolean", "mean", or "sum"
     max_lag = 0,
     A0 = 0.001,
     tau0 = 1.0,
     ctol = 1e-8,
     max_evals = 500,
-    use_raw = TRUE
+    use_raw = TRUE,
+    seed = 12345
   ) {
     
     # Find max lag if needed
@@ -574,7 +580,8 @@ estimate.autocorr.params <- function(
         ctol,
         max_evals,
         use_raw,
-        FALSE
+        FALSE,
+        as.integer(seed) + i # distinct, deterministic seed per neuron
       )
       
     }

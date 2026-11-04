@@ -1,9 +1,11 @@
 # Shared fixtures for the neuronsDG test suite.
 #
-# Heavy fixtures (anything built from the real demo data in inst/extdata) are
-# memoized in .fixture_cache so that, however many test files use them, the
-# underlying computation (reading a 20MB csv, preprocessing kilosort4 data,
-# etc.) only runs once per test session.
+# Heavy fixtures (anything built from the real demo data, downloaded and
+# cached per R/demo_data.R since it's too large to bundle in inst/extdata)
+# are memoized in .fixture_cache so that, however many test files use them,
+# the underlying work (downloading/reading a 20MB csv, preprocessing
+# kilosort4 data, etc.) only runs -- and is only attempted, on failure -- once
+# per test session.
 
 .fixture_cache <- new.env(parent = emptyenv())
 
@@ -34,12 +36,15 @@ make_synthetic_raster <- function() {
   )
 }
 
-# Real demo data used directly by the vignettes; small enough (3.2MB) that
-# loading it is fast.
+# Real demo data used directly by the vignettes. Too large to bundle in the
+# package (see R/demo_data.R), so it's downloaded and cached on first use;
+# the download is attempted at most once per test session (get_fixture()
+# caches a failed/NULL result too, not just a successful one), and every
+# caller skips gracefully if it's unavailable rather than erroring.
 dg_demo_spike_rasters <- function() {
-  get_fixture("dg_demo_spike_rasters", function() {
-    read.csv(system.file("extdata", "spike_rasters_2022data.csv", package = "neuronsDG"))
-  })
+  data <- get_fixture("dg_demo_spike_rasters", get_spike_rasters_2022_data)
+  if (is.null(data)) testthat::skip("spike_rasters_2022data.csv demo data unavailable (no internet?)")
+  data
 }
 
 # neuron list built exactly as in vignettes/tutorial_tau_est_DG.Rmd.
@@ -69,12 +74,21 @@ kilo4_metadata_formatted <- function() {
   })
 }
 
+# Path to the downloaded/cached kilo4demo directory; skips if unavailable.
+kilo4_demo_path <- function() {
+  path <- get_fixture("kilo4_demo_data_path", get_kilo4demo_data)
+  if (is.null(path)) testthat::skip("kilo4demo demo data unavailable (no internet?)")
+  path
+}
+
 kilo4_demo_preprocessed <- function() {
+  kilo4_path <- kilo4_demo_path()
+
   get_fixture("kilo4_demo_preprocessed", function() {
     preprocess.kilo4(
       trial_time_start = 500,
       trial_time_end = 500 + 1520,
-      recording.folder = system.file("extdata", "kilo4demo", package = "neuronsDG"),
+      recording.folder = kilo4_path,
       meta_data = kilo4_metadata_formatted(),
       max_spikes = 1e4,
       min_spikes = 1e2,
@@ -99,12 +113,13 @@ kilo4_demo_neurons <- function() {
   )
 }
 
-# Compact raster used by the cross-correlation/synchrony vignette (20MB; only
-# read once and shared across tests that need it).
+# Compact raster used by the cross-correlation/synchrony vignette. Too large
+# to bundle (see R/demo_data.R); downloaded/cached and skipped gracefully if
+# unavailable, same as the fixtures above.
 crosscorr_demo_raster <- function() {
-  get_fixture("crosscorr_demo_raster", function() {
-    read.csv(system.file("extdata", "cross_corr_demo_data.csv", package = "neuronsDG"))
-  })
+  data <- get_fixture("crosscorr_demo_raster", get_cross_corr_demo_data)
+  if (is.null(data)) testthat::skip("cross_corr_demo_data.csv demo data unavailable (no internet?)")
+  data
 }
 
 # Trial-parsing helper, copied verbatim from

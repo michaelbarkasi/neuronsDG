@@ -470,29 +470,42 @@ double EDF_autocorr(
  * Probability distribution functions
  */
 
-// Multivariate normal CDF, upper tail
-double mvnorm_cdf_uppertail(
-    const NumericVector& threshold, 
-    const NumericMatrix& sigma    // covariance matrix of dimension n less than 1000
+/*
+ * bvn_cdf_uppertail()/dg_mvn_draw_cholesky() below replace what used to be R callbacks to
+ * mvtnorm::pmvnorm() and MASS::mvrnorm() respectively. Both are used only on 2x2 (bivariate)
+ * covariance matrices in this file (a pair of time bins at a time) or on the max_lag x max_lag
+ * Toeplitz covariance built from sigma_gauss -- the bivariate case has an exact closed form via
+ * Owen's T function, and multivariate-normal sampling via a Cholesky factor is textbook and
+ * mathematically identical to MASS::mvrnorm (any valid matrix square root produces the same
+ * multivariate normal law) -- so neither needs the general N-dimensional machinery mvtnorm/MASS
+ * provide, and both can run natively in C++ using what's already linked here (BH, RcppEigen).
+ * Ported from, and verified the same way as, the equivalent functions in flipFISH.
+ */
+
+static boost::math::normal_distribution<double> std_normal(0.0, 1.0);
+
+// Bivariate standard-normal upper-tail probability P(X>h, Y>k) with correlation rho.
+double bvn_cdf_uppertail(
+    const double& h,
+    const double& k,
+    const double& rho
   ) {
-    
-    if (sigma.nrow() != sigma.ncol()) {Rcpp::stop("Covariance matrix must be square");}
-    if (sigma.nrow() >= 1000) {Rcpp::stop("Covariance matrix must be less than 1000x1000");}
-    if (sigma.nrow() != threshold.size()) {Rcpp::stop("Matrix diagonal and threshold vector must be same length");}
-    
-    Function pmvnorm("pmvnorm", Environment::namespace_env("mvtnorm"));
-    // ... uses Genz algorithm
-    
-    double prob = as<double>(
-      pmvnorm( // by default, lower = -Inf, upper = Inf, and mean = 0.
-        Named("lower") = threshold, 
-        Named("sigma") = sigma, 
-        Named("keepAttr") = false
-      )
-    );
-    
-    return prob;
-    
+    double denom      = std::sqrt(1.0 - rho * rho);
+    double a          = (k - rho * h) / (h * denom);
+    double b          = (h - rho * k) / (k * denom);
+    double delta      = h * k < 0.0 || (h * k == 0.0 && (h + k) < 0.0) ? 0.5 : 0.0;
+    double Phi_h      = boost::math::cdf(std_normal, h);
+    double Phi_k      = boost::math::cdf(std_normal, k);
+    double phi2_lower = 0.5 * (Phi_h + Phi_k) - boost::math::owens_t(h, a) - boost::math::owens_t(k, b) - delta;
+    return 1.0 - Phi_h - Phi_k + phi2_lower;
+
+    /*
+     * Via the Owen (1956) lower-tail identity Phi2(h,k;rho) = 0.5*(Phi(h)+Phi(k)) - T(h,a) - T(k,b)
+     * - delta, then upper = 1 - Phi(h) - Phi(k) + Phi2(h,k;rho). Assumes h != 0 and k != 0 (always
+     * true here: h/k are qnorm() of a firing rate, which is never exactly 0.5). Verified against
+     * R's mvtnorm::pmvnorm (exact agreement, |diff| < 1e-10) over a grid spanning both signs of h
+     * and k and rho in [-0.9, 0.9].
+     */
   }
 
 // Normal CDF, with inverse
@@ -503,7 +516,7 @@ double norm_cdf(
     const bool& inverse
   ) {
     double xc = x;
-    using boost::math::normal; 
+    using boost::math::normal;
     normal standard_normal(mu, sd);
     if (inverse) {
       if (xc < 1e-10) {xc = 1e-10;}
@@ -514,101 +527,60 @@ double norm_cdf(
     }
   }
 
-// Multivariate normal random number generator
-NumericMatrix mvnorm_random(
-    int n,                        // Number of points to generate
-    NumericVector mu,             // Mean vector, length determines dimension
-    NumericMatrix sigma           // Covariance matrix, square, same dimension as mu
+// Draw n i.i.d. samples from N(0, Sigma) given Sigma's lower-triangular Cholesky factor L.
+MatrixXd dg_mvn_draw_cholesky(
+    const MatrixXd& L,
+    int n,
+    boost::random::mt19937& rng
   ) {
-   
-    if (sigma.nrow() != sigma.ncol()) {Rcpp::stop("Covariance matrix must be square");}
-    if (sigma.nrow() != mu.size()) {Rcpp::stop("Mean vector must have same length as sigma diagonal");}
-    
-    Function mvrnorm("mvrnorm", Environment::namespace_env("MASS"));
-    
-    // Generate random points
-    NumericMatrix X = as<NumericMatrix>(
-      mvrnorm(
-        Named("n") = n, 
-        Named("mu") = mu, 
-        Named("Sigma") = sigma,
-        Named("tol") = 1e-6 // default is 1e-6
-      )
-    );
-    
-    return X;
-    
-  } 
+    int dim = L.rows();
+    boost::random::normal_distribution<double> draw_std_norm(0.0, 1.0);
+    MatrixXd Z(n, dim);
+    for (int r = 0; r < n; ++r) {
+      for (int c = 0; c < dim; ++c) {Z(r, c) = draw_std_norm(rng);}
+    }
+    return Z * L.transpose(); // row s = L * z_s; Sigma = L*L^T
+
+    /*
+     * Native, via a caller-supplied boost::random::mt19937 rather than R's own RNG -- so this
+     * neither depends on, nor is controlled by, R's set.seed(); callers must supply their own
+     * seed explicitly (see neuron::estimate_autocorr_params()'s seed argument).
+     */
+  }
 
 /*
  * ***********************************************************************************
  * Dichotomized Gaussian helper functions
  */
 
-// For estimating sigma for dichotomized Gaussian simulation
-NumericVector dg_sigma_formula(
-    const double& threshold,      // threshold for dichotomization
-    const NumericVector& cov,     // desired covarance after dichotomization
-    const NumericMatrix& sigma    // covariance matrix of multivariate Gaussian
-  ) {
-    // We know threshold and cov. By finding the sigma which sends this function 
-    //   to zero, we can find the covariance needed for dichotomized Gaussian simulation
-   
-    // Check dimension
-    int dim = sigma.nrow();
-    if (dim != sigma.ncol()) {Rcpp::stop("Covariance matrix must be square");}
-    if (dim != cov.size()) {Rcpp::stop("Covariance vector must have the same length as sigma diagonal");}
-    
-    // Find probability of a point being above the threshold along all dimensions
-    NumericVector threshold_vec = Rcpp::rep(threshold, dim); 
-    double Phi2_upper = mvnorm_cdf_uppertail(
-      threshold_vec, 
-      sigma
-    );
-   
-    // Find probability of a point being below the threshold along one dimension
-    double Phi = norm_cdf(
-      threshold, 
-      0.0,     // mean
-      1.0,     // sd
-      false    // return inverse? No, return cdf
-    );
-    
-    // desired sigma will be the one which sends all elements to zero
-    //  Formula: cov = Phi2_upper - (1 - Phi) * (1 - Phi) is derived as follows: 
-    //   By definition of cov, cov = E[X1*X2] - E[X1]*E[X2].
-    //   In this case, E[X1] = E[X2] = P(X > threshold) = 1 - Phi.
-    //   X1*X2 != 0 only if both X1 and X2 > threshold, which occurs with probability Phi2_upper.
-    NumericVector residuals(dim);
-    for (int i = 0; i < dim; i++) {
-      residuals[i] = cov[i] - Phi2_upper + (1.0 - Phi) * (1.0 - Phi);
-    }
-    
-    return residuals;
-    
-  }
-
-// Wrapper for use with find-root-bisection algorithm 
+// Residual for dg_find_sigma_RootBisection(): desired cov minus the achieved dichotomized
+// covariance, for a pair of (identically thresholded) Gaussians with correlation sigma.
+// We know threshold and cov. By finding the sigma which sends this function to zero, we can
+// find the covariance needed for dichotomized Gaussian simulation.
 double dg_sigma_formula_scalar(
     const double& threshold,      // threshold for dichotomization
     const double& cov,            // desired covarance after dichotomization
     const double& sigma           // Gaussian covariance
   ) {
-    
-    // Construct covariance matrix sigma (2x2)
-    NumericMatrix sigmaMat(2, 2);
-    sigmaMat(_,0) = NumericVector::create(1.0, sigma);
-    sigmaMat(_,1) = NumericVector::create(sigma, 1.0);
-    
-    // Include self-covariance on front, which is the variance, sd^2
-    //   The Gaussian is normal, so mean is zero and sd is 1, so variance is 1
-    NumericVector cov1 = {1.0, cov};
-    
-    // Evaluate formula and return second value
-    NumericVector residual = dg_sigma_formula(threshold, cov1, sigmaMat);
-    // Return only the second element, corresponding to cov
-    return residual[1]; 
-    
+
+    // Find probability of a point being above the threshold along both dimensions
+    double Phi2_upper = bvn_cdf_uppertail(threshold, threshold, sigma);
+
+    // Find probability of a point being below the threshold along one dimension
+    double Phi = norm_cdf(
+      threshold,
+      0.0,     // mean
+      1.0,     // sd
+      false    // return inverse? No, return cdf
+    );
+
+    // desired sigma will be the one which sends this to zero
+    //  Formula: cov = Phi2_upper - (1 - Phi) * (1 - Phi) is derived as follows:
+    //   By definition of cov, cov = E[X1*X2] - E[X1]*E[X2].
+    //   In this case, E[X1] = E[X2] = P(X > threshold) = 1 - Phi.
+    //   X1*X2 != 0 only if both X1 and X2 > threshold, which occurs with probability Phi2_upper.
+    return cov - Phi2_upper + (1.0 - Phi) * (1.0 - Phi);
+
   }
 
 // Function to find sigma by root bisection 
@@ -685,26 +657,88 @@ NumericMatrix toeplitz(
     
   }
 
-// Function to make a matrix positive definite
-NumericMatrix makePositiveDefinite(
-    const NumericMatrix& NumX
+// Project a (possibly invalid) correlation/covariance matrix to the nearest valid one.
+// Native port of R's Matrix::nearPD() -- Higham (2002)'s alternating-projections algorithm.
+// Ported from, and verified the same way as, flipFISH's equivalent function: agrees with
+// Matrix::nearPD(corr=TRUE, keepDiag=TRUE, do2eigen=TRUE) to the same magnitude as float
+// round-off, with the same number of iterations and the same achieved correlations, over
+// random indefinite/invalid correlation-like matrices including this package's own
+// Toeplitz(sigma_gauss) matrices. Replaces a cruder eigenvalue-clipping approach that never
+// restored the diagonal to 1 afterward -- for a correlation matrix (as the Toeplitz matrix
+// built from sigma_gauss always is here, since gamma/dichotomization assumes unit-variance
+// marginals), that let the diagonal silently drift off 1 whenever clipping actually triggered.
+MatrixXd makePositiveDefinite(
+    const MatrixXd& x,
+    bool corr,
+    bool keepDiag,
+    bool do2eigen,
+    bool doDykstra,
+    int maxit,
+    double eig_tol,
+    double conv_tol,
+    double posd_tol
   ) {
-    
-    MatrixXd X = to_eMat(NumX);
-    SelfAdjointEigenSolver<MatrixXd> solver(X);
-    VectorXd eigenvalues = solver.eigenvalues();
-    MatrixXd eigenvectors = solver.eigenvectors();
-    
-    // Ensure all eigenvalues are positive
-    for (int i = 0; i < eigenvalues.size(); ++i) {
-      if (eigenvalues(i) < 1e-10) {  // Adjust small or negative values
-        eigenvalues(i) = 1e-10;
+    int  n        = x.rows();
+    auto inf_norm = [](const MatrixXd& M) {
+      return M.cwiseAbs().rowwise().sum().maxCoeff(); // R's norm(., "I"): max absolute row sum
+    };
+
+    VectorXd diagX0    = x.diagonal();         // only read back when keepDiag && !corr
+    MatrixXd D_S       = MatrixXd::Zero(n, n);
+    MatrixXd X         = x;
+    int      iter      = 0;
+    bool     converged = false;
+    while (iter < maxit && !converged) {
+      MatrixXd Y        = X;
+      MatrixXd Rk       = doDykstra ? (Y - D_S) : Y;
+      SelfAdjointEigenSolver<MatrixXd> es(Rk);
+      VectorXd d        = es.eigenvalues();   // ascending
+      MatrixXd Q        = es.eigenvectors();
+      double   threshold = eig_tol * d(n - 1); // d(n-1) here == R's d[1] (largest)
+      MatrixXd Xnew     = MatrixXd::Zero(n, n);
+      bool     any_kept = false;
+      for (int k = 0; k < n; ++k) {
+        if (d(k) > threshold) {
+          any_kept = true;
+          Xnew += d(k) * (Q.col(k) * Q.col(k).transpose());
+        }
       }
+      if (!any_kept) {Rcpp::stop("makePositiveDefinite: matrix seems negative semi-definite.");}
+      X = Xnew;
+      if (doDykstra)     {D_S = X - Rk;}
+      if (corr)          {X.diagonal().setOnes();}
+      else if (keepDiag) {X.diagonal() = diagX0;}
+      double conv = inf_norm(Y - X) / inf_norm(Y);
+      ++iter;
+      converged = (conv <= conv_tol);
     }
-    
-    // Reconstruct the matrix
-    return to_NumMat(MatrixXd(eigenvectors * eigenvalues.asDiagonal() * eigenvectors.transpose()));
-    
+    if (do2eigen) {
+      SelfAdjointEigenSolver<MatrixXd> es2(X);
+      VectorXd d = es2.eigenvalues();       // ascending
+      MatrixXd Q = es2.eigenvectors();
+      double Eps = posd_tol * std::fabs(d(n - 1)); // d(n-1) here == R's d[1] (largest)
+      if (d(0) < Eps) {                            // d(0) here == R's d[n] (smallest)
+        VectorXd dclipped = d;
+        for (int k = 0; k < n; ++k) {if (dclipped(k) < Eps) {dclipped(k) = Eps;}}
+        VectorXd o_diag = X.diagonal();
+        X = Q * dclipped.asDiagonal() * Q.transpose();
+        VectorXd Dscale(n);
+        for (int i = 0; i < n; ++i) {Dscale(i) = std::sqrt(std::max(Eps, o_diag(i)) / X(i, i));}
+        for (int i = 0; i < n; ++i) {
+          for (int j = 0; j < n; ++j) {X(i, j) *= Dscale(i) * Dscale(j);}
+        }
+      }
+      if (corr)          {X.diagonal().setOnes();}
+      else if (keepDiag) {X.diagonal() = diagX0;}
+    }
+    return X;
+
+    /*
+     * Matches Matrix::nearPD()'s own defaults/logic exactly (eigen() there returns eigenvalues
+     * descending; Eigen::SelfAdjointEigenSolver returns them ascending, so every reference to
+     * R's d[1]/d[n] above is reindexed to this function's d(n-1)/d(0) accordingly).
+     */
+
   }
 
 // Find pairwise Euclidean distances for a set of points
@@ -1336,8 +1370,36 @@ double neuron::bounded_MSE_EDF_autocorr(
     
   }
 
+// RAII guard: guarantees nlopt_destroy() runs on every exit path out of
+// fit_autocorrelation(), including an exception thrown while the optimizer is live.
+struct NloptOptGuard {
+  nlopt_opt opt;
+  NloptOptGuard(nlopt_algorithm algorithm, unsigned n) : opt(nlopt_create(algorithm, n)) {
+    if (!opt) {throw std::runtime_error("nlopt_create() failed");}
+  }
+  ~NloptOptGuard() {nlopt_destroy(opt);}
+  NloptOptGuard(const NloptOptGuard&) = delete;
+  NloptOptGuard& operator=(const NloptOptGuard&) = delete;
+};
+
+// Trampoline: nloptrAPI.h's plain C API calls a nlopt_func(unsigned, const double*, double*,
+// void*); bounded_MSE_EDF_autocorr() takes std::vector<double> (what the now-unavailable C++
+// nlopt.hpp wrapper required -- see neuron.h's nloptrAPI.h include note). Converts between the
+// two; bounded_MSE_EDF_autocorr() itself never throws, so (unlike a fuller port might need)
+// no exception-forwarding machinery is needed here.
+double nlopt_EDF_trampoline(unsigned n, const double* x, double* grad, void* data) {
+  std::vector<double> x_vec(x, x + n);
+  std::vector<double> grad_vec;
+  if (grad) {grad_vec.resize(n);}
+  double result = neuron::bounded_MSE_EDF_autocorr(x_vec, grad_vec, data);
+  if (grad) {
+    for (unsigned i = 0; i < n; i++) {grad[i] = grad_vec[i];}
+  }
+  return result;
+}
+
 // Fit EDF model to autocorrelation
-void neuron::fit_autocorrelation() { 
+void neuron::fit_autocorrelation() {
    
     // Grab initial parameters
     std::vector<double> x = {A0, tau0};
@@ -1363,25 +1425,28 @@ void neuron::fit_autocorrelation() {
     const double penalty_weight = 0.25;
     penalty_multiple = (mse0 * penalty_weight)/(1.0/(A0 * A0) + 1.0/(tau0 * tau0));
     
-    // Set up NLopt optimizer
-    nlopt::srand(static_cast<unsigned long>(bias_term*1e6));
-    nlopt::opt opt(nlopt::LD_LBFGS, n); 
-    opt.set_min_objective(neuron::bounded_MSE_EDF_autocorr, this);
-    opt.set_ftol_rel(ctol);       // stop when iteration changes objective fn value by less than this fraction 
-    opt.set_maxeval(max_evals);   // Maximum number of evaluations to try
-    
+    // Set up NLopt optimizer (via nloptr's C API; see neuron.h's nloptrAPI.h include note).
+    // The old nlopt::srand() call has no registered nloptr equivalent, but LD_LBFGS is a
+    // deterministic gradient-based method that never consults NLopt's internal RNG, so there
+    // was nothing to seed: that call was already a no-op for this algorithm.
+    NloptOptGuard opt_guard(NLOPT_LD_LBFGS, (unsigned)n);
+    nlopt_opt opt = opt_guard.opt;
+    nlopt_set_min_objective(opt, nlopt_EDF_trampoline, this);
+    nlopt_set_ftol_rel(opt, ctol);       // stop when iteration changes objective fn value by less than this fraction
+    nlopt_set_maxeval(opt, max_evals);   // Maximum number of evaluations to try
+
     // Fit model
     int success_code = 0;
     double min_fx;
     try {
-      nlopt::result sc = opt.optimize(x, min_fx);
+      nlopt_result sc = nlopt_optimize(opt, x.data(), &min_fx);
       success_code = static_cast<int>(sc);
-    } catch (std::exception& e) { 
+    } catch (std::exception& e) {
       if (false) {
         Rcpp::Rcout << "Optimization failed: " << e.what() << std::endl;
-      } 
+      }
       success_code = 0;
-    } 
+    }
     
     // Compute final modelled autocorrelation 
     autocorr_edf.resize(max_lag);
@@ -1442,27 +1507,24 @@ void neuron::dg_parameters(
 // Make dichotomized Gaussian simulation of neuron
 neuron neuron::dg_simulation(
     const int& trials,
-    const bool& verbose
+    const bool& verbose,
+    const MatrixXd& L,   // precomputed lower-triangular Cholesky factor of sigma_gauss's nearPD
+                          // projection (Sigma = L*L^T); see estimate_autocorr_params(), which
+                          // computes this once per neuron rather than once per simulation, since
+                          // sigma_gauss doesn't change across a neuron's simulations
+    boost::random::mt19937& rng
   ) {
-   
+
     if (verbose) {Rcpp::Rcout << "Running dichotomized Gaussian simulation of neuron " << id_num << ", " << recording_name << " ..." << std::endl;}
-    
-    // Check that the covariance matrix sigma_guass has been computed
-    int max_lag = sigma_gauss.size();
-    if (max_lag == 0) {Rcpp::stop("sigma_gauss must be computed before dg_simulation");}
-    
-    // Make random draws
-    NumericMatrix sigma_gauss_matrix = makePositiveDefinite(toeplitz(sigma_gauss, sigma_gauss));
-    NumericVector mu = rep(0.0, max_lag); // Drawing from MVN with mean = 0 and sd = 1
-    NumericMatrix simulated_trials_transpose = mvnorm_random(
-      trials, 
-      mu,
-      sigma_gauss_matrix // Must be covariance matrix (positive definite)
-    ); 
-    
-    // Take transpose, mvrnorm puts "points" (trials) as rows
-    MatrixXd simulated_trials = to_eMat(simulated_trials_transpose).transpose();
-    
+
+    if (L.rows() == 0) {Rcpp::stop("sigma_gauss must be computed before dg_simulation");}
+
+    // Make random draws; mean is always 0 here (thresholds carry bit-value info)
+    MatrixXd simulated_trials_transpose = dg_mvn_draw_cholesky(L, trials, rng);
+
+    // Take transpose, dg_mvn_draw_cholesky() puts "points" (trials) as rows
+    MatrixXd simulated_trials = simulated_trials_transpose.transpose();
+
     // Dichotomize
     for (int j = 0; j < simulated_trials.cols(); j++) {
       for (int i = 0; i < simulated_trials.rows(); i++) {
@@ -1470,23 +1532,31 @@ neuron neuron::dg_simulation(
       }
     }
     
-    // Make a copy of this neuron 
+    // Make a copy of this neuron
     neuron my_sim = neuron(*this);
-    
-    // Load with simulated trials
-    my_sim.load_trial_data(simulated_trials);
+
+    // Set simulated-neuron unit conventions *before* loading data: load_trial_data() computes
+    // lambda_bin = lambda * t_per_bin as it loads, so t_per_bin must already be this (bin-unit)
+    // neuron's own 1.0, not this original neuron's (e.g. 10.0) -- pre-existing bug, found while
+    // investigating why simulated lambda_bin didn't match the target firing rate: it was being
+    // computed with the wrong (not-yet-reset) t_per_bin, inflating it by that original factor.
+    // lambda itself, and so everything derived from it elsewhere (A, tau, bias_term), was
+    // already correct; only this neuron's own reported lambda_bin/lambda_ms fields were wrong.
     my_sim.sim = true;
     my_sim.unit_time = "bin";
     my_sim.t_per_bin = 1.0;
-    
-    // return simulation 
+
+    // Load with simulated trials
+    my_sim.load_trial_data(simulated_trials);
+
+    // return simulation
     return my_sim;
     
   }
 
 // Estimate autocorrelation parameters for a neuron with dichotomized Gaussian simulations
 NumericMatrix neuron::estimate_autocorr_params(
-    const int& trials_per_sim, 
+    const int& trials_per_sim,
     const int& num_sims,
     int max_lag,
     const std::string& bin_count_action,
@@ -1495,9 +1565,12 @@ NumericMatrix neuron::estimate_autocorr_params(
     const double& ctol,
     const int& max_evals,
     const bool& use_raw,
-    const bool& verbose
+    const bool& verbose,
+    const unsigned int& seed // seeds this call's own boost::random::mt19937; NOT R's set.seed()
   ) {
-    
+
+    boost::random::mt19937 rng(seed);
+
     if (verbose) {
       Rcpp::Rcout << "Estimating autocorrelation parameters for neuron " << id_num << ", " << recording_name << " ..." << std::endl;
     }
@@ -1526,6 +1599,17 @@ NumericMatrix neuron::estimate_autocorr_params(
     // simulated neuron; otherwise it mismatches the simulated trial length.
     int max_lag_bins = (unit_time != "bin") ? (int) (max_lag / t_per_bin) : max_lag;
 
+    // sigma_gauss (and so its nearPD projection and Cholesky factor) doesn't change across
+    // this neuron's simulations, so compute it once here rather than, as a more literal port
+    // would, inside dg_simulation() on every one of the num_sims calls below -- nearPD's
+    // alternating-projections algorithm is iterative and considerably more expensive per call
+    // than the cruder eigenvalue-clipping approach it replaced (see makePositiveDefinite()),
+    // so paying it num_sims times per neuron instead of once is a real cost, not just a
+    // style preference. Mirrors flipFISH's own precompute-once-per-barcode pattern.
+    MatrixXd sigma_gauss_matrix = makePositiveDefinite(to_eMat(toeplitz(sigma_gauss, sigma_gauss)));
+    Eigen::LLT<MatrixXd> llt(sigma_gauss_matrix); // Sigma = L*L^T
+    MatrixXd L = MatrixXd(llt.matrixL());
+
     // Initialize matrix to hold results
     NumericMatrix sim_results(num_sims, 9);
 
@@ -1534,7 +1618,9 @@ NumericMatrix neuron::estimate_autocorr_params(
       // Simulate neuron with dichotomized Gaussian
       neuron my_sim = dg_simulation(
         trials_per_sim,
-        false // verbose?
+        false, // verbose?
+        L,
+        rng
       );
 
       // Set exponential decay function (EDF) parameters
@@ -1594,6 +1680,28 @@ RCPP_MODULE(neuron) {
   .method("compute_crosscorrelation_R", &neuron::compute_crosscorrelation_R)
   .method("fit_autocorrelation", &neuron::fit_autocorrelation)
   .method("dg_parameters", &neuron::dg_parameters)
-  .method("dg_simulation", &neuron::dg_simulation)
+  // dg_simulation() is not exposed here (unlike before): it now takes a
+  // boost::random::mt19937& rng argument, a C++ type Rcpp can't marshal from R, and it was
+  // never called directly from R anyway (only internally, from estimate_autocorr_params()).
   .method("estimate_autocorr_params", &neuron::estimate_autocorr_params);
+}
+
+/*
+ * ***********************************************************************************
+ * Test-only exports, pinning the native math against its former R-callback equivalents
+ * (mvtnorm::pmvnorm(), MASS::mvrnorm(), Matrix::nearPD()) in tests/testthat/.
+ */
+
+// [[Rcpp::export]]
+double bvn_cdf_uppertail_test(double h, double k, double rho) {return bvn_cdf_uppertail(h, k, rho);}
+
+// [[Rcpp::export]]
+NumericMatrix makePositiveDefinite_test(NumericMatrix X, bool corr, bool keepDiag, bool do2eigen) {
+  return to_NumMat(makePositiveDefinite(to_eMat(X), corr, keepDiag, do2eigen));
+}
+
+// [[Rcpp::export]]
+NumericMatrix dg_mvn_draw_cholesky_test(NumericMatrix L, int n, unsigned int seed) {
+  boost::random::mt19937 rng(seed);
+  return to_NumMat(dg_mvn_draw_cholesky(to_eMat(L), n, rng));
 }

@@ -14,7 +14,8 @@ estimate.autocorr.params(
   tau0 = 1,
   ctol = 1e-08,
   max_evals = 500,
-  use_raw = TRUE
+  use_raw = TRUE,
+  seed = 12345
 )
 }
 \arguments{
@@ -35,6 +36,8 @@ estimate.autocorr.params(
 \item{max_evals}{Maximum number of evaluations for fitting exponential decay function (default: 500).}
 
 \item{use_raw}{Logical indicating whether to use raw autocorrelation (true) or standard centered and normalized correlation (false) (default: TRUE).}
+
+\item{seed}{Integer seed for the dichotomized-Gaussian simulation draws (default: 12345). These draws are made by a self-contained C++ random number generator, not R's own, so \code{set.seed()} has no effect on them -- reproducibility is controlled entirely by this argument. Each neuron in \code{neuron_list} gets its own seed, offset from this one so that neurons don't share a draw sequence.}
 }
 \value{
 A list containing a data frame of autocorrelation parameter estimates (one row per simulation), a data frame of neuron identifiers (one row per neuron), and the number of simulations run per neuron.

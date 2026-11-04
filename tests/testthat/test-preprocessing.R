@@ -1,9 +1,10 @@
 # Regression values captured by running these functions against the real
-# demo data in inst/extdata/kilo4demo on the current package build.
+# kilosort4 demo data (downloaded/cached per R/demo_data.R) on the current
+# package build.
 
 test_that("load_mat() reads a real includeVector.mat file (regression)", {
   mat_path <- file.path(
-    system.file("extdata", "kilo4demo", package = "neuronsDG"),
+    kilo4_demo_path(),
     "2025-04-05_11-50-43", "kilosort4", "includeVector.mat"
   )
   out <- neuronsDG:::load_mat(mat_path)
@@ -15,10 +16,7 @@ test_that("load_mat() reads a real includeVector.mat file (regression)", {
 })
 
 test_that("import.kilo4() returns spikes/stim data frames with expected shape (regression)", {
-  folder <- file.path(
-    system.file("extdata", "kilo4demo", package = "neuronsDG"),
-    "2025-04-05_11-50-43"
-  )
+  folder <- file.path(kilo4_demo_path(), "2025-04-05_11-50-43")
   res <- import.kilo4(
     folder_path = folder,
     stim_data_file = file.path(folder, "StimulusStamps.csv"),

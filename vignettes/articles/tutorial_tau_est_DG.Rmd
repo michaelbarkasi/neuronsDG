@@ -20,29 +20,23 @@ This tutorial shows how to use neuronsDG to estimate network time constants usin
 
 <h2>Load spike rasters</h2>
 
-Set up the R environment by clearing the workspace, setting a random-number generator seed, and loading neuronsDG.
+Set up the R environment by clearing the workspace, setting a random-number generator seed, and loading neuronsDG. This seed controls the one source of randomness still left to R itself in this tutorial: [analyze.autocorr()](../reference/analyze.autocorr.html)'s bootstrap resampling, further down. The dichotomized-Gaussian simulations run by [estimate.autocorr.params()](../reference/estimate.autocorr.params.html), also further down, are drawn by their own self-contained random number generator in C++, so `set.seed()` has no effect on them; that function takes its own `seed` argument instead.
 
 ```{r Rsetup}
 # Clear the R workspace to start fresh
 rm(list = ls())
 
-# Set seed for reproducibility
-set.seed(12345) 
+# Set seed for reproducibility (affects analyze.autocorr()'s bootstrap; see above)
+set.seed(12345)
 
 # Load package
-library(neuronsDG, quietly = TRUE) 
+library(neuronsDG, quietly = TRUE)
 ```
 
-All of the data is contained in a single csv file, provided with neuronsDG, as a compact spike raster. 
+All of the data is contained in a single csv file, as a compact spike raster. It's too large to bundle in the package itself, so `get_spike_rasters_2022_data()` downloads it once (caching it for later use) and returns it as a data frame.
 
 ```{r load_rasters}
-spike.rasters <- read.csv(
-  system.file(
-      "extdata", 
-      "spike_rasters_2022data.csv", 
-      package = "neuronsDG"
-    )
-  )
+spike.rasters <- get_spike_rasters_2022_data()
 print(head(spike.rasters))
 ```
 
@@ -287,9 +281,10 @@ This procedure yields a distribution of possible $\tau$ values for each neuron. 
 ```{r run_simulations}
 autocor.ests <- estimate.autocorr.params(
     neuron_list = neurons,
-    n_trials_per_sim = 500, 
+    n_trials_per_sim = 500,
     n_sims_per_neurons = 100,
-    use_raw = TRUE
+    use_raw = TRUE,
+    seed = 12345
   )
 print(head(autocor.ests$estimates))
 ```
@@ -327,26 +322,22 @@ set.seed(12345)
 library(neuronsDG) 
 
 # Load demo data
-spike.rasters <- read.csv(
-  system.file(
-      "extdata", 
-      "spike_rasters_2022data.csv", 
-      package = "neuronsDG"
-    )
-  )
+spike.rasters <- get_spike_rasters_2022_data()
 
 # Create neuron objects
 neurons <- load.rasters.as.neurons(spike.rasters, bin_size = 10.0)
 
-# Run dichotomized Gaussian simulations 
+# Run dichotomized Gaussian simulations (seed is this function's own argument, not
+# set.seed() above -- see the "Load spike rasters" section)
 autocor.ests <- estimate.autocorr.params(
     neuron_list = neurons,
-    n_trials_per_sim = 500, 
+    n_trials_per_sim = 500,
     n_sims_per_neurons = 100,
-    use_raw = TRUE
+    use_raw = TRUE,
+    seed = 12345
   )
 
-# Analyze results by covariate
+# Analyze results by covariate (this step's randomness IS controlled by set.seed() above)
 autocor.results.bootstraps <- analyze.autocorr(
     autocor.ests,
     covariate = c("hemi","genotype"),

@@ -2,15 +2,14 @@ Package: neuronsDG
 Type: Package
 Title: Modelling neurons via dichotomized Gaussians
 Version: 1.0
-Date: 2026-04-01
 Author: Michael Barkasi
 Maintainer: Michael Barkasi <barkasi@wustl.edu>
 Description: Various tools for modeling neurons with dichotomized Gaussians. Defines a Cpp class 'neuron' intended to model a single neuron, accessible through R functions. Provides analysis methods for autocorrelation and cross-correlation.  
 License: GPL 3
-Imports: Rcpp (>= 1.0.13), RcppEigen, R.matlab, hdf5r, reticulate
-LinkingTo: Rcpp, RcppEigen, BH, MASS, mvtnorm
+Imports: Rcpp (>= 1.0.13), R.matlab, hdf5r, reticulate, nloptr
+LinkingTo: Rcpp, RcppEigen, BH, nloptr
 Depends: ggplot2, grid, gridExtra, colorspace
-Suggests: testthat (>= 3.0.0)
+Suggests: testthat (>= 3.0.0), mvtnorm, Matrix, MASS
 Config/testthat/edition: 3
-SystemRequirements: NLopt
+Config/Needs/website: rmarkdown
 RoxygenNote: 7.3.3

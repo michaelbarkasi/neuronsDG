@@ -16,30 +16,26 @@ The neuronsDG package provides functions to use [dichotomized Gaussians to estim
 
 <h2>Load data</h2>
 
-Begin by clearing the R workspace, setting a random-number generator seed, and loading neuronsDG.
+Begin by clearing the R workspace, setting a random-number generator seed, and loading neuronsDG. This seed controls the one source of randomness still left to R itself in this tutorial: [analyze.autocorr()](../reference/analyze.autocorr.html)'s bootstrap resampling, further down. The dichotomized-Gaussian simulations run by [estimate.autocorr.params()](../reference/estimate.autocorr.params.html), also further down, are drawn by their own self-contained random number generator in C++, so `set.seed()` has no effect on them; that function takes its own `seed` argument instead.
 
 ```{r Rsetup}
 # Clear the R workspace to start fresh
 rm(list = ls())
 
-# Set seed for reproducibility
-set.seed(12345) 
+# Set seed for reproducibility (affects analyze.autocorr()'s bootstrap; see above)
+set.seed(12345)
 
 # Load package
-library(neuronsDG, quietly = TRUE) 
+library(neuronsDG, quietly = TRUE)
 ```
 
 <h3>Spike and stimulus data</h3>
 
-Provide the file path to the output from kilosort4. Recordings from the left and right hemisphere of various genotypes of mice are used for this tutortial. These recordings targeted the auditory cortex and were made while auditory stimuli were played at regular intervals. 
+Provide the file path to the output from kilosort4. Recordings from the left and right hemisphere of various genotypes of mice are used for this tutortial. These recordings targeted the auditory cortex and were made while auditory stimuli were played at regular intervals. This demo dataset (7 recording sessions) is too large to bundle in the package itself, so `get_kilo4demo_data()` downloads it once (caching it for later use) and returns the path to it.
 
 ```{r datapath}
-# Set path to data 
-demo_data <- system.file(
-    "extdata", 
-    "kilo4demo", 
-    package = "neuronsDG"
-  )
+# Set path to data
+demo_data <- get_kilo4demo_data()
 ```
 
 The function used to process kilosort4 output is [preprocess.kilo4()](../reference/preprocess.kilo4.html). This function expects its argument **data_path** to point to a folder the subfolders of which each contain a single kilosort4 output. This output should be in its own folder **/kilosort4**. The following four files are needed:
@@ -281,8 +277,9 @@ This procedure yields a distribution of possible $\tau$ values for each neuron. 
 ```{r estimate_autocorr}
 autocor.ests <- estimate.autocorr.params(
     neuron_list = neurons,
-    n_trials_per_sim = 500, 
-    n_sims_per_neurons = 100
+    n_trials_per_sim = 500,
+    n_sims_per_neurons = 100,
+    seed = 12345
   )
 print(head(autocor.ests$estimates))
 ```
@@ -340,12 +337,8 @@ colnames(kilo4_metadata) <- c("hemi", "genotype", "age", "sex")
 spike.rasters <- preprocess.kilo4(
   trial_time_start = 500,      # ms
   trial_time_end = 500 + 1520, # ms
-  recording.folder = system.file(
-    "extdata", 
-    "kilo4demo", 
-    package = "neuronsDG"
-    ),
-  meta_data = kilo4_metadata, 
+  recording.folder = get_kilo4demo_data(),
+  meta_data = kilo4_metadata,
   max_spikes = 1e4,
   min_spikes = 1e2,
   min_trials = 1e2,
@@ -361,14 +354,16 @@ neurons <- load.rasters.as.neurons(
   sample_rt = 1e3
   )
 
-# Run simulations
+# Run simulations (seed is this function's own argument, not set.seed() above -- see
+# "Load data" section)
 autocor.ests <- estimate.autocorr.params(
   neuron_list = neurons,
-  n_trials_per_sim = 500, 
-  n_sims_per_neurons = 100
+  n_trials_per_sim = 500,
+  n_sims_per_neurons = 100,
+  seed = 12345
   )
 
-# Run analysis
+# Run analysis (this step's randomness IS controlled by set.seed() above)
 autocor.results.bootstraps <- analyze.autocorr(
   autocor.ests,
   covariate = c("hemi","genotype"),

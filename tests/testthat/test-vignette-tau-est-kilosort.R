@@ -1,10 +1,14 @@
-# Full-fidelity replay of vignettes/tutorial_tau_est_kilosort.Rmd: same real
-# kilosort4 demo data, same seed, same parameters as the tutorial (not a
-# scaled-down version). Slow (~75s dominated by estimate.autocorr.params()'s
-# 3,600 DG simulations, on top of the ~40s preprocess.kilo4() shared with
-# test-preprocessing.R via the memoized fixture), so skipped on CRAN/CI; run
-# locally / explicitly to catch regressions in either the numbers or the
-# narrative claims the tutorial makes about them.
+# Full-fidelity replay of vignettes/articles/tutorial_tau_est_kilosort.Rmd: same real kilosort4
+# demo data, same seed, same parameters as the tutorial (not a scaled-down version). Slow
+# (dominated by estimate.autocorr.params()'s 3,600 DG simulations, on top of the ~40s
+# preprocess.kilo4() shared with test-preprocessing.R via the memoized fixture), so skipped on
+# CRAN/CI; run locally / explicitly to catch regressions in either the numbers or the narrative
+# claims the tutorial makes about them.
+#
+# estimate.autocorr.params()'s simulations are drawn by their own C++ random number generator,
+# not R's -- set.seed() below has no effect on them, only the seed argument passed to that call
+# does. analyze.autocorr()'s bootstrap, in contrast, is plain R sample(), so it's still
+# controlled by set.seed() as before.
 
 test_that("the kilosort tutorial's full pipeline reproduces its own narrative claims and pinned values", {
   skip_on_cran()
@@ -49,11 +53,12 @@ test_that("the kilosort tutorial's full pipeline reproduces its own narrative cl
   autocor.ests <- estimate.autocorr.params(
     neuron_list = neurons,
     n_trials_per_sim = 500,
-    n_sims_per_neurons = 100
+    n_sims_per_neurons = 100,
+    seed = 12345
   )
   expect_equal(dim(autocor.ests$estimates), c(3600, 9))
-  expect_equal(autocor.ests$estimates$A[1],   0.01270022, tolerance = 1e-4)
-  expect_equal(autocor.ests$estimates$tau[1], 50.25951,   tolerance = 1e-1)
+  expect_equal(autocor.ests$estimates$A[1],   0.0123871968, tolerance = 1e-4)
+  expect_equal(autocor.ests$estimates$tau[1], 59.4834104130, tolerance = 1e-1)
 
   autocor.results.bootstraps <- analyze.autocorr(
     autocor.ests,

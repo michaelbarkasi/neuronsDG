@@ -32,13 +32,7 @@ library(neuronsDG, quietly = TRUE)
 The next step is to load data representing the spike trains to be analyzed. In this case, the data is in a csv file and formatted as a compact (spike-indexed) raster. That is, each row represents a spike, with a column for the time of the spike and a column for the cell that fired the spike. Additional columns provide information about the recording session and covariates, such as genotype.
 
 ```{r load_rasters}
-spike.rasters <- read.csv(
-  system.file(
-      "extdata", 
-      "cross_corr_demo_data.csv", 
-      package = "neuronsDG"
-    )
-  )
+spike.rasters <- get_cross_corr_demo_data()
 print(head(spike.rasters))
 ```
 

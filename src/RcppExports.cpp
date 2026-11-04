@@ -11,10 +11,53 @@ Rcpp::Rostream<true>&  Rcpp::Rcout = Rcpp::Rcpp_cout_get();
 Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
+// bvn_cdf_uppertail_test
+double bvn_cdf_uppertail_test(double h, double k, double rho);
+RcppExport SEXP _neuronsDG_bvn_cdf_uppertail_test(SEXP hSEXP, SEXP kSEXP, SEXP rhoSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< double >::type h(hSEXP);
+    Rcpp::traits::input_parameter< double >::type k(kSEXP);
+    Rcpp::traits::input_parameter< double >::type rho(rhoSEXP);
+    rcpp_result_gen = Rcpp::wrap(bvn_cdf_uppertail_test(h, k, rho));
+    return rcpp_result_gen;
+END_RCPP
+}
+// makePositiveDefinite_test
+NumericMatrix makePositiveDefinite_test(NumericMatrix X, bool corr, bool keepDiag, bool do2eigen);
+RcppExport SEXP _neuronsDG_makePositiveDefinite_test(SEXP XSEXP, SEXP corrSEXP, SEXP keepDiagSEXP, SEXP do2eigenSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< NumericMatrix >::type X(XSEXP);
+    Rcpp::traits::input_parameter< bool >::type corr(corrSEXP);
+    Rcpp::traits::input_parameter< bool >::type keepDiag(keepDiagSEXP);
+    Rcpp::traits::input_parameter< bool >::type do2eigen(do2eigenSEXP);
+    rcpp_result_gen = Rcpp::wrap(makePositiveDefinite_test(X, corr, keepDiag, do2eigen));
+    return rcpp_result_gen;
+END_RCPP
+}
+// dg_mvn_draw_cholesky_test
+NumericMatrix dg_mvn_draw_cholesky_test(NumericMatrix L, int n, unsigned int seed);
+RcppExport SEXP _neuronsDG_dg_mvn_draw_cholesky_test(SEXP LSEXP, SEXP nSEXP, SEXP seedSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< NumericMatrix >::type L(LSEXP);
+    Rcpp::traits::input_parameter< int >::type n(nSEXP);
+    Rcpp::traits::input_parameter< unsigned int >::type seed(seedSEXP);
+    rcpp_result_gen = Rcpp::wrap(dg_mvn_draw_cholesky_test(L, n, seed));
+    return rcpp_result_gen;
+END_RCPP
+}
 
 RcppExport SEXP _rcpp_module_boot_neuron();
 
 static const R_CallMethodDef CallEntries[] = {
+    {"_neuronsDG_bvn_cdf_uppertail_test", (DL_FUNC) &_neuronsDG_bvn_cdf_uppertail_test, 3},
+    {"_neuronsDG_makePositiveDefinite_test", (DL_FUNC) &_neuronsDG_makePositiveDefinite_test, 4},
+    {"_neuronsDG_dg_mvn_draw_cholesky_test", (DL_FUNC) &_neuronsDG_dg_mvn_draw_cholesky_test, 3},
     {"_rcpp_module_boot_neuron", (DL_FUNC) &_rcpp_module_boot_neuron, 0},
     {NULL, NULL, 0}
 };

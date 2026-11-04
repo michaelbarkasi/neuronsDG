@@ -1,8 +1,7 @@
-# Regression values captured with set.seed(42), a 3-neuron subset of
-# inst/extdata/spike_rasters_2022data.csv, n_trials_per_sim = 50,
-# n_sims_per_neurons = 5. Kept small so this file runs in seconds; see
-# test-vignette-tau-est-DG.R and test-vignette-tau-est-kilosort.R for the
-# full-fidelity (slow) replays using the tutorials' actual parameters.
+# Regression values captured with seed = 42, a 3-neuron subset of the demo spike-raster data,
+# n_trials_per_sim = 50, n_sims_per_neurons = 5. Kept small so this file runs in seconds; see
+# test-vignette-tau-est-DG.R and test-vignette-tau-est-kilosort.R for the full-fidelity (slow)
+# replays using the tutorials' actual parameters.
 #
 # estimate.autocorr.params() previously crashed on exactly this kind of call
 # (realistic multi-neuron data, default bin size) with "max_lag must be less
@@ -10,9 +9,35 @@
 # R/neuronsDG.R's max_lag default and src/neuron.cpp's
 # neuron::estimate_autocorr_params(). These tests guard against that
 # regression as much as they check the numeric output.
+#
+# estimate.autocorr.params()'s simulations are drawn by their own C++ random number generator
+# (see src/neuron.cpp's dg_mvn_draw_cholesky()), not R's -- set.seed() has no effect on them,
+# only this function's own seed argument does. analyze.autocorr()'s bootstrap, in contrast, is
+# plain R sample(), so it's still controlled by set.seed() as before.
+
+test_that("estimate.autocorr.params()'s simulated lambda_bin tracks the neuron's true firing rate", {
+  # Regression guard for a bug found while investigating how different the native-RNG port's
+  # results were from the old implementation's (neither is "noise" -- see git history): inside
+  # dg_simulation(), load_trial_data() (which computes lambda_bin = lambda * t_per_bin as it
+  # loads) was being called *before* t_per_bin was reset from this neuron's own value (e.g. 10)
+  # to the simulated neuron's bin-unit value (1), inflating simulated lambda_bin by that factor.
+  # tau/A were unaffected (they come from lambda and the trial-data matrix directly, not
+  # lambda_bin), but the lambda_bin/lambda_ms columns estimate.autocorr.params() reports were
+  # wrong for any neuron whose own t_per_bin != 1 -- i.e. essentially always, since 1 isn't the
+  # default.
+  neurons <- dg_demo_neurons()
+  nrn <- neurons[[16]]
+  true_lambda_bin <- unname(nrn$fetch_lambda()[2])
+  expect_gt(true_lambda_bin, 0.01) # sanity: this neuron's t_per_bin (10) actually matters here
+
+  ests <- estimate.autocorr.params(
+    neuron_list = list(nrn), n_trials_per_sim = 300, n_sims_per_neurons = 30,
+    use_raw = TRUE, seed = 7
+  )
+  expect_equal(mean(ests$estimates$lambda_bin), true_lambda_bin, tolerance = 0.1)
+})
 
 test_that("estimate.autocorr.params() runs without error on a realistic multi-neuron list", {
-  set.seed(42)
   neurons <- dg_demo_neurons()[1:3]
 
   expect_no_error(
@@ -20,7 +45,8 @@ test_that("estimate.autocorr.params() runs without error on a realistic multi-ne
       neuron_list = neurons,
       n_trials_per_sim = 50,
       n_sims_per_neurons = 5,
-      use_raw = TRUE
+      use_raw = TRUE,
+      seed = 42
     )
   )
   expect_equal(dim(ests$estimates), c(15, 9))
@@ -29,13 +55,13 @@ test_that("estimate.autocorr.params() runs without error on a realistic multi-ne
 })
 
 test_that("estimate.autocorr.params() matches pinned regression values", {
-  set.seed(42)
   neurons <- dg_demo_neurons()[1:3]
   ests <- estimate.autocorr.params(
     neuron_list = neurons,
     n_trials_per_sim = 50,
     n_sims_per_neurons = 5,
-    use_raw = TRUE
+    use_raw = TRUE,
+    seed = 42
   )
 
   expect_equal(
@@ -45,19 +71,36 @@ test_that("estimate.autocorr.params() matches pinned regression values", {
   )
 
   # First simulation of each of the 3 neurons (rows 1, 6, 11)
-  expect_equal(ests$estimates$A[1],   0.0084601196, tolerance = 1e-5)
-  expect_equal(ests$estimates$tau[1], 24.2421343255, tolerance = 1e-2)
-  expect_equal(ests$estimates$A[6],   0.0314380844, tolerance = 1e-5)
-  expect_equal(ests$estimates$tau[6], 50.2193586938, tolerance = 1e-2)
-  expect_equal(ests$estimates$A[11],  0.0310142998, tolerance = 1e-5)
-  expect_equal(ests$estimates$tau[11], 47.1933049604, tolerance = 1e-2)
+  expect_equal(ests$estimates$A[1],   0.0172710816, tolerance = 1e-5)
+  expect_equal(ests$estimates$tau[1], 41.6892651244, tolerance = 1e-2)
+  expect_equal(ests$estimates$A[6],   0.0040958268, tolerance = 1e-5)
+  expect_equal(ests$estimates$tau[6], 37.0979091081, tolerance = 1e-2)
+  expect_equal(ests$estimates$A[11],  0.0191032390, tolerance = 1e-5)
+  expect_equal(ests$estimates$tau[11], 58.4879648201, tolerance = 1e-2)
+})
+
+test_that("estimate.autocorr.params() is deterministic given the same seed, and differs otherwise", {
+  neurons <- dg_demo_neurons()[1:3]
+  ests1 <- estimate.autocorr.params(neurons, n_trials_per_sim = 20, n_sims_per_neurons = 2, seed = 5)
+  ests2 <- estimate.autocorr.params(neurons, n_trials_per_sim = 20, n_sims_per_neurons = 2, seed = 5)
+  ests3 <- estimate.autocorr.params(neurons, n_trials_per_sim = 20, n_sims_per_neurons = 2, seed = 6)
+  expect_equal(ests1$estimates, ests2$estimates)
+  expect_false(isTRUE(all.equal(ests1$estimates, ests3$estimates)))
+})
+
+test_that("estimate.autocorr.params() is unaffected by R's set.seed()", {
+  neurons <- dg_demo_neurons()[1:3]
+  set.seed(1)
+  ests1 <- estimate.autocorr.params(neurons, n_trials_per_sim = 20, n_sims_per_neurons = 2, seed = 5)
+  set.seed(99999)
+  ests2 <- estimate.autocorr.params(neurons, n_trials_per_sim = 20, n_sims_per_neurons = 2, seed = 5)
+  expect_equal(ests1$estimates, ests2$estimates)
 })
 
 test_that("estimate.autocorr.params() works across neurons with heterogeneous trial lengths", {
-  # The bug this guards against was masked for a single neuron and only
+  # The max_lag bug this guards against was masked for a single neuron and only
   # surfaced with >=2 neurons of differing raw trial length -- which is the
   # realistic case (see test-autocorrelation.R's min(trial_lengths) check).
-  set.seed(1)
   neurons <- dg_demo_neurons()
   trial_lengths <- sapply(neurons, function(nrn) nrow(nrn$fetch_trial_data_R()))
   expect_gt(length(unique(trial_lengths)), 1) # sanity: data really is heterogeneous
@@ -68,26 +111,26 @@ test_that("estimate.autocorr.params() works across neurons with heterogeneous tr
       neuron_list = shortest_and_longest,
       n_trials_per_sim = 20,
       n_sims_per_neurons = 2,
-      use_raw = TRUE
+      use_raw = TRUE,
+      seed = 1
     )
   )
 })
 
 test_that("analyze.autocorr() bootstraps tau by covariate and matches pinned values", {
-  set.seed(42)
   neurons <- dg_demo_neurons()[1:3]
   ests <- estimate.autocorr.params(
-    neuron_list = neurons, n_trials_per_sim = 50, n_sims_per_neurons = 5, use_raw = TRUE
+    neuron_list = neurons, n_trials_per_sim = 50, n_sims_per_neurons = 5, use_raw = TRUE, seed = 42
   )
 
-  set.seed(42)
+  set.seed(42) # controls analyze.autocorr()'s own bootstrap sample(); unrelated to the seed above
   result <- analyze.autocorr(ests, covariate = "hemi", n_bs = 100)
 
   expect_named(result, c("resamples", "distribution_plot"))
   expect_equal(colnames(result$resamples), c("LH", "RH"))
   expect_equal(nrow(result$resamples), 100)
-  expect_equal(result$resamples$LH[1], 27.94411, tolerance = 1e-2)
-  expect_equal(result$resamples$RH[1], 49.22139, tolerance = 1e-2)
+  expect_equal(result$resamples$LH[1], 41.3102831924, tolerance = 1e-2)
+  expect_equal(result$resamples$RH[1], 43.7148102970, tolerance = 1e-2)
   expect_s3_class(result$distribution_plot, "ggplot")
 })
 
@@ -97,22 +140,20 @@ test_that("analyze.autocorr() rejects input that isn't an estimate.autocorr.para
 })
 
 test_that("analyze.autocorr() rejects an unknown covariate", {
-  set.seed(42)
   neurons <- dg_demo_neurons()[1:3]
   ests <- estimate.autocorr.params(
-    neuron_list = neurons, n_trials_per_sim = 20, n_sims_per_neurons = 2, use_raw = TRUE
+    neuron_list = neurons, n_trials_per_sim = 20, n_sims_per_neurons = 2, use_raw = TRUE, seed = 42
   )
   expect_error(analyze.autocorr(ests, covariate = "not_a_real_covariate"), "not found")
 })
 
 test_that("analyze.autocorr() accepts a list of estimate.autocorr.params() outputs (batched input)", {
-  set.seed(42)
   neurons <- dg_demo_neurons()[1:3]
   ests1 <- estimate.autocorr.params(
-    neuron_list = neurons[1:2], n_trials_per_sim = 20, n_sims_per_neurons = 2, use_raw = TRUE
+    neuron_list = neurons[1:2], n_trials_per_sim = 20, n_sims_per_neurons = 2, use_raw = TRUE, seed = 42
   )
   ests2 <- estimate.autocorr.params(
-    neuron_list = neurons[3], n_trials_per_sim = 20, n_sims_per_neurons = 2, use_raw = TRUE
+    neuron_list = neurons[3], n_trials_per_sim = 20, n_sims_per_neurons = 2, use_raw = TRUE, seed = 43
   )
 
   expect_no_error(

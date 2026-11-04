@@ -6,10 +6,18 @@
 // Rcpp
 // [[Rcpp::depends(BH)]]
 // [[Rcpp::depends(RcppEigen)]]
+// [[Rcpp::depends(nloptr)]]
 #include <Rcpp.h>
 #include <RcppEigen.h>
-#include <nlopt.hpp>
+#include <nloptrAPI.h>  // L-BFGS, via nloptr's bundled NLopt -- plain C API only: nloptrAPI.h
+                        // proxies each call through R's CCallable registry
+                        // (R_GetCCallable("nloptr", ...)) rather than linking a system
+                        // libnlopt. See neuron::fit_autocorrelation() for the RAII guard this
+                        // requires in place of the (unavailable here) C++ nlopt.hpp wrapper.
 #include <boost/math/distributions/normal.hpp>
+#include <boost/math/special_functions/owens_t.hpp>
+#include <boost/random/mersenne_twister.hpp>
+#include <boost/random/normal_distribution.hpp>
 using namespace Rcpp;
 using namespace Eigen;
 
@@ -117,25 +125,32 @@ double EDF_autocorr(
  * Probability distribution functions
  */
 
-// multivariate normal CDF, upper tail
-double mvnorm_cdf_uppertail(
-    const NumericVector& threshold, 
-    const NumericMatrix& sigma
+// Bivariate standard-normal upper-tail probability P(X>h, Y>k) with correlation rho.
+// Native (Owen's T function, boost::math::owens_t); exact closed form for the bivariate
+// case, so no R callback to mvtnorm::pmvnorm is needed. See neuron.cpp for derivation
+// and verification against mvtnorm::pmvnorm.
+double bvn_cdf_uppertail(
+    const double& h,
+    const double& k,
+    const double& rho
   );
 
 // Normal CDF, with inverse
 double norm_cdf(
-    const double& x, 
-    const double& mu, 
+    const double& x,
+    const double& mu,
     const double& sd,
     const bool& inverse
   );
 
-// Multivariate normal random number generator
-MatrixXd mvnorm_random(
-    int n, 
-    VectorXd mu, 
-    MatrixXd sigma
+// Draw n i.i.d. samples from N(0, Sigma) given Sigma's lower-triangular Cholesky factor L
+// (Sigma = L*L^T). Native (boost::random, via a caller-supplied generator rather than R's
+// own RNG); mathematically identical to MASS::mvrnorm (any valid matrix square root
+// produces the same multivariate normal law). See neuron.cpp.
+MatrixXd dg_mvn_draw_cholesky(
+    const MatrixXd& L,
+    int n,
+    boost::random::mt19937& rng
   );
 
 /*
@@ -143,14 +158,7 @@ MatrixXd mvnorm_random(
  * Dichotomized Gaussian helper functions
  */
 
-// Formula for estimating sigma for dichotomized Gaussian simulation
-NumericVector dg_sigma_formula(
-    const double& threshold,      // threshold for dichotomization
-    const NumericVector& cov,     // desired covarance after dichotomization
-    const NumericMatrix& sigma    // covariance matrix of multivariate Gaussian
-  );
-
-// Wrapper for use with find-root-bisection algorithm 
+// Wrapper for use with find-root-bisection algorithm
 double dg_sigma_formula_scalar(
     const double& threshold,      // threshold for dichotomization
     const double& cov,            // desired covarance after dichotomization
@@ -174,9 +182,19 @@ NumericMatrix toeplitz(
     const std::vector<double>& first_row
   );
 
-// Function to make a matrix positive definite
-NumericMatrix makePositiveDefinite(
-    const NumericMatrix& NumX
+// Project a (possibly invalid) correlation/covariance matrix to the nearest valid one.
+// Native port of R's Matrix::nearPD() (Higham 2002's alternating-projections algorithm);
+// see neuron.cpp for the full derivation and verification against Matrix::nearPD().
+MatrixXd makePositiveDefinite(
+    const MatrixXd& X,
+    bool corr = true,
+    bool keepDiag = true,
+    bool do2eigen = true,
+    bool doDykstra = true,
+    int maxit = 100,
+    double eig_tol = 1e-6,
+    double conv_tol = 1e-7,
+    double posd_tol = 1e-8
   );
 
 // Find pairwise Euclidean distances for a set of points
@@ -320,9 +338,9 @@ class neuron {
     );
     void fit_autocorrelation();
     void dg_parameters(const bool& use_raw, const bool& verbose);
-    neuron dg_simulation(const int& trials, const bool& verbose);
+    neuron dg_simulation(const int& trials, const bool& verbose, const MatrixXd& L, boost::random::mt19937& rng);
     NumericMatrix estimate_autocorr_params(
-      const int& trials_per_sim, 
+      const int& trials_per_sim,
       const int& num_sims,
       int max_lag,
       const std::string& bin_count_action,
@@ -331,7 +349,8 @@ class neuron {
       const double& ctol,
       const int& max_evals,
       const bool& use_raw,
-      const bool& verbose
+      const bool& verbose,
+      const unsigned int& seed
     );
     
   };
