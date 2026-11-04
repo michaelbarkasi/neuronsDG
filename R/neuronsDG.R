@@ -530,16 +530,20 @@ estimate.autocorr.params <- function(
   ) {
     
     # Find max lag if needed
+    # ... max_lag must be in the same (raw, unbinned) time units as each neuron's
+    #      trial data, matching what compute_autocorrelation() expects for the
+    #      original (non-simulated) neuron; see neuron::estimate_autocorr_params,
+    #      which separately converts to bin units for the simulated neurons.
     if (max_lag == 0) {
       trial_lengths <- rep(Inf, length(neuron_list))
       for (i in seq_along(neuron_list)) {
         nrn <- neuron_list[[i]]
-        trial_lengths[i] <- nrow(nrn$fetch_trial_data_R())/nrn$fetch_id_data()[["t_per_bin"]]
+        trial_lengths[i] <- nrow(nrn$fetch_trial_data_R())
       }
       max_lag <- min(trial_lengths)
     }
-   
-    # Pre-allocate matrix 
+
+    # Pre-allocate matrix
     n_neurons <- length(neuron_list)
     dg_estimates <- matrix(NA_real_, nrow = n_sims_per_neurons * n_neurons, ncol = 9)
     

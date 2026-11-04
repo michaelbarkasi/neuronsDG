@@ -1518,24 +1518,31 @@ NumericMatrix neuron::estimate_autocorr_params(
       use_raw,
       false // verbose?
     );
-    
-    // Initialize matrix to hold results 
-    NumericMatrix sim_results(num_sims, 9); 
-    
+
+    // Simulated neurons (from dg_simulation) are always in bin units (unit_time
+    // == "bin", t_per_bin == 1), regardless of this neuron's own unit_time. So
+    // max_lag, which above is in this neuron's own (possibly unbinned) time
+    // units, must be separately converted to bin units before being used on a
+    // simulated neuron; otherwise it mismatches the simulated trial length.
+    int max_lag_bins = (unit_time != "bin") ? (int) (max_lag / t_per_bin) : max_lag;
+
+    // Initialize matrix to hold results
+    NumericMatrix sim_results(num_sims, 9);
+
     for (int s = 0; s < num_sims; s++) {
-      
+
       // Simulate neuron with dichotomized Gaussian
       neuron my_sim = dg_simulation(
-        trials_per_sim, 
+        trials_per_sim,
         false // verbose?
       );
-      
-      // Set exponential decay function (EDF) parameters 
+
+      // Set exponential decay function (EDF) parameters
       my_sim.set_edf_initials(A0, tau0);
       my_sim.set_edf_termination(ctol, max_evals);
-      
+
       // Compute autocorrelation
-      my_sim.compute_autocorrelation(bin_count_action, max_lag, use_raw);
+      my_sim.compute_autocorrelation(bin_count_action, max_lag_bins, use_raw);
       
       // Fit autocorrelation 
       my_sim.fit_autocorrelation();

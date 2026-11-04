@@ -10,5 +10,7 @@ License: GPL 3
 Imports: Rcpp (>= 1.0.13), RcppEigen, R.matlab, hdf5r, reticulate
 LinkingTo: Rcpp, RcppEigen, BH, MASS, mvtnorm
 Depends: ggplot2, grid, gridExtra, colorspace
+Suggests: testthat (>= 3.0.0)
+Config/testthat/edition: 3
 SystemRequirements: NLopt
 RoxygenNote: 7.3.3
