@@ -1,0 +1,10 @@
+^.*\.Rproj$
+^\.Rproj\.user$
+^\.positai$
+^\.claude$
+^_pkgdown\.yml$
+^pkgdown$
+^docs$
+^build_install\.sh$
+^requirements\.R$
+^kilo4_demo_draft1\.zip$
