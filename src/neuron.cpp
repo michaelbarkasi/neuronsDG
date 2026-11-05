@@ -1259,9 +1259,7 @@ void neuron::compute_autocorrelation(
     bool convert_to_bins = false;
     int T_n = trial_data.rows();
     if (max_lag > T_n) {
-      std::cout << "T_n: " << T_n << std::endl;
-      std::cout << "max_lag: " << max_lag << std::endl;
-      Rcpp::stop("max_lag must be less than or equal to the trial length");
+      Rcpp::stop("max_lag (%d) must be less than or equal to the trial length (%d)", max_lag, T_n);
     }
     if (unit_time != "bin") {
       convert_to_bins = true;

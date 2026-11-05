@@ -40,7 +40,7 @@ estimate.autocorr.params(
 \item{seed}{Integer seed for the dichotomized-Gaussian simulation draws (default: 12345). These draws are made by a self-contained C++ random number generator, not R's own, so \code{set.seed()} has no effect on them -- reproducibility is controlled entirely by this argument. Each neuron in \code{neuron_list} gets its own seed, offset from this one so that neurons don't share a draw sequence.}
 }
 \value{
-A list containing a data frame of autocorrelation parameter estimates (one row per simulation), a data frame of neuron identifiers (one row per neuron), and the number of simulations run per neuron.
+A \code{neuronsDG_estimates} object: a list containing a data frame of autocorrelation parameter estimates (one row per simulation), a data frame of neuron identifiers (one row per neuron), and the number of simulations run per neuron. See \code{\link{print.neuronsDG_estimates}}.
 }
 \description{
 This function performs the same estimate-and-fit procedure as \code{process.autocorr}, but does so multiple times for each neuron using simulated spike rasters generated from a dichotomized Gaussian model of that neuron.

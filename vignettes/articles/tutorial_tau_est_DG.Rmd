@@ -47,18 +47,18 @@ neurons <- load.rasters.as.neurons(spike.rasters, bin_size = 10.0)
 cat("Number of cells discovered:", length(neurons))
 ```
 
-The **neuron** object class is native to C++ and integrated into neuronsDG (an R package) via Rcpp. It comes with built-in methods for many tasks, such as estimating autocorrelation parameters with dichotomized Gaussian simulations. Some of these methods can be accessed through R, but neurons provides R-native wrappers for the most useful ones. The neuronsDG package also provides native R functions for plotting. Let's plot the rasters for two cells. The first has high autocorrelation, as can be seen from the long horizontal streaks of spikes:
+The **neuron** object class is native to C++ and integrated into neuronsDG (an R package) via Rcpp. It comes with built-in methods for many tasks, such as estimating autocorrelation parameters with dichotomized Gaussian simulations. Some of these methods can be accessed through R, but neurons provides R-native wrappers for the most useful ones. The neuronsDG package also provides native R functions for plotting, and a neuron object's `plot()` method is a shorthand for these (it defaults to the raster view shown below; pass `type = "autocorrelation"` for the view used further down). Let's plot the rasters for two cells. The first has high autocorrelation, as can be seen from the long horizontal streaks of spikes:
 
 ```{r plot_raster_high_autocor}
 cell_high <- 16
-plot.raster(neurons[[cell_high]]) 
+plot_raster(neurons[[cell_high]]) 
 ```
 
 The second has low autocorrelation, as can be seen from the more random distribution of spikes without long streaks:  
 
 ```{r plot_raster_low_autocor}
 cell_low <- 1
-plot.raster(neurons[[cell_low]]) 
+plot_raster(neurons[[cell_low]]) 
 ```
 
 <h2>Computing empirical autocorrelation from data</h2>
@@ -101,28 +101,28 @@ The function [compute.autocorr()](../reference/compute.autocorr.html) takes a si
 
 ```{r compute_autocorrelation_high}
 compute.autocorr(neurons[[cell_high]], use_raw = TRUE)
-plot.autocorrelation(neurons[[cell_high]])
+plot_autocorrelation(neurons[[cell_high]])
 ```
 
 Which type of correlation, raw or Peason, is calculated is controlled by the **use_raw** option. The Pearson autocorrelation for the same data can be got by setting **use_raw** to FALSE: 
 
 ```{r compute_autocorrelation_high_pearson}
 compute.autocorr(neurons[[cell_high]], use_raw = FALSE)
-plot.autocorrelation(neurons[[cell_high]])
+plot_autocorrelation(neurons[[cell_high]])
 ```
 
 As another example, here is the raw autocorrelation for the neuron with low autocorrelation shown above:
 
 ```{r compute_autocorrelation_low}
 compute.autocorr(neurons[[cell_low]], use_raw = TRUE)
-plot.autocorrelation(neurons[[cell_low]])
+plot_autocorrelation(neurons[[cell_low]])
 ```
 
 And the Pearson autocorrelation for the same data:
 
 ```{r compute_autocorrelation_low_pearson}
 compute.autocorr(neurons[[cell_low]], use_raw = FALSE)
-plot.autocorrelation(neurons[[cell_low]])
+plot_autocorrelation(neurons[[cell_low]])
 ```
 
 <h2>Modeling autocorrelation decay</h2>
@@ -138,7 +138,7 @@ Model fitting is accessed in neuronsDG with the function [fit.edf.autocorr()](..
 ```{r fit_autocorrelation_high}
 compute.autocorr(neurons[[cell_high]]) # Recompute with raw autocorrelation
 fit.edf.autocorr(neurons[[cell_high]])
-plot.autocorrelation(neurons[[cell_high]])
+plot_autocorrelation(neurons[[cell_high]])
 ```
 
 The fitted model is plotted as the red line. The parameters of the exponential decay fit can be fetched directly with a neuron method and provide succinct quantification of the empirical autocorrelation. 

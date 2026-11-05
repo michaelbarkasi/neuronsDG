@@ -27,7 +27,7 @@ load.rasters.as.neurons(
 \item{time_cutoff}{Maximum time (in ms) to include spikes; spikes occurring after this time will be excluded (default: Inf).}
 }
 \value{
-A list of neuron objects, one per unique cell in the raster data.
+A list of neuron objects (class \code{"Rcpp_neuron"}; see \code{\link{neuron-methods}}), one per unique cell in the raster data.
 }
 \description{
 This function loads spike raster data from a data frame or CSV file and converts each unique cell into a neuron object. The raster data frame must contain columns for cell identifier, spike time in milliseconds, and trial number. Optional metadata columns can also be included.

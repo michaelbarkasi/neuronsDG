@@ -180,22 +180,22 @@ neurons <- load.rasters.as.neurons(
   )
 ```
 
-The **neuron** object class is native to C++ and integrated into neuronsDG (an R package) via Rcpp. It comes with built-in methods for many tasks, such as estimating autocorrelation parameters with dichotomized Gaussian simulations. Some of these methods can be accessed through R, but neurons provides R-native wrappers for the most useful ones. The neuronsDG package also provides native R functions for plotting. 
+The **neuron** object class is native to C++ and integrated into neuronsDG (an R package) via Rcpp. It comes with built-in methods for many tasks, such as estimating autocorrelation parameters with dichotomized Gaussian simulations. Some of these methods can be accessed through R, but neurons provides R-native wrappers for the most useful ones. The neuronsDG package also provides native R functions for plotting, and a neuron object's `plot()` method (which defaults to the raster view shown below, and takes `type = "autocorrelation"` for the view shown further down) is a shorthand for these.
 
 <h3>Visualizing autocorrelation</h3>
 
-For example, here is the raster from one cell, plotted with the [plot.raster()](../reference/plot.raster.html) function: 
+For example, here is the raster from one cell, plotted with the [plot_raster()](../reference/plot_raster.html) function (equivalently, `plot(neurons[[cell_high]])`):
 
 ```{r plot_raster_high_autocor}
 cell_high <- 25
-plot.raster(neurons[[cell_high]]) 
+plot_raster(neurons[[cell_high]])
 ```
 
 This cell exhibits high autocorrelation, as can be seen by the long horizontal streaks of spikes. Contrast this raster with one from a cell with low autocorrelation:
 
 ```{r plot_raster_low_autocor}
 cell_low <- 13
-plot.raster(neurons[[cell_low]]) 
+plot_raster(neurons[[cell_low]])
 ```
 
 Notice how the raster for this cell shows more randomly scattered spikes, with fewer (almost no) long streaks. The streaks absent here, but present in the previous raster, are a manifestation of autocorrelation, i.e., the tendency of a spike now to increase the probability of a spike later.
@@ -214,16 +214,16 @@ compute.autocorr(neurons[[cell_low]])
 fit.edf.autocorr(neurons[[cell_low]])
 ```
 
-The results can be visualized by using the [plot.autocorrelation()](../reference/plot.autocorrelation.html) function to plot both the computed empirical autocorrelation and fitted exponential decay in empirical autocorrelation. Here is the high-autocorrelation cell:
+The results can be visualized by using the [plot_autocorrelation()](../reference/plot_autocorrelation.html) function (equivalently, `plot(nrn, type = "autocorrelation")`) to plot both the computed empirical autocorrelation and fitted exponential decay in empirical autocorrelation. Here is the high-autocorrelation cell:
 
 ```{r plot_autocor_high}
-plot.autocorrelation(neurons[[cell_high]])
+plot_autocorrelation(neurons[[cell_high]])
 ```
 
 Here is the plot for the low-autocorrelation cell:
 
 ```{r plot_autocor_low}
-plot.autocorrelation(neurons[[cell_low]]) 
+plot_autocorrelation(neurons[[cell_low]])
 ```
 
 The parameters of the exponential decay fit can be fetched directly with a neuron method and provide succinct quantification of the empirical autocorrelation. 

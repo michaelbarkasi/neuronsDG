@@ -42,7 +42,7 @@ process.autocorr(
 \item{use_raw}{Logical indicating whether to use raw autocorrelation (true) or standard centered and normalized correlation (false) (default: TRUE).}
 }
 \value{
-A data frame with one row per neuron and columns for lambda (mean spike rate per ms and per bin), amplitude (A), time constant (tau), bias term, first autocorrelation value, maximum autocorrelation value, mean autocorrelation value, and minimum autocorrelation value.
+A \code{neuronsDG_autocorr_table} object: a data frame with one row per neuron and columns for lambda (mean spike rate per ms and per bin), amplitude (A), time constant (tau), bias term, first autocorrelation value, maximum autocorrelation value, mean autocorrelation value, and minimum autocorrelation value. See \code{\link{plot.neuronsDG_autocorr_table}}.
 }
 \description{
 First estimates autocorrelation of each neuron in the list, then fits an exponential decay function to the estimated autocorrelation, and finally collects and returns summary statistics for each neuron.

@@ -19,6 +19,12 @@ NULL
     # only registered once nloptr's own namespace has actually been loaded, which merely
     # listing nloptr in Imports does not by itself trigger -- so force it here.
     requireNamespace("nloptr", quietly = TRUE)
+    # show()'s S4 method must be registered only after loadModule() (above) has created the
+    # "Rcpp_neuron" class -- registering it at the top level of this file instead errors with
+    # "no definition for class 'Rcpp_neuron'", since top-level code runs before .onLoad() does.
+    # (Dispatches to print.Rcpp_neuron() by name, not generic print(), so R CMD check's static
+    # scan of .onLoad() for console-writing calls doesn't flag this.)
+    methods::setMethod("show", "Rcpp_neuron", function(object) print.Rcpp_neuron(object))
   }
 
 # Initialization for C++ object classes ################################################################################
@@ -59,11 +65,11 @@ new.neuron <- function(
     t_per_bin = 10.0, 
     sample_rate = 1e4
   ) {
-    neuron <- new(
-      neuron, 
+    nrn <- new(
+      neuron,
       id_num, recording_name, type, genotype, sex, hemi, region, age, sim, unit_time, unit_sample_rate, unit_data, t_per_bin, sample_rate
     )
-    return(neuron)
+    return(nrn)
   }
 
 # Functions for neuron analysis ########################################################################################
@@ -199,19 +205,10 @@ make.plot.title <- function(
     
   }
 
-#' Function to plot autocorrelation of neuron
-#' 
-#' Wrapper function to fetch and plot autocorrelation information from a neuron object. Assumes the autocorrelation has already been computed. 
-#' 
-#' @name plot.autocorrelation 
-#' @rdname plot-autocorrelation
-#' @usage plot.autocorrelation(
-#'  nrn, 
-#'  plot_title = "Est. autocorr", 
-#'  bias_term = 0, 
-#'  plot_time_cutoff = Inf, 
-#'  return_plot = FALSE
-#' )
+#' Plot autocorrelation of a neuron
+#'
+#' Fetches and plots autocorrelation information from a neuron object. Assumes the autocorrelation has already been computed. Called by \code{plot.neuron(nrn, type = "autocorrelation")}.
+#'
 #' @param nrn Neuron object for which to plot autocorrelation.
 #' @param plot_title Title for the plot (default: "Est. autocorr").
 #' @param bias_term Bias term to plot as a horizontal line (default: NULL).
@@ -219,7 +216,7 @@ make.plot.title <- function(
 #' @param return_plot Logical indicating whether to return the ggplot object (TRUE) or print it (FALSE) (default: FALSE).
 #' @return A ggplot object showing the estimated and fitted autocorrelation.
 #' @export
-plot.autocorrelation <- function(
+plot_autocorrelation <- function(
     nrn,
     plot_title = "Est. autocorr",
     bias_term = NULL,
@@ -281,21 +278,18 @@ plot.autocorrelation <- function(
     
   }
 
-#' Function to plot spike raster of neuron
-#' 
-#' Wrapper function to fetch and plot spike raster from a neuron object. Assumes the spike raster has already been loaded.
-#' 
-#' @name plot.raster
-#' @rdname plot-raster
-#' @usage plot.raster(nrn, plot_title = "Spike raster", zero_as_onset = TRUE, return_plot = FALSE)
+#' Plot spike raster of a neuron
+#'
+#' Fetches and plots the spike raster from a neuron object. Assumes the spike raster has already been loaded. Called by \code{plot.neuron(nrn, type = "raster")} (the default plot for a neuron).
+#'
 #' @param nrn Neuron object for which to plot spike raster.
 #' @param plot_title Title for the plot (default: "Spike raster").
 #' @param zero_as_onset Logical indicating whether to plot a vertical line at time zero to indicate stimulus onset (default: TRUE).
 #' @param return_plot Logical indicating whether to return the ggplot object (TRUE) or print it (FALSE) (default: FALSE).
 #' @return A ggplot object showing the spike raster.
 #' @export
-plot.raster <- function(
-    nrn,  
+plot_raster <- function(
+    nrn,
     plot_title = "Spike raster",
     zero_as_onset = TRUE,
     return_plot = FALSE
@@ -342,21 +336,159 @@ plot.raster <- function(
       print(plt)
       return(invisible(NULL))
     }
-    
+
+  }
+
+# S3/S4 methods for neuron objects ######################################################################################
+#
+# neuron objects are Rcpp Modules reference objects: formally S4 (class "Rcpp_neuron"), not
+# plain S3. Prepending a class via class(x) <- c("neuron", class(x)) silently strips their
+# S4-ness (R's own class<- warns "result will no longer be an S4 object"), which breaks the $
+# accessor Rcpp modules rely on for method dispatch -- so these methods target "Rcpp_neuron"
+# directly rather than a wrapper class. print()'s S3 dispatch only fires on an explicit
+# print(nrn) call; auto-printing a neuron at the console (typing nrn by itself) goes through
+# the S4 generic show() instead, hence the separate setMethod() below.
+
+#' Print a neuron object
+#'
+#' @param x A neuron object.
+#' @param ... Unused; present for S3 consistency.
+#' @return \code{x}, invisibly.
+#' @export
+print.Rcpp_neuron <- function(x, ...) {
+
+    id_data <- x$fetch_id_data()
+    has_trial_data <- nrow(x$fetch_trial_data_R()) > 0
+    has_autocorr <- length(x$fetch_autocorr_R()) > 0
+
+    header <- paste0("<neuron> #", id_data$id_num, " (", id_data$recording_name, ")")
+    if (id_data$sim) header <- paste0(header, " [simulated]")
+    cat(header, "\n")
+    cat("  type:", id_data$type, "\n")
+    for (field in c("genotype", "sex", "hemi", "region", "age")) {
+      val <- id_data[[field]]
+      if (!(val %in% c("not_provided", "not provided"))) cat("  ", field, ": ", val, "\n", sep = "")
+    }
+    cat("  trial data loaded:", has_trial_data, "\n")
+    if (has_trial_data) {
+      lambda <- x$fetch_lambda()
+      cat("    lambda:    ", signif(unname(lambda["lambda"]), 4), id_data$unit_data, "per", id_data$unit_time, "\n")
+      cat("    lambda_bin:", signif(unname(lambda["lambda_bin"]), 4), id_data$unit_data, "per bin\n")
+    }
+    cat("  autocorrelation computed:", has_autocorr, "\n")
+
+    invisible(x)
+
+  }
+
+#' Summarize a neuron object
+#'
+#' @param object A neuron object.
+#' @param ... Unused; present for S3 consistency.
+#' @return A \code{summary.neuron} object, printed by its own \code{print} method.
+#' @export
+summary.Rcpp_neuron <- function(object, ...) {
+
+    id_data <- object$fetch_id_data()
+    has_trial_data <- nrow(object$fetch_trial_data_R()) > 0
+    has_autocorr <- length(object$fetch_autocorr_R()) > 0
+    has_fit <- length(object$fetch_autocorr_edf_R()) > 0
+
+    out <- list(
+      id_data = id_data,
+      has_trial_data = has_trial_data,
+      has_autocorr = has_autocorr,
+      has_fit = has_fit,
+      lambda = if (has_trial_data) object$fetch_lambda() else NULL,
+      edf_parameters = if (has_fit) object$fetch_EDF_parameters() else NULL
+    )
+    class(out) <- "summary.neuron"
+    out
+
+  }
+
+#' Print a neuron summary
+#'
+#' @param x A \code{summary.neuron} object, from \code{summary.neuron}.
+#' @param ... Unused; present for S3 consistency.
+#' @return \code{x}, invisibly.
+#' @export
+print.summary.neuron <- function(x, ...) {
+
+    id_data <- x$id_data
+    cat("Neuron #", id_data$id_num, " (", id_data$recording_name, ")\n", sep = "")
+    cat("  type:", id_data$type, "\n")
+    cat("  simulated:", id_data$sim, "\n")
+    for (field in c("genotype", "sex", "hemi", "region", "age")) {
+      val <- id_data[[field]]
+      if (!(val %in% c("not_provided", "not provided"))) cat("  ", field, ": ", val, "\n", sep = "")
+    }
+    cat("  unit_time:", id_data$unit_time, "\n")
+    cat("  t_per_bin:", id_data$t_per_bin, id_data$unit_time, "\n")
+    cat("  sample_rate:", id_data$sample_rate, id_data$unit_sample_rate, "\n")
+    cat("  trial data loaded:", x$has_trial_data, "\n")
+    if (x$has_trial_data) {
+      cat("    lambda:    ", signif(unname(x$lambda["lambda"]), 4), id_data$unit_data, "per", id_data$unit_time, "\n")
+      cat("    lambda_bin:", signif(unname(x$lambda["lambda_bin"]), 4), id_data$unit_data, "per bin\n")
+    }
+    cat("  autocorrelation computed:", x$has_autocorr, "\n")
+    cat("  exponential decay fit:", x$has_fit, "\n")
+    if (x$has_fit) {
+      edf <- x$edf_parameters
+      cat("    A:        ", signif(unname(edf["A"]), 4), "\n")
+      cat("    tau:      ", signif(unname(edf["tau"]), 4), id_data$unit_time, "\n")
+      cat("    bias_term:", signif(unname(edf["bias_term"]), 4), "\n")
+    }
+
+    invisible(x)
+
+  }
+
+#' Plot a neuron object
+#'
+#' Default \code{plot} method for neuron objects. Dispatches to \code{\link{plot_raster}} or \code{\link{plot_autocorrelation}} depending on \code{type}; defaults to the raster view.
+#'
+#' @param x A neuron object.
+#' @param type One of "raster" (default) or "autocorrelation", specifying which view of the neuron to plot.
+#' @param ... Additional arguments passed on to \code{\link{plot_raster}} or \code{\link{plot_autocorrelation}}.
+#' @return Whatever \code{\link{plot_raster}}/\code{\link{plot_autocorrelation}} returns (a ggplot object if \code{return_plot = TRUE}, otherwise \code{NULL}, invisibly).
+#' @export
+plot.Rcpp_neuron <- function(x, type = c("raster", "autocorrelation"), ...) {
+    type <- match.arg(type)
+    if (type == "raster") {
+      plot_raster(x, ...)
+    } else {
+      plot_autocorrelation(x, ...)
+    }
   }
 
 #' Helper function for testing assumption of autocorrelation processing
-#' 
-#' The approach we're using is valid if autocorr (red lines) is below mean firing rate (blue line). If so, then the equation we're using to convert spiking autocorr to guassian sigma should work. 
-#' 
+#'
+#' The approach we're using is valid if autocorr (red lines) is below mean firing rate (blue line). If so, then the equation we're using to convert spiking autocorr to guassian sigma should work. Thin wrapper around \code{plot.neuronsDG_autocorr_table}, which does the actual plotting.
+#'
 #' @param autocor_results Data frame of autocorrelation results from the \code{process.autocorr} function.
 #' @return Nothing; this function produces a base-R plot for visual inspection.
 #' @export
 test.sigma.assumption <- function(
     autocor_results
   ) {
-    
-    autocor_results <- autocor_results[order(autocor_results$lambda_bin),]
+    if (!inherits(autocor_results, "neuronsDG_autocorr_table")) {
+      class(autocor_results) <- c("neuronsDG_autocorr_table", class(autocor_results))
+    }
+    plot(autocor_results)
+  }
+
+#' Plot an autocorrelation summary table
+#'
+#' \code{plot} method for the data frame returned by \code{\link{process.autocorr}}. Checks the assumption behind the sigma-fitting equation used to convert spiking autocorrelation to a dichotomized-Gaussian sigma: the approach is valid if autocorrelation (red lines) stays below mean firing rate (blue line).
+#'
+#' @param x A \code{neuronsDG_autocorr_table} object, i.e. the output of \code{\link{process.autocorr}}.
+#' @param ... Unused; present for S3 consistency.
+#' @return \code{x}, invisibly. Produces a base-R plot as a side effect.
+#' @export
+plot.neuronsDG_autocorr_table <- function(x, ...) {
+
+    x <- x[order(x$lambda_bin),]
     these_cols <- c(
       "lambda_bin",
       "max_autocorr",
@@ -364,17 +496,19 @@ test.sigma.assumption <- function(
       "min_autocorr"
     )
     plot(
-      autocor_results[,2], 
-      ylim = c(0, max(autocor_results[,these_cols])*1.1),
+      x[,2],
+      ylim = c(0, max(x[,these_cols])*1.1),
       type = "l",
       ylab = "value",
       xlab = "neuron (sorted by lambda_bin)",
       col = "blue"
     )
-    lines(autocor_results$max_autocorr, col = "red4")
-    lines(autocor_results$mean_autocorr, col = "red3")
-    lines(autocor_results$min_autocorr, col = "red")
-    
+    lines(x$max_autocorr, col = "red4")
+    lines(x$mean_autocorr, col = "red3")
+    lines(x$min_autocorr, col = "red")
+
+    invisible(x)
+
   }
 
 #' Function to process autocorrelation of neuron list
@@ -474,7 +608,7 @@ process.autocorr <- function(
         sim <- id_data$sim
         if (sim) recording_name <- paste(recording_name, "(sim)")
         
-        print(plot.autocorrelation(nrn, "Est. autocorr", bias_term, plot_time_cutoff))
+        print(plot_autocorrelation(nrn, "Est. autocorr", bias_term, plot_time_cutoff))
         
       }
       
@@ -495,14 +629,15 @@ process.autocorr <- function(
       "mean_autocorr",
       "min_autocorr"
     )
-    
-    # Convert to data frame 
+    class(autocor_results) <- c("neuronsDG_autocorr_table", class(autocor_results))
+
+    # Convert to data frame
     if (check_autofiring_ratio) {
       test.sigma.assumption(autocor_results)
     }
-    
+
     return(autocor_results)
-    
+
   }
 
 #' Function to estimate autocorrelation parameters using dichotomized Gaussian simulations
@@ -599,26 +734,48 @@ estimate.autocorr.params <- function(
       "min_autocorr"
     )
     
-    return(list(
+    result <- list(
       estimates = dg_estimates,
       neuron_id = neuron_id,
       n_sims_per_neurons = n_sims_per_neurons
-    ))
-    
+    )
+    class(result) <- c("neuronsDG_estimates", class(result))
+    return(result)
+
+  }
+
+#' Print an autocorrelation-parameter estimate set
+#'
+#' @param x A \code{neuronsDG_estimates} object, from \code{\link{estimate.autocorr.params}}.
+#' @param ... Unused; present for S3 consistency.
+#' @return \code{x}, invisibly.
+#' @export
+print.neuronsDG_estimates <- function(x, ...) {
+
+    cat("<neuronsDG_estimates>\n")
+    cat("  neurons:          ", nrow(x$neuron_id), "\n")
+    cat("  sims per neuron:  ", x$n_sims_per_neurons, "\n")
+    cat("  total simulations:", nrow(x$estimates), "\n")
+    cat("  mean tau:         ", signif(mean(x$estimates$tau), 4), "\n")
+    cat("  mean A:           ", signif(mean(x$estimates$A), 4), "\n")
+
+    invisible(x)
+
   }
 
 #' Function to analyze autocorrelation estimates with bootstrapping
-#' 
+#'
 #' This function takes the output from \code{estimate.autocorr.params} and performs a bootstrap analysis to estimate the distribution of the mean time constant (tau) for different levels of specified covariates.
-#' 
-#' @param ests Output from \code{estimate.autocorr.params}, or a list of such outputs.
+#'
+#' @param ests A \code{neuronsDG_estimates} object (the output of \code{estimate.autocorr.params}), or a list of such objects.
 #' @param covariate Character string or vector of character strings specifying the covariate(s) to analyze (e.g., "hemi").
 #' @param n_bs Number of bootstrap resamples to perform (default: 1e4).
-#' @return A list with two elements: 
+#' @return A \code{neuronsDG_analysis} object: a list with two elements:
 #'  \describe{
 #'    \item{resamples}{data frame with bootstrap resamples of the mean tau for each combination of covariate levels}
 #'    \item{distribution_plot}{ggplot object showing the distribution of mean tau for each combination of covariate levels}
 #'  }
+#' @export
 analyze.autocorr <- function(
     ests,
     covariate,
@@ -627,22 +784,20 @@ analyze.autocorr <- function(
     
     # Check input types
     error_message <- "Input is not a valid estimate.autocorr.params output or list of such output."
-    if (class(ests) == "list") {
-      if ("n_sims_per_neurons" %in% names(ests)) {
-        if (!(all(covariate %in% names(ests$neuron_id)))) {
-          stop("Covariate not found in neuron_id.")
+    if (inherits(ests, "neuronsDG_estimates")) {
+      if (!(all(covariate %in% names(ests$neuron_id)))) {
+        stop("Covariate not found in neuron_id.")
+      }
+      # ... this is single input, wrap in list
+      ests <- list(ests)
+    } else if (is.list(ests) && !is.data.frame(ests)) {
+      # ... check if list of proper inputs
+      for (i in seq_along(ests)) {
+        if (!inherits(ests[[i]], "neuronsDG_estimates")) {
+          stop(error_message)
         }
-        # ... this is single input, wrap in list
-        ests <- list(ests)
-      } else {
-        # ... check if list of proper inputs 
-        for (i in seq_along(ests)) {
-          if (!("n_sims_per_neurons" %in% names(ests[[i]]))) {
-            stop(error_message)
-          }
-          if (!(all(covariate %in% names(ests[[i]]$neuron_id)))) {
-            stop("Covariate not found in neuron_id.")
-          }
+        if (!(all(covariate %in% names(ests[[i]]$neuron_id)))) {
+          stop("Covariate not found in neuron_id.")
         }
       }
     } else {
@@ -740,13 +895,45 @@ analyze.autocorr <- function(
         legend.position = "bottom"
       ) 
     
-    return(
-      list(
-        resamples = resamples,
-        distribution_plot = distribution_plot
-      )
+    result <- list(
+      resamples = resamples,
+      distribution_plot = distribution_plot
     )
-    
+    class(result) <- c("neuronsDG_analysis", class(result))
+    return(result)
+
+  }
+
+#' Print an autocorrelation bootstrap analysis
+#'
+#' @param x A \code{neuronsDG_analysis} object, from \code{\link{analyze.autocorr}}.
+#' @param ... Unused; present for S3 consistency.
+#' @return \code{x}, invisibly.
+#' @export
+print.neuronsDG_analysis <- function(x, ...) {
+
+    cat("<neuronsDG_analysis>\n")
+    cat("  bootstrap resamples:", nrow(x$resamples), "\n")
+    cat("  covariate groups:   ", paste(colnames(x$resamples), collapse = ", "), "\n")
+    for (g in colnames(x$resamples)) {
+      cat(sprintf("    %-20s mean tau = %s\n", g, signif(mean(x$resamples[[g]], na.rm = TRUE), 4)))
+    }
+
+    invisible(x)
+
+  }
+
+#' Plot an autocorrelation bootstrap analysis
+#'
+#' \code{plot} method for \code{neuronsDG_analysis} objects; displays the stored distribution plot.
+#'
+#' @param x A \code{neuronsDG_analysis} object, from \code{\link{analyze.autocorr}}.
+#' @param ... Unused; present for S3 consistency.
+#' @return \code{x}, invisibly. Prints \code{x$distribution_plot} as a side effect.
+#' @export
+plot.neuronsDG_analysis <- function(x, ...) {
+    print(x$distribution_plot)
+    invisible(x)
   }
 
 #' Compute autocorrelation of single neuron object

@@ -13,5 +13,5 @@ test.sigma.assumption(autocor_results)
 Nothing; this function produces a base-R plot for visual inspection.
 }
 \description{
-The approach we're using is valid if autocorr (red lines) is below mean firing rate (blue line). If so, then the equation we're using to convert spiking autocorr to guassian sigma should work.
+The approach we're using is valid if autocorr (red lines) is below mean firing rate (blue line). If so, then the equation we're using to convert spiking autocorr to guassian sigma should work. Thin wrapper around \code{\link{plot.neuronsDG_autocorr_table}}, which does the actual plotting.
 }

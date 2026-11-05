@@ -7,18 +7,19 @@
 analyze.autocorr(ests, covariate, n_bs = 10000)
 }
 \arguments{
-\item{ests}{Output from \code{estimate.autocorr.params}, or a list of such outputs.}
+\item{ests}{A \code{neuronsDG_estimates} object (the output of \code{estimate.autocorr.params}), or a list of such objects.}
 
 \item{covariate}{Character string or vector of character strings specifying the covariate(s) to analyze (e.g., "hemi").}
 
 \item{n_bs}{Number of bootstrap resamples to perform (default: 1e4).}
 }
 \value{
-A list with two elements: 
+A \code{neuronsDG_analysis} object: a list with two elements:
  \describe{
    \item{resamples}{data frame with bootstrap resamples of the mean tau for each combination of covariate levels}
    \item{distribution_plot}{ggplot object showing the distribution of mean tau for each combination of covariate levels}
  }
+See \code{\link{neuronsDG_analysis-methods}} for its \code{print}/\code{plot} methods.
 }
 \description{
 This function takes the output from \code{estimate.autocorr.params} and performs a bootstrap analysis to estimate the distribution of the mean time constant (tau) for different levels of specified covariates.
