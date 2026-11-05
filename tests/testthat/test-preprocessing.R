@@ -16,6 +16,7 @@ test_that("load_mat() reads a real includeVector.mat file (regression)", {
 })
 
 test_that("import.kilo4() returns spikes/stim data frames with expected shape (regression)", {
+  skip_if_no_numpy()
   folder <- file.path(kilo4_demo_path(), "2025-04-05_11-50-43")
   res <- import.kilo4(
     folder_path = folder,
@@ -43,6 +44,7 @@ test_that("preprocess.kilo4() reproduces the exact quality-control counts descri
   # males and 1 from the left hemisphere of females ... For C57 (wildtype)
   # mice, 1 cluster passed from the left hemisphere of females ... As the
   # last neuron, number 37, is the only C57 sample ..."
+  skip_if_no_numpy()
   processed <- kilo4_demo_preprocessed()
 
   expect_named(processed, c("spikes", "timeXtrial", "cluster.key"))
@@ -75,6 +77,7 @@ test_that("preprocess.kilo4() reproduces the exact quality-control counts descri
 })
 
 test_that("summarize.cluster.key() computes rounded mean spikes/trials per combination", {
+  skip_if_no_numpy()
   processed <- kilo4_demo_preprocessed()
   summary <- summarize.cluster.key(
     key = processed$cluster.key,

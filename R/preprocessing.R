@@ -58,7 +58,19 @@ import.kilo4 <- function(
   ) {
     
     # Will produce two data frames, spike (rows are spikes) and stim (rows are stimulus onset times)
-    
+
+    # spike_positions/spike_clusters/spike_times are read from .npy files via
+    # reticulate+numpy; fail clearly up front rather than letting a missing
+    # Python/numpy installation silently empty out every .npy-derived column
+    # (which previously surfaced only much later as a confusing, unrelated error).
+    if (!reticulate::py_module_available("numpy")) {
+      stop(
+        "import.kilo4() requires a Python installation with the 'numpy' module, accessible via reticulate. ",
+        "Install Python and numpy (e.g. reticulate::install_miniconda(); reticulate::py_install(\"numpy\")) and try again.",
+        call. = FALSE
+      )
+    }
+
     # Make lists of all .npy and .tsv files in the folder
     folder_path_kilo4 <- paste0(folder_path, "/kilosort4", sep = "")
     npy_files <- list.files(folder_path_kilo4, pattern = "\\.npy$", full.names = TRUE)
