@@ -19,3 +19,9 @@ installed package small. This downloads it once into a per-user cache
 directory (see \code{\link[tools]{R_user_dir}}) and reuses that cache on
 every later call.
 }
+\examples{
+\dontrun{
+spike_rasters <- get_spike_rasters_2022_data()
+head(spike_rasters)
+}
+}

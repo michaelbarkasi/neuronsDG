@@ -32,3 +32,18 @@
 \description{
 \code{print}, \code{summary}, and \code{plot} methods for neuron objects (class \code{"Rcpp_neuron"}, as created by \code{\link{new.neuron}}/\code{\link{load.rasters.as.neurons}}). \code{plot.Rcpp_neuron} dispatches to \code{\link{plot_raster}} or \code{\link{plot_autocorrelation}} depending on \code{type}, defaulting to the raster view. A neuron object is formally S4, so auto-printing it at the console (typing it by itself, rather than calling \code{print()} explicitly) goes through an S4 \code{show} method instead, which simply calls \code{print.Rcpp_neuron}.
 }
+\examples{
+raster_df <- data.frame(
+  cell       = c(1, 1, 1, 1, 1, 1, 1, 1),
+  time_in_ms = c(10, 20, 30, 40, 15, 25, 35, 45),
+  trial      = c(1, 1, 1, 1, 2, 2, 2, 2)
+)
+nrn <- load.rasters.as.neurons(raster_df, bin_size = 10)[["neuron_1"]]
+compute.autocorr(nrn)
+fit.edf.autocorr(nrn)
+
+print(nrn)
+summary(nrn)
+plot(nrn) # raster view (the default)
+plot(nrn, type = "autocorrelation")
+}

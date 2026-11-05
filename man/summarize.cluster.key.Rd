@@ -17,3 +17,10 @@ A data frame with one row per combination of covariates, and columns giving the 
 \description{
 Function to summarize the \code{cluster.key} output of \code{preprocess.kilo4} by covariates.
 }
+\examples{
+\dontrun{
+kilo4_path <- get_kilo4demo_data()
+preprocessed <- preprocess.kilo4(recording.folder = kilo4_path)
+summarize.cluster.key(preprocessed$cluster.key, covariate_list = c("hemi"))
+}
+}

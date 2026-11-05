@@ -56,3 +56,7 @@ A new neuron object (class \code{"Rcpp_neuron"}; see \code{\link{neuron-methods}
 \description{
 This function initializes a new neuron object with specified parameters. The neuron objects are the main tools for running correlation analyses of spike data.
 }
+\examples{
+nrn <- new.neuron(id_num = 1, recording_name = "demo")
+print(nrn)
+}

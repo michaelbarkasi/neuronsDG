@@ -29,3 +29,14 @@ A ggplot object showing the estimated and fitted autocorrelation.
 \description{
 Fetches and plots autocorrelation information from a neuron object. Assumes the autocorrelation has already been computed. Called by \code{plot.neuron(nrn, type = "autocorrelation")}.
 }
+\examples{
+raster_df <- data.frame(
+  cell       = c(1, 1, 1, 1, 1, 1, 1, 1),
+  time_in_ms = c(10, 20, 30, 40, 15, 25, 35, 45),
+  trial      = c(1, 1, 1, 1, 2, 2, 2, 2)
+)
+nrn <- load.rasters.as.neurons(raster_df, bin_size = 10)[["neuron_1"]]
+compute.autocorr(nrn)
+fit.edf.autocorr(nrn)
+plot_autocorrelation(nrn)
+}

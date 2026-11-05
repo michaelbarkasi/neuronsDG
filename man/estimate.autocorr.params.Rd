@@ -47,3 +47,24 @@ A \code{neuronsDG_estimates} object: a list containing a data frame of autocorre
 \description{
 This function performs the same estimate-and-fit procedure as \code{process.autocorr}, but does so multiple times for each neuron using simulated spike rasters generated from a dichotomized Gaussian model of that neuron.
 }
+\examples{
+# A well-conditioned example needs more trials/spikes than process.autocorr()'s
+# minimal examples, so the dichotomized-Gaussian fit underneath isn't degenerate.
+set.seed(42)
+make_cell <- function(cell_id, hemi, n_trials = 20, trial_dur = 100, n_spikes = 10) {
+  times <- unlist(lapply(
+    seq_len(n_trials), function(tr) sort(sample(seq_len(trial_dur), n_spikes))
+  ))
+  data.frame(
+    cell = cell_id, time_in_ms = times,
+    trial = rep(seq_len(n_trials), each = n_spikes), hemi = hemi
+  )
+}
+raster_df <- rbind(make_cell(1, "left"), make_cell(2, "right"))
+neurons <- load.rasters.as.neurons(raster_df, bin_size = 10)
+
+ests <- estimate.autocorr.params(
+  neuron_list = neurons, n_trials_per_sim = 10, n_sims_per_neurons = 2, seed = 1
+)
+ests
+}

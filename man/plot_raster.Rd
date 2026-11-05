@@ -21,3 +21,12 @@ A ggplot object showing the spike raster.
 \description{
 Fetches and plots the spike raster from a neuron object. Assumes the spike raster has already been loaded. Called by \code{plot.neuron(nrn, type = "raster")} (the default plot for a neuron).
 }
+\examples{
+raster_df <- data.frame(
+  cell       = c(1, 1, 1, 1, 1, 1, 1, 1),
+  time_in_ms = c(10, 20, 30, 40, 15, 25, 35, 45),
+  trial      = c(1, 1, 1, 1, 2, 2, 2, 2)
+)
+nrn <- load.rasters.as.neurons(raster_df, bin_size = 10)[["neuron_1"]]
+plot_raster(nrn)
+}

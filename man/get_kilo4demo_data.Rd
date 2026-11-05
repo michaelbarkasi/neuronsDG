@@ -20,3 +20,9 @@ keep the installed package small. This downloads and unpacks it once into
 a per-user cache directory (see \code{\link[tools]{R_user_dir}}) and
 reuses that cache on every later call.
 }
+\examples{
+\dontrun{
+kilo4_path <- get_kilo4demo_data()
+list.files(kilo4_path)
+}
+}

@@ -52,3 +52,16 @@ A list with three elements:
 \description{
 Function to preprocess kilosort4 data for use with neurons package functions.
 }
+\examples{
+\dontrun{
+# get_kilo4demo_data() downloads/caches the package's own kilosort4 demo
+# recordings; recording.folder can also be a vector of several such folders.
+kilo4_path <- get_kilo4demo_data()
+preprocessed <- preprocess.kilo4(
+  trial_time_start = 500,
+  trial_time_end = 2020,
+  recording.folder = kilo4_path
+)
+str(preprocessed, max.level = 1)
+}
+}

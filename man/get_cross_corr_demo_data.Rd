@@ -19,3 +19,9 @@ keep the installed package small. This downloads it once into a per-user
 cache directory (see \code{\link[tools]{R_user_dir}}) and reuses that
 cache on every later call.
 }
+\examples{
+\dontrun{
+crosscorr_raster <- get_cross_corr_demo_data()
+head(crosscorr_raster)
+}
+}

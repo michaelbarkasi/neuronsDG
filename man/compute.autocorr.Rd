@@ -21,3 +21,13 @@ None. Modifies neuron in place.
 \description{
 This function computes the autocorrelation of a single neuron object using specified parameters. It's a wrapper around the \code{compute_autocorrelation} method of the neuron class.
 }
+\examples{
+raster_df <- data.frame(
+  cell       = c(1, 1, 1, 1, 1, 1, 1, 1),
+  time_in_ms = c(10, 20, 30, 40, 15, 25, 35, 45),
+  trial      = c(1, 1, 1, 1, 2, 2, 2, 2)
+)
+nrn <- load.rasters.as.neurons(raster_df, bin_size = 10)[["neuron_1"]]
+compute.autocorr(nrn)
+nrn$fetch_autocorr_R()
+}

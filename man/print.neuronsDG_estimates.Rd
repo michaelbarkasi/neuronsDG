@@ -17,3 +17,14 @@
 \description{
 Print method for the list returned by \code{\link{estimate.autocorr.params}}.
 }
+\examples{
+set.seed(42)
+times <- unlist(lapply(1:20, function(tr) sort(sample(1:100, 10))))
+raster_df <- data.frame(cell = 1, time_in_ms = times, trial = rep(1:20, each = 10))
+nrn <- load.rasters.as.neurons(raster_df, bin_size = 10)[["neuron_1"]]
+
+ests <- estimate.autocorr.params(
+  neuron_list = list(nrn), n_trials_per_sim = 10, n_sims_per_neurons = 2, seed = 1
+)
+print(ests)
+}

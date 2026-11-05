@@ -40,3 +40,15 @@ Base function to import raw kilosort4 and accompanying stimulus data. The functi
    \item{includeVector.mat}{MATLAB file giving whether each cluster is stimulus-responsive (1) or not (0)}
 }
 }
+\examples{
+\dontrun{
+# folder_path/kilosort4 must contain kilosort4's own output files
+# (spike_positions.npy, spike_clusters.npy, spike_times.npy, cluster_group.tsv,
+# includeVector.mat -- see Description above); stim_data_file is a csv of
+# stimulus onset times.
+imported <- import.kilo4(
+  folder_path = "path/to/recording",
+  stim_data_file = "path/to/recording/stim_events.csv"
+)
+}
+}

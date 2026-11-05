@@ -32,3 +32,12 @@ A list of neuron objects (class \code{"Rcpp_neuron"}; see \code{\link{neuron-met
 \description{
 This function loads spike raster data from a data frame or CSV file and converts each unique cell into a neuron object. The raster data frame must contain columns for cell identifier, spike time in milliseconds, and trial number. Optional metadata columns can also be included.
 }
+\examples{
+raster_df <- data.frame(
+  cell       = c(1, 1, 1, 1, 2, 2, 2, 2),
+  time_in_ms = c(10, 20, 30, 40, 15, 25, 35, 45),
+  trial      = c(1, 1, 1, 1, 1, 1, 1, 1)
+)
+neurons <- load.rasters.as.neurons(raster_df, bin_size = 10)
+names(neurons)
+}

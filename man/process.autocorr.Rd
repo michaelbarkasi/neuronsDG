@@ -47,3 +47,12 @@ A \code{neuronsDG_autocorr_table} object: a data frame with one row per neuron a
 \description{
 First estimates autocorrelation of each neuron in the list, then fits an exponential decay function to the estimated autocorrelation, and finally collects and returns summary statistics for each neuron.
 }
+\examples{
+raster_df <- data.frame(
+  cell       = c(1,1,1,1, 1,1,1,1, 2,2,2,2),
+  time_in_ms = c(10,20,30,40, 15,25,35,45, 12,22,32,42),
+  trial      = c(1,1,1,1, 2,2,2,2, 1,1,1,1)
+)
+neurons <- load.rasters.as.neurons(raster_df, bin_size = 10)
+process.autocorr(neurons)
+}

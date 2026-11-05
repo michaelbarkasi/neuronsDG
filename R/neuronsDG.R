@@ -246,7 +246,7 @@ plot_autocorrelation <- function(
     axis_size <- 12 
     legend_size <- 10
     plt <- ggplot2::ggplot(df_temp) +
-      ggplot2::geom_line(ggplot2::aes(x = bin, y = autocorrelation), color = "blue") + 
+      ggplot2::geom_line(ggplot2::aes(x = .data$bin, y = .data$autocorrelation), color = "blue") +
       ggplot2::labs(
         title = plot_title,
         x = "Lag (bins)",
@@ -267,7 +267,7 @@ plot_autocorrelation <- function(
       plt <- plt + ggplot2::geom_hline(yintercept = bias_term, linewidth = 2, linetype = "dotted", color = "darkgray")
     }
     if (length(autocorr_edf) > 1) {
-      plt <- plt + ggplot2::geom_line(ggplot2::aes(x = bin, y = autocorrelation_fitted), color = "red")
+      plt <- plt + ggplot2::geom_line(ggplot2::aes(x = .data$bin, y = .data$autocorrelation_fitted), color = "red")
     }
     if (return_plot) {
       return(plt)
@@ -880,7 +880,7 @@ analyze.autocorr <- function(
     title_size <- 14 
     axis_size <- 12 
     legend_size <- 10
-    distribution_plot <- ggplot2::ggplot(df, ggplot2::aes(x = value, fill = group)) +
+    distribution_plot <- ggplot2::ggplot(df, ggplot2::aes(x = .data$value, fill = .data$group)) +
       ggplot2::geom_density(alpha = 0.6) +
       #scale_y_continuous(transform = "log1p") +
       ggplot2::labs(title = "Expected Time Constant", x = "ms", y = "Density") +
