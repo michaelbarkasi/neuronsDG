@@ -9,7 +9,6 @@
 
 #' @useDynLib neuronsDG, .registration = TRUE
 #' @import Rcpp
-#' @import ggplot2
 NULL
 
 .onLoad <- function(libname, pkgname) {
@@ -17,8 +16,9 @@ NULL
     # Our compiled code calls NLopt only through nloptr's registered C routines
     # (nloptrAPI.h, resolved via R_GetCCallable()), not a system libnlopt. Those routines are
     # only registered once nloptr's own namespace has actually been loaded, which merely
-    # listing nloptr in Imports does not by itself trigger -- so force it here.
-    requireNamespace("nloptr", quietly = TRUE)
+    # listing nloptr in Imports does not by itself trigger -- so force it here with a real
+    # (harmless) call, which R CMD check also recognizes as actually using the Import.
+    invisible(nloptr::is.nloptr(NULL))
     # show()'s S4 method must be registered only after loadModule() (above) has created the
     # "Rcpp_neuron" class -- registering it at the top level of this file instead errors with
     # "no definition for class 'Rcpp_neuron'", since top-level code runs before .onLoad() does.
@@ -96,7 +96,7 @@ load.rasters.as.neurons <- function(
   ) {
     
     # Load data
-    if (class(raster_df) == "character") {
+    if (is.character(raster_df)) {
       raster_df <- as.data.frame(read.csv(raster_df))
     }
     
@@ -306,7 +306,7 @@ plot_raster <- function(
     legend_size <- 10
     plt <- ggplot2::ggplot(spike.raster) +
       ggplot2::geom_segment(
-        ggplot2::aes(x = time - dx, xend = time + dx, y = trial, yend = trial), 
+        ggplot2::aes(x = .data$time - dx, xend = .data$time + dx, y = .data$trial, yend = .data$trial),
         color = "black",
         linewidth = 0.5
       ) +
@@ -648,6 +648,7 @@ process.autocorr <- function(
 #' @param n_trials_per_sim Number of trials to simulate for each simulation (default: 300).
 #' @param n_sims_per_neurons Number of simulations to run for each neuron (default: 100).
 #' @param bin_count_action Method for counting spikes in each bin when computing autocorrelation; one of "boolean", "mean", or "sum" (default: "sum").
+#' @param max_lag Maximum lag (in raw, unbinned units of each neuron's own trial data) to compute autocorrelation for both the original and each dichotomized-Gaussian-simulated spike raster; if 0, uses the shortest raw trial length across \code{neuron_list} (default: 0).
 #' @param A0 Initial guess for amplitude parameter of exponential decay function (default: 0.001).
 #' @param tau0 Initial guess for time constant parameter of exponential decay function (default: 1.0).
 #' @param ctol Convergence tolerance for fitting exponential decay function (default: 1e-8).

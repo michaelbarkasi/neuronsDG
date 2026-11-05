@@ -27,6 +27,8 @@ estimate.autocorr.params(
 
 \item{bin_count_action}{Method for counting spikes in each bin when computing autocorrelation; one of "boolean", "mean", or "sum" (default: "sum").}
 
+\item{max_lag}{Maximum lag (in raw, unbinned units of each neuron's own trial data) to compute autocorrelation for both the original and each dichotomized-Gaussian-simulated spike raster; if 0, uses the shortest raw trial length across \code{neuron_list} (default: 0).}
+
 \item{A0}{Initial guess for amplitude parameter of exponential decay function (default: 0.001).}
 
 \item{tau0}{Initial guess for time constant parameter of exponential decay function (default: 1.0).}

@@ -8,9 +8,8 @@ Authors@R: person(given = "Michael",
                    email = "barkasi@wustl.edu")
 Description: Various tools for modeling neurons with dichotomized Gaussians. Defines a Cpp class 'neuron' intended to model a single neuron, accessible through R functions. Provides analysis methods for autocorrelation and cross-correlation.
 License: GPL-3
-Imports: Rcpp (>= 1.0.13), R.matlab, hdf5r, reticulate, nloptr, methods
+Imports: Rcpp (>= 1.0.13), R.matlab, hdf5r, reticulate, methods, ggplot2, nloptr
 LinkingTo: Rcpp, RcppEigen, BH, nloptr
-Depends: ggplot2, grid, gridExtra, colorspace
 Suggests: testthat (>= 3.0.0), mvtnorm, Matrix, MASS
 Config/testthat/edition: 3
 Config/Needs/website: rmarkdown
