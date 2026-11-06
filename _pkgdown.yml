@@ -23,17 +23,17 @@ articles:
 - title: Installation
   navbar: Installation
   contents:
-  - install
+  - articles/install
 
 - title: Tutorials
   navbar: Tutorials
-  contents: 
-  - starts_with("tutorial_")
+  contents:
+  - starts_with("articles/tutorial_")
 
 - title: Legal
   navbar: Legal
   contents:
-  - license
+  - articles/license
 
 reference:
 - title: Initialization functions

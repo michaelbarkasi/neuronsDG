@@ -81,7 +81,7 @@
                         <h4 data-toc-skip class="author">Michael
 Barkasi</h4>
             
-            <h4 data-toc-skip class="date">July 8, 2026 (v1.0)</h4>
+            <h4 data-toc-skip class="date">November 6, 2026 (v1.0)</h4>
       
 
       <div class="d-none name"><code>tutorial_tau_est_DG.Rmd</code></div>
@@ -129,26 +129,28 @@ few improvements.</p>
 Load spike rasters
 </h2>
 <p>Set up the R environment by clearing the workspace, setting a
-random-number generator seed, and loading neuronsDG.</p>
+random-number generator seed, and loading neuronsDG. This seed controls
+the one source of randomness still left to R itself in this tutorial: <a href="../reference/analyze.autocorr.html">analyze.autocorr()</a>’s
+bootstrap resampling, further down. The dichotomized-Gaussian
+simulations run by <a href="../reference/estimate.autocorr.params.html">estimate.autocorr.params()</a>,
+also further down, are drawn by their own self-contained random number
+generator in C++, so <code><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed()</a></code> has no effect on them; that
+function takes its own <code>seed</code> argument instead.</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Clear the R workspace to start fresh</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/rm.html" class="external-link">rm</a></span><span class="op">(</span>list <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/ls.html" class="external-link">ls</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Set seed for reproducibility</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">12345</span><span class="op">)</span> </span>
+<span><span class="co"># Set seed for reproducibility (affects analyze.autocorr()'s bootstrap; see above)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">12345</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Load package</span></span>
-<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va">neuronsDG</span>, quietly <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span> </span></code></pre></div>
-<p>All of the data is contained in a single csv file, provided with
-neuronsDG, as a compact spike raster.</p>
+<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va">neuronsDG</span>, quietly <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div>
+<p>All of the data is contained in a single csv file, as a compact spike
+raster. It’s too large to bundle in the package itself, so
+<code><a href="../reference/get_spike_rasters_2022_data.html">get_spike_rasters_2022_data()</a></code> downloads it once (caching it
+for later use) and returns it as a data frame.</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">spike.rasters</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/utils/read.table.html" class="external-link">read.csv</a></span><span class="op">(</span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span></span>
-<span>      <span class="st">"extdata"</span>, </span>
-<span>      <span class="st">"spike_rasters_2022data.csv"</span>, </span>
-<span>      package <span class="op">=</span> <span class="st">"neuronsDG"</span></span>
-<span>    <span class="op">)</span></span>
-<span>  <span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="va">spike.rasters</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/get_spike_rasters_2022_data.html">get_spike_rasters_2022_data</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">spike.rasters</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <pre class="scroll-output"><code><span><span class="co">##   trial sample cell time_in_ms recording_name hemi genotype sex    age region</span></span>
 <span><span class="co">## 1     2   1181    1      118.1    20080930002   LH    CBA/J   M P30:60    ACx</span></span>
@@ -181,18 +183,21 @@ built-in methods for many tasks, such as estimating autocorrelation
 parameters with dichotomized Gaussian simulations. Some of these methods
 can be accessed through R, but neurons provides R-native wrappers for
 the most useful ones. The neuronsDG package also provides native R
-functions for plotting. Let’s plot the rasters for two cells. The first
-has high autocorrelation, as can be seen from the long horizontal
-streaks of spikes:</p>
+functions for plotting, and a neuron object’s <code><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot()</a></code> method
+is a shorthand for these (it defaults to the raster view shown below;
+pass <code>type = "autocorrelation"</code> for the view used further
+down). Let’s plot the rasters for two cells. The first has high
+autocorrelation, as can be seen from the long horizontal streaks of
+spikes:</p>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">cell_high</span> <span class="op">&lt;-</span> <span class="fl">16</span></span>
-<span><span class="fu"><a href="../reference/plot-raster.html">plot.raster</a></span><span class="op">(</span><span class="va">neurons</span><span class="op">[[</span><span class="va">cell_high</span><span class="op">]</span><span class="op">]</span><span class="op">)</span> </span></code></pre></div>
+<span><span class="fu"><a href="../reference/plot_raster.html">plot_raster</a></span><span class="op">(</span><span class="va">neurons</span><span class="op">[[</span><span class="va">cell_high</span><span class="op">]</span><span class="op">]</span><span class="op">)</span> </span></code></pre></div>
 <p><img src="tutorial_tau_est_DG_files/figure-html/plot_raster_high_autocor-1.png" class="r-plt" alt="" width="700"></p>
 <p>The second has low autocorrelation, as can be seen from the more
 random distribution of spikes without long streaks:</p>
 <div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">cell_low</span> <span class="op">&lt;-</span> <span class="fl">1</span></span>
-<span><span class="fu"><a href="../reference/plot-raster.html">plot.raster</a></span><span class="op">(</span><span class="va">neurons</span><span class="op">[[</span><span class="va">cell_low</span><span class="op">]</span><span class="op">]</span><span class="op">)</span> </span></code></pre></div>
+<span><span class="fu"><a href="../reference/plot_raster.html">plot_raster</a></span><span class="op">(</span><span class="va">neurons</span><span class="op">[[</span><span class="va">cell_low</span><span class="op">]</span><span class="op">]</span><span class="op">)</span> </span></code></pre></div>
 <p><img src="tutorial_tau_est_DG_files/figure-html/plot_raster_low_autocor-1.png" class="r-plt" alt="" width="700"></p>
 <h2>
 Computing empirical autocorrelation from data
@@ -297,7 +302,7 @@ autocorrelation for the neuron with high autocorrelation shown
 above:</p>
 <div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/compute.autocorr.html">compute.autocorr</a></span><span class="op">(</span><span class="va">neurons</span><span class="op">[[</span><span class="va">cell_high</span><span class="op">]</span><span class="op">]</span>, use_raw <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
-<span><span class="fu"><a href="../reference/plot-autocorrelation.html">plot.autocorrelation</a></span><span class="op">(</span><span class="va">neurons</span><span class="op">[[</span><span class="va">cell_high</span><span class="op">]</span><span class="op">]</span><span class="op">)</span></span></code></pre></div>
+<span><span class="fu"><a href="../reference/plot_autocorrelation.html">plot_autocorrelation</a></span><span class="op">(</span><span class="va">neurons</span><span class="op">[[</span><span class="va">cell_high</span><span class="op">]</span><span class="op">]</span><span class="op">)</span></span></code></pre></div>
 <p><img src="tutorial_tau_est_DG_files/figure-html/compute_autocorrelation_high-1.png" class="r-plt" alt="" width="700"></p>
 <p>Which type of correlation, raw or Peason, is calculated is controlled
 by the <strong>use_raw</strong> option. The Pearson autocorrelation for
@@ -305,18 +310,18 @@ the same data can be got by setting <strong>use_raw</strong> to
 FALSE:</p>
 <div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/compute.autocorr.html">compute.autocorr</a></span><span class="op">(</span><span class="va">neurons</span><span class="op">[[</span><span class="va">cell_high</span><span class="op">]</span><span class="op">]</span>, use_raw <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
-<span><span class="fu"><a href="../reference/plot-autocorrelation.html">plot.autocorrelation</a></span><span class="op">(</span><span class="va">neurons</span><span class="op">[[</span><span class="va">cell_high</span><span class="op">]</span><span class="op">]</span><span class="op">)</span></span></code></pre></div>
+<span><span class="fu"><a href="../reference/plot_autocorrelation.html">plot_autocorrelation</a></span><span class="op">(</span><span class="va">neurons</span><span class="op">[[</span><span class="va">cell_high</span><span class="op">]</span><span class="op">]</span><span class="op">)</span></span></code></pre></div>
 <p><img src="tutorial_tau_est_DG_files/figure-html/compute_autocorrelation_high_pearson-1.png" class="r-plt" alt="" width="700"></p>
 <p>As another example, here is the raw autocorrelation for the neuron
 with low autocorrelation shown above:</p>
 <div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/compute.autocorr.html">compute.autocorr</a></span><span class="op">(</span><span class="va">neurons</span><span class="op">[[</span><span class="va">cell_low</span><span class="op">]</span><span class="op">]</span>, use_raw <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
-<span><span class="fu"><a href="../reference/plot-autocorrelation.html">plot.autocorrelation</a></span><span class="op">(</span><span class="va">neurons</span><span class="op">[[</span><span class="va">cell_low</span><span class="op">]</span><span class="op">]</span><span class="op">)</span></span></code></pre></div>
+<span><span class="fu"><a href="../reference/plot_autocorrelation.html">plot_autocorrelation</a></span><span class="op">(</span><span class="va">neurons</span><span class="op">[[</span><span class="va">cell_low</span><span class="op">]</span><span class="op">]</span><span class="op">)</span></span></code></pre></div>
 <p><img src="tutorial_tau_est_DG_files/figure-html/compute_autocorrelation_low-1.png" class="r-plt" alt="" width="700"></p>
 <p>And the Pearson autocorrelation for the same data:</p>
 <div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/compute.autocorr.html">compute.autocorr</a></span><span class="op">(</span><span class="va">neurons</span><span class="op">[[</span><span class="va">cell_low</span><span class="op">]</span><span class="op">]</span>, use_raw <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
-<span><span class="fu"><a href="../reference/plot-autocorrelation.html">plot.autocorrelation</a></span><span class="op">(</span><span class="va">neurons</span><span class="op">[[</span><span class="va">cell_low</span><span class="op">]</span><span class="op">]</span><span class="op">)</span></span></code></pre></div>
+<span><span class="fu"><a href="../reference/plot_autocorrelation.html">plot_autocorrelation</a></span><span class="op">(</span><span class="va">neurons</span><span class="op">[[</span><span class="va">cell_low</span><span class="op">]</span><span class="op">]</span><span class="op">)</span></span></code></pre></div>
 <p><img src="tutorial_tau_est_DG_files/figure-html/compute_autocorrelation_low_pearson-1.png" class="r-plt" alt="" width="700"></p>
 <h2>
 Modeling autocorrelation decay
@@ -345,7 +350,7 @@ high autocorrelation:</p>
 <div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/compute.autocorr.html">compute.autocorr</a></span><span class="op">(</span><span class="va">neurons</span><span class="op">[[</span><span class="va">cell_high</span><span class="op">]</span><span class="op">]</span><span class="op">)</span> <span class="co"># Recompute with raw autocorrelation</span></span>
 <span><span class="fu"><a href="../reference/fit.edf.autocorr.html">fit.edf.autocorr</a></span><span class="op">(</span><span class="va">neurons</span><span class="op">[[</span><span class="va">cell_high</span><span class="op">]</span><span class="op">]</span><span class="op">)</span></span>
-<span><span class="fu"><a href="../reference/plot-autocorrelation.html">plot.autocorrelation</a></span><span class="op">(</span><span class="va">neurons</span><span class="op">[[</span><span class="va">cell_high</span><span class="op">]</span><span class="op">]</span><span class="op">)</span></span></code></pre></div>
+<span><span class="fu"><a href="../reference/plot_autocorrelation.html">plot_autocorrelation</a></span><span class="op">(</span><span class="va">neurons</span><span class="op">[[</span><span class="va">cell_high</span><span class="op">]</span><span class="op">]</span><span class="op">)</span></span></code></pre></div>
 <p><img src="tutorial_tau_est_DG_files/figure-html/fit_autocorrelation_high-1.png" class="r-plt" alt="" width="700"></p>
 <p>The fitted model is plotted as the red line. The parameters of the
 exponential decay fit can be fetched directly with a neuron method and
@@ -566,18 +571,19 @@ practice, 1000 or more simulations should be run.</p>
 <div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">autocor.ests</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/estimate.autocorr.params.html">estimate.autocorr.params</a></span><span class="op">(</span></span>
 <span>    neuron_list <span class="op">=</span> <span class="va">neurons</span>,</span>
-<span>    n_trials_per_sim <span class="op">=</span> <span class="fl">500</span>, </span>
+<span>    n_trials_per_sim <span class="op">=</span> <span class="fl">500</span>,</span>
 <span>    n_sims_per_neurons <span class="op">=</span> <span class="fl">100</span>,</span>
-<span>    use_raw <span class="op">=</span> <span class="cn">TRUE</span></span>
+<span>    use_raw <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>    seed <span class="op">=</span> <span class="fl">12345</span></span>
 <span>  <span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">autocor.ests</span><span class="op">$</span><span class="va">estimates</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
-<pre class="scroll-output"><code><span><span class="co">##    lambda_ms lambda_bin          A      tau    bias_term  autocorr1 max_autocorr mean_autocorr min_autocorr</span></span>
-<span><span class="co">## 1 0.01485915  0.1485915 0.01105836 32.05667 0.0002207945 0.01127915  0.008315734  0.0004350302 0.0002207945</span></span>
-<span><span class="co">## 2 0.01660563  0.1660563 0.01144916 34.19481 0.0002757471 0.01172491  0.008821844  0.0005147842 0.0002757471</span></span>
-<span><span class="co">## 3 0.01690141  0.1690141 0.01264304 36.96877 0.0002856576 0.01292870  0.009932287  0.0005743306 0.0002856576</span></span>
-<span><span class="co">## 4 0.01811268  0.1811268 0.01290035 37.93506 0.0003280690 0.01322842  0.010239075  0.0006314054 0.0003280690</span></span>
-<span><span class="co">## 5 0.01615493  0.1615493 0.01196002 33.57555 0.0002609817 0.01222101  0.009140382  0.0005054699 0.0002609817</span></span>
-<span><span class="co">## 6 0.01539437  0.1539437 0.01105912 30.26630 0.0002369865 0.01129610  0.008184464  0.0004373144 0.0002369865</span></span></code></pre>
+<pre class="scroll-output"><code><span><span class="co">##    lambda_ms lambda_bin           A      tau    bias_term  autocorr1 max_autocorr mean_autocorr min_autocorr</span></span>
+<span><span class="co">## 1 0.02081690 0.02081690 0.011682738 37.62410 0.0004333434 0.01211608  0.009389357  0.0007054876 0.0004333434</span></span>
+<span><span class="co">## 2 0.02204225 0.02204225 0.013172298 37.07094 0.0004858609 0.01365816  0.010543806  0.0007875670 0.0004858609</span></span>
+<span><span class="co">## 3 0.02145070 0.02145070 0.012132618 36.40765 0.0004601327 0.01259275  0.009678795  0.0007323529 0.0004601327</span></span>
+<span><span class="co">## 4 0.02342254 0.02342254 0.012961803 42.88474 0.0005486152 0.01351042  0.010814473  0.0008986655 0.0005486152</span></span>
+<span><span class="co">## 5 0.02309859 0.02309859 0.013475187 43.40920 0.0005335449 0.01400873  0.011236117  0.0009024497 0.0005335449</span></span>
+<span><span class="co">## 6 0.01801408 0.01801408 0.009906633 32.73303 0.0003245072 0.01023114  0.007623255  0.0005211449 0.0003245072</span></span></code></pre>
 <p>With the simulations run, the final step is to estimate the network
 time constant for covariates of interest. The function <a href="../reference/analyze.autocorr.html">analyze.autocorr()</a> does
 this by bootstrapping over the tau values obtained from the simulations.
@@ -599,12 +605,12 @@ simulation.</p>
 <div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">autocor.results.bootstraps</span><span class="op">$</span><span class="va">resamples</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <pre class="scroll-output"><code><span><span class="co">##   LH_CBA/J RH_CBA/J</span></span>
-<span><span class="co">## 1 57.24231 53.22666</span></span>
-<span><span class="co">## 2 51.22015 56.22815</span></span>
-<span><span class="co">## 3 46.86830 51.19610</span></span>
-<span><span class="co">## 4 52.67101 48.77020</span></span>
-<span><span class="co">## 5 53.69465 59.17320</span></span>
-<span><span class="co">## 6 52.05223 56.77158</span></span></code></pre>
+<span><span class="co">## 1 53.37849 57.93641</span></span>
+<span><span class="co">## 2 51.86931 66.33116</span></span>
+<span><span class="co">## 3 54.52058 61.49864</span></span>
+<span><span class="co">## 4 51.45689 62.96174</span></span>
+<span><span class="co">## 5 51.92582 55.56604</span></span>
+<span><span class="co">## 6 53.18690 60.44672</span></span></code></pre>
 <p>The second is <strong>distribution_plot</strong>, a ggplot2 object
 visualizing the bootstrap distributions of tau for each covariate.</p>
 <div class="sourceCode" id="cb24"><pre class="downlit sourceCode r">
@@ -621,26 +627,22 @@ Code summary
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va">neuronsDG</span><span class="op">)</span> </span>
 <span></span>
 <span><span class="co"># Load demo data</span></span>
-<span><span class="va">spike.rasters</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/utils/read.table.html" class="external-link">read.csv</a></span><span class="op">(</span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span></span>
-<span>      <span class="st">"extdata"</span>, </span>
-<span>      <span class="st">"spike_rasters_2022data.csv"</span>, </span>
-<span>      package <span class="op">=</span> <span class="st">"neuronsDG"</span></span>
-<span>    <span class="op">)</span></span>
-<span>  <span class="op">)</span></span>
+<span><span class="va">spike.rasters</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/get_spike_rasters_2022_data.html">get_spike_rasters_2022_data</a></span><span class="op">(</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Create neuron objects</span></span>
 <span><span class="va">neurons</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/load.rasters.as.neurons.html">load.rasters.as.neurons</a></span><span class="op">(</span><span class="va">spike.rasters</span>, bin_size <span class="op">=</span> <span class="fl">10.0</span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Run dichotomized Gaussian simulations </span></span>
+<span><span class="co"># Run dichotomized Gaussian simulations (seed is this function's own argument, not</span></span>
+<span><span class="co"># set.seed() above -- see the "Load spike rasters" section)</span></span>
 <span><span class="va">autocor.ests</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/estimate.autocorr.params.html">estimate.autocorr.params</a></span><span class="op">(</span></span>
 <span>    neuron_list <span class="op">=</span> <span class="va">neurons</span>,</span>
-<span>    n_trials_per_sim <span class="op">=</span> <span class="fl">500</span>, </span>
+<span>    n_trials_per_sim <span class="op">=</span> <span class="fl">500</span>,</span>
 <span>    n_sims_per_neurons <span class="op">=</span> <span class="fl">100</span>,</span>
-<span>    use_raw <span class="op">=</span> <span class="cn">TRUE</span></span>
+<span>    use_raw <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>    seed <span class="op">=</span> <span class="fl">12345</span></span>
 <span>  <span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Analyze results by covariate</span></span>
+<span><span class="co"># Analyze results by covariate (this step's randomness IS controlled by set.seed() above)</span></span>
 <span><span class="va">autocor.results.bootstraps</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/analyze.autocorr.html">analyze.autocorr</a></span><span class="op">(</span></span>
 <span>    <span class="va">autocor.ests</span>,</span>
 <span>    covariate <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"hemi"</span>,<span class="st">"genotype"</span><span class="op">)</span>,</span>
@@ -657,7 +659,7 @@ Code summary
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.1.</p>
 </div>
 
     </footer>
