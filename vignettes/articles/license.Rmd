@@ -1,7 +1,7 @@
 ---
 title: "Dependency licenses"
 author: "Michael Barkasi"
-date: "July 8, 2026 (v1.0)"
+date: "November 6, 2026 (v1.0)"
 ---
 
 This package uses code from the following packages, which are distributed under the licenses listed below.
@@ -98,3 +98,33 @@ by: Alan Genz, Frank Bretz, Tetsuhisa Miwa, Xuefei Mi, Friedrich Leisch, Fabian 
 http://mvtnorm.R-forge.R-project.org
 
 GNU General Public License v2.0
+
+<h1> R.matlab </h1>
+
+by: Henrik Bengtsson, Andy Jacobson, and Jason Riedy
+
+https://cran.r-project.org/web/packages/R.matlab/index.html
+https://github.com/HenrikBengtsson/R.matlab
+
+GNU Lesser General Public License (LGPL) v2.1 or later
+https://www.gnu.org/licenses/old-licenses/lgpl-2.1.html
+
+<h1> hdf5r </h1>
+
+by: Holger Hoefling and Mario Annau
+
+https://cran.r-project.org/web/packages/hdf5r/index.html
+https://github.com/hhoeflin/hdf5r
+
+Apache License 2.0
+https://www.apache.org/licenses/LICENSE-2.0
+
+<h1> reticulate </h1>
+
+by: Tomasz Kalinowski, Kevin Ushey, JJ Allaire, Yuan Tang, and other contributors (Posit/RStudio)
+
+https://cran.r-project.org/web/packages/reticulate/index.html
+https://github.com/rstudio/reticulate
+
+Apache License 2.0
+https://www.apache.org/licenses/LICENSE-2.0
