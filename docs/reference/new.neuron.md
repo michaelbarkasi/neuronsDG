@@ -96,4 +96,17 @@ new.neuron(
 
 ## Value
 
-A new neuron object.
+A new neuron object (class `"Rcpp_neuron"`; see
+[`neuron-methods`](https://michaelbarkasi.github.io/neuronsDG/reference/neuron-methods.md)
+for its `print`/`summary`/`plot` methods).
+
+## Examples
+
+``` r
+nrn <- new.neuron(id_num = 1, recording_name = "demo")
+print(nrn)
+#> <neuron> #1 (demo) 
+#>   type: generic 
+#>   trial data loaded: FALSE 
+#>   autocorrelation computed: FALSE 
+```

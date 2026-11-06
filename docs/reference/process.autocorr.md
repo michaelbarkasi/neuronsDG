@@ -82,7 +82,27 @@ process.autocorr(
 
 ## Value
 
-A data frame with one row per neuron and columns for lambda (mean spike
-rate per ms and per bin), amplitude (A), time constant (tau), bias term,
-first autocorrelation value, maximum autocorrelation value, mean
-autocorrelation value, and minimum autocorrelation value.
+A `neuronsDG_autocorr_table` object: a data frame with one row per
+neuron and columns for lambda (mean spike rate per ms and per bin),
+amplitude (A), time constant (tau), bias term, first autocorrelation
+value, maximum autocorrelation value, mean autocorrelation value, and
+minimum autocorrelation value. See
+[`plot.neuronsDG_autocorr_table`](https://michaelbarkasi.github.io/neuronsDG/reference/plot.neuronsDG_autocorr_table.md).
+
+## Examples
+
+``` r
+raster_df <- data.frame(
+  cell       = c(1,1,1,1, 1,1,1,1, 2,2,2,2),
+  time_in_ms = c(10,20,30,40, 15,25,35,45, 12,22,32,42),
+  trial      = c(1,1,1,1, 2,2,2,2, 1,1,1,1)
+)
+neurons <- load.rasters.as.neurons(raster_df, bin_size = 10)
+process.autocorr(neurons)
+#>       cell lambda_ms lambda_bin         A      tau bias_term autocorr1
+#> 1 neuron_1 0.1000000   1.000000 0.4613628 1.682201  1.000000  1.461363
+#> 2 neuron_2 0.1333333   1.333333 0.3286061 1.079589  1.777778  2.106384
+#>   max_autocorr mean_autocorr min_autocorr
+#> 1     1.001209      1.000606     1.000003
+#> 2     1.777809      1.777793     1.777778
+```

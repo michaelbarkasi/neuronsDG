@@ -74,3 +74,18 @@ import.kilo4(
 
 A list with two data frames: spikes (rows are spikes) and stim (rows are
 stimulus onset times)
+
+## Examples
+
+``` r
+if (FALSE) { # \dontrun{
+# folder_path/kilosort4 must contain kilosort4's own output files
+# (spike_positions.npy, spike_clusters.npy, spike_times.npy, cluster_group.tsv,
+# includeVector.mat -- see Description above); stim_data_file is a csv of
+# stimulus onset times.
+imported <- import.kilo4(
+  folder_path = "path/to/recording",
+  stim_data_file = "path/to/recording/stim_events.csv"
+)
+} # }
+```

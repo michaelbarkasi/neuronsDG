@@ -1,4 +1,4 @@
-url: https://michaelbarkasi.github.io/neurons/
+url: https://michaelbarkasi.github.io/neuronsDG/
 template:
   bootstrap: 5
   light-switch: true
@@ -41,7 +41,13 @@ reference:
   contents:
   - starts_with("new.")
   - load.rasters.as.neurons
-  
+
+- title: The neuron class
+  navbar: The neuron class
+  contents:
+  - Rcpp_neuron-class
+  - neuron-methods
+
 - title: Neuron method wrappers
   navbar: Neuron method wrappers
   contents:
@@ -49,18 +55,30 @@ reference:
   - compute.autocorr
   - estimate.autocorr.params
   - process.autocorr
-  - plot.raster
-  - plot.autocorrelation
+  - plot_raster
+  - plot_autocorrelation
   
 - title: Analysis functions
   navbar: Analysis functions
   contents:
   - starts_with("analyze.")
   - test.sigma.assumption
-  
-- title: Preprocessing functions 
-  navbar: Preprocessing functions 
+
+- title: Methods for analysis results
+  navbar: Methods for analysis results
+  contents:
+  - neuronsDG_analysis-methods
+  - plot.neuronsDG_autocorr_table
+  - print.neuronsDG_estimates
+
+- title: Preprocessing functions
+  navbar: Preprocessing functions
   contents:
   - import.kilo4
   - preprocess.kilo4
   - summarize.cluster.key
+
+- title: Demo data
+  navbar: Demo data
+  contents:
+  - starts_with("get_")

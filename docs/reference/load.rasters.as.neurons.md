@@ -50,4 +50,19 @@ load.rasters.as.neurons(
 
 ## Value
 
-A list of neuron objects, one per unique cell in the raster data.
+A list of neuron objects (class `"Rcpp_neuron"`; see
+[`neuron-methods`](https://michaelbarkasi.github.io/neuronsDG/reference/neuron-methods.md)),
+one per unique cell in the raster data.
+
+## Examples
+
+``` r
+raster_df <- data.frame(
+  cell       = c(1, 1, 1, 1, 2, 2, 2, 2),
+  time_in_ms = c(10, 20, 30, 40, 15, 25, 35, 45),
+  trial      = c(1, 1, 1, 1, 1, 1, 1, 1)
+)
+neurons <- load.rasters.as.neurons(raster_df, bin_size = 10)
+names(neurons)
+#> [1] "neuron_1" "neuron_2"
+```

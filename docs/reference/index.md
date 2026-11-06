@@ -2,40 +2,72 @@
 
 ## Initialization functions
 
-- [`new.neuron()`](https://michaelbarkasi.github.io/neurons/reference/new.neuron.md)
+- [`new.neuron()`](https://michaelbarkasi.github.io/neuronsDG/reference/new.neuron.md)
   : Initialize neuron
-- [`load.rasters.as.neurons()`](https://michaelbarkasi.github.io/neurons/reference/load.rasters.as.neurons.md)
+- [`load.rasters.as.neurons()`](https://michaelbarkasi.github.io/neuronsDG/reference/load.rasters.as.neurons.md)
   : Load neuron data from raster file
+
+## The neuron class
+
+- [`Rcpp_neuron-class`](https://michaelbarkasi.github.io/neuronsDG/reference/Rcpp_neuron-class.md)
+  [`Rcpp_neuron`](https://michaelbarkasi.github.io/neuronsDG/reference/Rcpp_neuron-class.md)
+  [`C++Object-class`](https://michaelbarkasi.github.io/neuronsDG/reference/Rcpp_neuron-class.md)
+  [`C++Object`](https://michaelbarkasi.github.io/neuronsDG/reference/Rcpp_neuron-class.md)
+  : The neuron reference class
+- [`print(`*`<Rcpp_neuron>`*`)`](https://michaelbarkasi.github.io/neuronsDG/reference/neuron-methods.md)
+  [`summary(`*`<Rcpp_neuron>`*`)`](https://michaelbarkasi.github.io/neuronsDG/reference/neuron-methods.md)
+  [`print(`*`<summary.neuron>`*`)`](https://michaelbarkasi.github.io/neuronsDG/reference/neuron-methods.md)
+  [`plot(`*`<Rcpp_neuron>`*`)`](https://michaelbarkasi.github.io/neuronsDG/reference/neuron-methods.md)
+  : S3/S4 methods for neuron objects
 
 ## Neuron method wrappers
 
-- [`fit.edf.autocorr()`](https://michaelbarkasi.github.io/neurons/reference/fit.edf.autocorr.md)
+- [`fit.edf.autocorr()`](https://michaelbarkasi.github.io/neuronsDG/reference/fit.edf.autocorr.md)
   : Fit exponential decay function to autocorrelation of single neuron
   object
-- [`compute.autocorr()`](https://michaelbarkasi.github.io/neurons/reference/compute.autocorr.md)
+- [`compute.autocorr()`](https://michaelbarkasi.github.io/neuronsDG/reference/compute.autocorr.md)
   : Compute autocorrelation of single neuron object
-- [`estimate.autocorr.params()`](https://michaelbarkasi.github.io/neurons/reference/estimate.autocorr.params.md)
+- [`estimate.autocorr.params()`](https://michaelbarkasi.github.io/neuronsDG/reference/estimate.autocorr.params.md)
   : Function to estimate autocorrelation parameters using dichotomized
   Gaussian simulations
-- [`process.autocorr()`](https://michaelbarkasi.github.io/neurons/reference/process.autocorr.md)
+- [`process.autocorr()`](https://michaelbarkasi.github.io/neuronsDG/reference/process.autocorr.md)
   : Function to process autocorrelation of neuron list
-- [`plot.raster()`](https://michaelbarkasi.github.io/neurons/reference/plot-raster.md)
-  : Function to plot spike raster of neuron
-- [`plot.autocorrelation()`](https://michaelbarkasi.github.io/neurons/reference/plot-autocorrelation.md)
-  : Function to plot autocorrelation of neuron
+- [`plot_raster()`](https://michaelbarkasi.github.io/neuronsDG/reference/plot_raster.md)
+  : Plot spike raster of a neuron
+- [`plot_autocorrelation()`](https://michaelbarkasi.github.io/neuronsDG/reference/plot_autocorrelation.md)
+  : Plot autocorrelation of a neuron
 
 ## Analysis functions
 
-- [`analyze.autocorr()`](https://michaelbarkasi.github.io/neurons/reference/analyze.autocorr.md)
+- [`analyze.autocorr()`](https://michaelbarkasi.github.io/neuronsDG/reference/analyze.autocorr.md)
   : Function to analyze autocorrelation estimates with bootstrapping
-- [`test.sigma.assumption()`](https://michaelbarkasi.github.io/neurons/reference/test.sigma.assumption.md)
+- [`test.sigma.assumption()`](https://michaelbarkasi.github.io/neuronsDG/reference/test.sigma.assumption.md)
   : Helper function for testing assumption of autocorrelation processing
+
+## Methods for analysis results
+
+- [`print(`*`<neuronsDG_analysis>`*`)`](https://michaelbarkasi.github.io/neuronsDG/reference/neuronsDG_analysis-methods.md)
+  [`plot(`*`<neuronsDG_analysis>`*`)`](https://michaelbarkasi.github.io/neuronsDG/reference/neuronsDG_analysis-methods.md)
+  : Methods for autocorrelation bootstrap analyses
+- [`plot(`*`<neuronsDG_autocorr_table>`*`)`](https://michaelbarkasi.github.io/neuronsDG/reference/plot.neuronsDG_autocorr_table.md)
+  : Plot an autocorrelation summary table
+- [`print(`*`<neuronsDG_estimates>`*`)`](https://michaelbarkasi.github.io/neuronsDG/reference/print.neuronsDG_estimates.md)
+  : Print an autocorrelation-parameter estimate set
 
 ## Preprocessing functions
 
-- [`import.kilo4()`](https://michaelbarkasi.github.io/neurons/reference/import.kilo4.md)
+- [`import.kilo4()`](https://michaelbarkasi.github.io/neuronsDG/reference/import.kilo4.md)
   : Import raw kilosort4 data
-- [`preprocess.kilo4()`](https://michaelbarkasi.github.io/neurons/reference/preprocess.kilo4.md)
+- [`preprocess.kilo4()`](https://michaelbarkasi.github.io/neuronsDG/reference/preprocess.kilo4.md)
   : Preprocess kilosort4 data
-- [`summarize.cluster.key()`](https://michaelbarkasi.github.io/neurons/reference/summarize.cluster.key.md)
+- [`summarize.cluster.key()`](https://michaelbarkasi.github.io/neuronsDG/reference/summarize.cluster.key.md)
   : Summarize cluster key by covariates
+
+## Demo data
+
+- [`get_cross_corr_demo_data()`](https://michaelbarkasi.github.io/neuronsDG/reference/get_cross_corr_demo_data.md)
+  : Download the cross-correlation demo dataset
+- [`get_kilo4demo_data()`](https://michaelbarkasi.github.io/neuronsDG/reference/get_kilo4demo_data.md)
+  : Download the kilosort4 demo dataset
+- [`get_spike_rasters_2022_data()`](https://michaelbarkasi.github.io/neuronsDG/reference/get_spike_rasters_2022_data.md)
+  : Download the 2022 spike-raster demo dataset
