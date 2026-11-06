@@ -87,6 +87,14 @@ import.kilo4 <- function(
     folder_path_kilo4 <- paste0(folder_path, "/kilosort4", sep = "")
     npy_files <- list.files(folder_path_kilo4, pattern = "\\.npy$", full.names = TRUE)
     tsv_files <- list.files(folder_path_kilo4, pattern = "\\.tsv$", full.names = TRUE)
+    if (length(npy_files) == 0) {
+      stop(
+        "import.kilo4() found no .npy files in '", folder_path_kilo4, "'. ",
+        "Files actually present there: ",
+        paste(list.files(folder_path_kilo4, full.names = FALSE), collapse = ", "),
+        call. = FALSE
+      )
+    }
     
     # Create an empty list to store data
     data_list <- list()
@@ -104,10 +112,16 @@ import.kilo4 <- function(
     # Files to import as integers
     int_list <- c("spike_clusters")
     
-    # Load .npy files 
+    # Load .npy files
+    # (file_name is derived with basename() rather than by stripping
+    # folder_path_kilo4 as a string prefix off `file`: if that prefix ever
+    # fails to match exactly -- e.g. a path-separator or normalization
+    # mismatch between how list.files() and folder_path_kilo4 render the
+    # same directory -- file_name silently falls through to the full path,
+    # fails the import_list membership test below, and the file is skipped
+    # via `next` with no warning or error at all.)
     for (file in npy_files) {
-      file_name <- gsub(paste0(folder_path_kilo4,"/"), "", file)
-      file_name <- sub("\\..*", "", file_name)
+      file_name <- sub("\\..*", "", basename(file))
       if (!(file_name %in% import_list)) next
       data_list[[file_name]] <- tryCatch({
         reticulate::import("numpy")$load(file, allow_pickle = TRUE)
@@ -118,13 +132,23 @@ import.kilo4 <- function(
         )
       })
     }
-    
+
     # Load .tsv files
     for (file in tsv_files) {
-      file_name <- gsub(paste0(folder_path_kilo4,"/"), "", file)
-      file_name <- sub("\\..*", "", file_name)
+      file_name <- sub("\\..*", "", basename(file))
       if (!(file_name %in% import_list)) next
       data_list[[file_name]] <- read.delim(file, sep = "\t", header = TRUE)
+    }
+
+    missing_required <- setdiff(c("spike_clusters", "spike_times"), names(data_list))
+    if (length(missing_required) > 0) {
+      stop(
+        "import.kilo4() could not load required file(s): ",
+        paste(missing_required, collapse = ", "), ". ",
+        ".npy files found: ", paste(basename(npy_files), collapse = ", "), ". ",
+        "Successfully loaded: ", paste(names(data_list), collapse = ", "),
+        call. = FALSE
+      )
     }
     
     # Print report on the imported data
