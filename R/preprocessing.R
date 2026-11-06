@@ -415,8 +415,8 @@ preprocess.kilo4 <- function(
       single_cells_mask <- good_mua(kilosort_data)
       cell_numbers <- sort(unique(kilosort_data$spike_clusters[single_cells_mask]))
       if (length(cell_numbers) == 0) next
-      # Combine with recording name 
-      raster_names <- c(raster_names, paste0(sub(paste0(recording.folder, "/"), "", rf), "_", cell_numbers))
+      # Combine with recording name
+      raster_names <- c(raster_names, paste0(basename(rf), "_", cell_numbers))
       # Grab max trial number 
       matrix_col_num <- c(matrix_col_num, rep(kilosort.data.maxtrial[rf], length(cell_numbers)))
     }
@@ -451,8 +451,8 @@ preprocess.kilo4 <- function(
       
       # For each cell, extract data as matrices with rows as sample times, columns as trials
       for (cn in cell_numbers) {
-        # ... grab raster name 
-        rn <- paste0(sub(paste0(recording.folder, "/"), "", rf), "_", cn)
+        # ... grab raster name
+        rn <- paste0(basename(rf), "_", cn)
         # ... grab spikes which belong to that cell and are in a valid trial
         spike_idx <- which(kilosort_data$spike_clusters == cn)
         # For each spike ...
@@ -476,7 +476,7 @@ preprocess.kilo4 <- function(
         # ... reorder and subset columns
         kilosort_data_parsed_spikes_good <- kilosort_data_parsed_spikes_good[, c("trial", "sample", "cell", "time_in_ms")]
         # ... add recording name, cluster, and covariate information
-        recordingname <- sub(paste0(recording.folder, "/"), "", rf)
+        recordingname <- basename(rf)
         kilosort_data_parsed_spikes_good$recording_name <- recordingname
         kilosort_data_parsed_spikes_good$cluster <- original_cluster_nums
         if (!is.null(meta_data)) {
@@ -484,8 +484,8 @@ preprocess.kilo4 <- function(
         }
         # ... replace cell numbers with new cell numbers
         replaced <- rep(FALSE, nrow(kilosort_data_parsed_spikes_good))
-        for (cn in cell_numbers) { 
-          rn <- paste0(sub(paste0(recording.folder, "/"), "", rf), "_", cn)
+        for (cn in cell_numbers) {
+          rn <- paste0(basename(rf), "_", cn)
           cell_mask <- !replaced & kilosort_data_parsed_spikes_good$cell == cn
           kilosort_data_parsed_spikes_good$cell[cell_mask] <- cell_numbers_good[rn]
           replaced <- replaced | cell_mask
