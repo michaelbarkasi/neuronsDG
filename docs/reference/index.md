@@ -11,8 +11,6 @@
 
 - [`Rcpp_neuron-class`](https://michaelbarkasi.github.io/neuronsDG/reference/Rcpp_neuron-class.md)
   [`Rcpp_neuron`](https://michaelbarkasi.github.io/neuronsDG/reference/Rcpp_neuron-class.md)
-  [`C++Object-class`](https://michaelbarkasi.github.io/neuronsDG/reference/Rcpp_neuron-class.md)
-  [`C++Object`](https://michaelbarkasi.github.io/neuronsDG/reference/Rcpp_neuron-class.md)
   : The neuron reference class
 - [`print(`*`<Rcpp_neuron>`*`)`](https://michaelbarkasi.github.io/neuronsDG/reference/neuron-methods.md)
   [`summary(`*`<Rcpp_neuron>`*`)`](https://michaelbarkasi.github.io/neuronsDG/reference/neuron-methods.md)
