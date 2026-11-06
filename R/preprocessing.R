@@ -5,6 +5,17 @@
 #' @import reticulate
 NULL
 
+# reticulate's py_module_available() can report TRUE on the strength of its
+# own auto-provisioning (e.g. silently bootstrapping an ephemeral Python/numpy
+# via uv) without that environment actually being usable for real work; doing
+# a trivial real numpy call is the only reliable way to know numpy will work.
+numpy_available <- function() {
+  tryCatch({
+    reticulate::import("numpy")$array(1)
+    TRUE
+  }, error = function(e) FALSE)
+}
+
 load_mat <- function(path) {
     # Read first few bytes to determine format
     con <- file(path, "rb")
@@ -60,12 +71,13 @@ import.kilo4 <- function(
     # Will produce two data frames, spike (rows are spikes) and stim (rows are stimulus onset times)
 
     # spike_positions/spike_clusters/spike_times are read from .npy files via
-    # reticulate+numpy; fail clearly up front rather than letting a missing
-    # Python/numpy installation silently empty out every .npy-derived column
-    # (which previously surfaced only much later as a confusing, unrelated error).
-    if (!reticulate::py_module_available("numpy")) {
+    # reticulate+numpy; fail clearly up front rather than letting a missing or
+    # non-functional Python/numpy installation silently empty out every
+    # .npy-derived column (which previously surfaced only much later as a
+    # confusing, unrelated error).
+    if (!numpy_available()) {
       stop(
-        "import.kilo4() requires a Python installation with the 'numpy' module, accessible via reticulate. ",
+        "import.kilo4() requires a working Python installation with the 'numpy' module, accessible via reticulate. ",
         "Install Python and numpy (e.g. reticulate::install_miniconda(); reticulate::py_install(\"numpy\")) and try again.",
         call. = FALSE
       )
@@ -100,8 +112,10 @@ import.kilo4 <- function(
       data_list[[file_name]] <- tryCatch({
         reticulate::import("numpy")$load(file, allow_pickle = TRUE)
       }, error = function(e) {
-        cat("\n\nError loading: ", file, "\n")
-        NULL
+        stop(
+          "import.kilo4() failed to load '", file, "' via reticulate/numpy: ", conditionMessage(e),
+          call. = FALSE
+        )
       })
     }
     

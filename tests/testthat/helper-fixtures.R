@@ -84,10 +84,13 @@ kilo4_demo_path <- function() {
 # import.kilo4()/preprocess.kilo4() read the kilosort4 .npy files via
 # reticulate+numpy; skip gracefully wherever that's unavailable (e.g. no
 # Python on the machine) rather than erroring, same spirit as the
-# no-internet skips above.
+# no-internet skips above. Uses neuronsDG:::numpy_available() (a real,
+# functional numpy call) rather than reticulate::py_module_available(),
+# which can report TRUE purely on the strength of its own auto-provisioning
+# without that environment actually working.
 skip_if_no_numpy <- function() {
   testthat::skip_if_not(
-    reticulate::py_module_available("numpy"),
+    neuronsDG:::numpy_available(),
     "numpy (via reticulate) unavailable"
   )
 }
