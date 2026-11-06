@@ -103,8 +103,8 @@ test_that("compute_crosscorrelation_R() of a neuron against a copy of itself mat
   expect_length(cross, 10)
   expect_equal(
     cross,
-    c(0.1738209, 0.1258930, 0.1020796, 0.0891353, 0.0808246,
-      0.0744301, 0.0692385, 0.0651553, 0.0614339, 0.0578687),
+    c(0.1738209, 0.1258781, 0.1020540, 0.0891096, 0.0808007,
+      0.0744066, 0.0692147, 0.0651252, 0.0613976, 0.0578283),
     tolerance = 1e-4
   )
 })

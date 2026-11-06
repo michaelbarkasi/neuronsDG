@@ -1202,8 +1202,14 @@ VectorXd neuron::compute_crosscorrelation(
       // Subset data to current lag step
       int ref_end = lag_step + max_lag_bin - 1;
       MatrixXd binned_data_ref_cut = binned_data_ref(seq(lag_step, ref_end), Eigen::all);
-      // Comparison data should be longer, as it is shifted by max_lag_bin
-      int comp_end = std::min(ref_end + max_lag_bin, trial_length_comp_bin);
+      // Comparison data should be longer, as it is shifted by max_lag_bin.
+      // Clamp to the last valid row index (trial_length_comp_bin - 1): binned_data_comp
+      // has trial_length_comp_bin rows, so trial_length_comp_bin itself is one past the
+      // end. empirical_corr_lagged() already zero-pads when handed a shorter-than-ideal
+      // comparison window (see its n_cmp < n_ref + max_lag check), so clamping here is
+      // safe and doesn't lose any real data -- it previously caused a heap-buffer-overflow
+      // read whenever this lag step's ideal window ran past the end of the comparison data.
+      int comp_end = std::min(ref_end + max_lag_bin, trial_length_comp_bin - 1);
       MatrixXd binned_data_comp_cut = binned_data_comp(seq(lag_step, comp_end), Eigen::all);
       // Find lagged correlation for this step
       VectorXd step_crosscorr = empirical_corr_lagged(binned_data_ref_cut, binned_data_comp_cut, max_lag_bin, use_raw);
@@ -1440,10 +1446,19 @@ void neuron::fit_autocorrelation() {
       nlopt_result sc = nlopt_optimize(opt, x.data(), &min_fx);
       success_code = static_cast<int>(sc);
     } catch (std::exception& e) {
-      if (false) {
-        Rcpp::Rcout << "Optimization failed: " << e.what() << std::endl;
-      }
+      Rcpp::warning(
+        "fit_autocorrelation(): nlopt_optimize() threw for neuron %d (%s): %s. "
+        "Falling back to the unfitted initial guess (A0=%g, tau0=%g).",
+        id_num, recording_name.c_str(), e.what(), A0, tau0
+      );
       success_code = 0;
+    }
+    if (success_code < 0) {
+      Rcpp::warning(
+        "fit_autocorrelation(): nlopt_optimize() returned failure code %d for neuron %d (%s); "
+        "result may not be fully converged.",
+        success_code, id_num, recording_name.c_str()
+      );
     }
     
     // Compute final modelled autocorrelation 
