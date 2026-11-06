@@ -2,23 +2,22 @@
 % Please edit documentation in R/neuronsDG.R
 \name{neuron-methods}
 \alias{neuron-methods}
-\alias{print.Rcpp_neuron}
-\alias{summary.Rcpp_neuron}
+\alias{print.neuron}
+\alias{summary.neuron}
 \alias{print.summary.neuron}
-\alias{plot.Rcpp_neuron}
-\alias{show,Rcpp_neuron-method}
-\title{S3/S4 methods for neuron objects}
+\alias{plot.neuron}
+\title{S3 methods for neuron objects}
 \usage{
-\method{print}{Rcpp_neuron}(x, ...)
+\method{print}{neuron}(x, ...)
 
-\method{summary}{Rcpp_neuron}(object, ...)
+\method{summary}{neuron}(object, ...)
 
 \method{print}{summary.neuron}(x, ...)
 
-\method{plot}{Rcpp_neuron}(x, type = c("raster", "autocorrelation"), ...)
+\method{plot}{neuron}(x, type = c("raster", "autocorrelation"), ...)
 }
 \arguments{
-\item{x}{A neuron object (or, for \code{print.summary.neuron}, a \code{summary.neuron} object from \code{summary.Rcpp_neuron}).}
+\item{x}{A neuron object (or, for \code{print.summary.neuron}, a \code{summary.neuron} object from \code{summary.neuron}).}
 
 \item{...}{Unused for \code{print}/\code{summary}; present for S3 consistency. For \code{plot}, additional arguments passed on to \code{\link{plot_raster}} or \code{\link{plot_autocorrelation}}.}
 
@@ -27,10 +26,10 @@
 \item{type}{One of "raster" (default) or "autocorrelation", specifying which view of the neuron to plot.}
 }
 \value{
-\code{print.Rcpp_neuron} and \code{print.summary.neuron} return their argument, invisibly. \code{summary.Rcpp_neuron} returns a \code{summary.neuron} object, printed by its own \code{print} method. \code{plot.Rcpp_neuron} returns whatever \code{\link{plot_raster}}/\code{\link{plot_autocorrelation}} returns (a ggplot object if \code{return_plot = TRUE}, otherwise \code{NULL}, invisibly).
+\code{print.neuron} and \code{print.summary.neuron} return their argument, invisibly. \code{summary.neuron} returns a \code{summary.neuron} object, printed by its own \code{print} method. \code{plot.neuron} returns whatever \code{\link{plot_raster}}/\code{\link{plot_autocorrelation}} returns (a ggplot object if \code{return_plot = TRUE}, otherwise \code{NULL}, invisibly).
 }
 \description{
-\code{print}, \code{summary}, and \code{plot} methods for neuron objects (class \code{"Rcpp_neuron"}, as created by \code{\link{new.neuron}}/\code{\link{load.rasters.as.neurons}}). \code{plot.Rcpp_neuron} dispatches to \code{\link{plot_raster}} or \code{\link{plot_autocorrelation}} depending on \code{type}, defaulting to the raster view. A neuron object is formally S4, so auto-printing it at the console (typing it by itself, rather than calling \code{print()} explicitly) goes through an S4 \code{show} method instead, which simply calls \code{print.Rcpp_neuron}.
+\code{print}, \code{summary}, and \code{plot} methods for neuron objects (class \code{"neuron"}, as created by \code{\link{new.neuron}}/\code{\link{load.rasters.as.neurons}}). \code{plot.neuron} dispatches to \code{\link{plot_raster}} or \code{\link{plot_autocorrelation}} depending on \code{type}, defaulting to the raster view. A neuron object is a plain S3 wrapper around the package's internal C++ representation, so auto-printing it at the console (typing it by itself, rather than calling \code{print()} explicitly) already goes through ordinary S3 dispatch to \code{print.neuron}, with no special handling needed.
 }
 \examples{
 raster_df <- data.frame(

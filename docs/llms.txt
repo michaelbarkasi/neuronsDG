@@ -31,11 +31,30 @@ Copyright (C) 2026, Michael Barkasi <barkasi@wustl.edu>
 - [`Rcpp_neuron-class`](https://michaelbarkasi.github.io/neuronsDG/reference/Rcpp_neuron-class.md)
   [`Rcpp_neuron`](https://michaelbarkasi.github.io/neuronsDG/reference/Rcpp_neuron-class.md)
   : The neuron reference class
-- [`print(`*`<Rcpp_neuron>`*`)`](https://michaelbarkasi.github.io/neuronsDG/reference/neuron-methods.md)
-  [`summary(`*`<Rcpp_neuron>`*`)`](https://michaelbarkasi.github.io/neuronsDG/reference/neuron-methods.md)
+- [`print(`*`<neuron>`*`)`](https://michaelbarkasi.github.io/neuronsDG/reference/neuron-methods.md)
+  [`summary(`*`<neuron>`*`)`](https://michaelbarkasi.github.io/neuronsDG/reference/neuron-methods.md)
   [`print(`*`<summary.neuron>`*`)`](https://michaelbarkasi.github.io/neuronsDG/reference/neuron-methods.md)
-  [`plot(`*`<Rcpp_neuron>`*`)`](https://michaelbarkasi.github.io/neuronsDG/reference/neuron-methods.md)
-  : S3/S4 methods for neuron objects
+  [`plot(`*`<neuron>`*`)`](https://michaelbarkasi.github.io/neuronsDG/reference/neuron-methods.md)
+  : S3 methods for neuron objects
+
+## Neuron accessor functions
+
+- [`fetch.autocorr()`](https://michaelbarkasi.github.io/neuronsDG/reference/fetch.autocorr.md)
+  : Fetch a neuron's computed empirical autocorrelation
+- [`fetch.edf.parameters()`](https://michaelbarkasi.github.io/neuronsDG/reference/fetch.edf.parameters.md)
+  : Fetch a neuron's fitted exponential-decay parameters
+- [`fetch.id.data()`](https://michaelbarkasi.github.io/neuronsDG/reference/fetch.id.data.md)
+  : Fetch a neuron's identifying metadata
+- [`fetch.lambda()`](https://michaelbarkasi.github.io/neuronsDG/reference/fetch.lambda.md)
+  : Fetch a neuron's mean spike rate
+- [`fetch.spike.raster()`](https://michaelbarkasi.github.io/neuronsDG/reference/fetch.spike.raster.md)
+  : Fetch a neuron's spike raster
+- [`fetch.trial.data()`](https://michaelbarkasi.github.io/neuronsDG/reference/fetch.trial.data.md)
+  : Fetch a neuron's trial data matrix
+- [`load.trial.data()`](https://michaelbarkasi.github.io/neuronsDG/reference/load.trial.data.md)
+  : Load a trial data matrix into a neuron object
+- [`compute.crosscorr()`](https://michaelbarkasi.github.io/neuronsDG/reference/compute.crosscorr.md)
+  : Compute cross-correlation between two neurons
 
 ## Neuron method wrappers
 

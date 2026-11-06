@@ -46,6 +46,6 @@ raster_df <- data.frame(
 )
 nrn <- load.rasters.as.neurons(raster_df, bin_size = 10)[["neuron_1"]]
 compute.autocorr(nrn)
-nrn$fetch_autocorr_R()
+fetch.autocorr(nrn)
 #> [1] 1.2500000 1.0000000 0.8333333 0.6562500
 ```

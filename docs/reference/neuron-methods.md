@@ -1,31 +1,32 @@
-# S3/S4 methods for neuron objects
+# S3 methods for neuron objects
 
 `print`, `summary`, and `plot` methods for neuron objects (class
-`"Rcpp_neuron"`, as created by
+`"neuron"`, as created by
 [`new.neuron`](https://michaelbarkasi.github.io/neuronsDG/reference/new.neuron.md)/[`load.rasters.as.neurons`](https://michaelbarkasi.github.io/neuronsDG/reference/load.rasters.as.neurons.md)).
-`plot.Rcpp_neuron` dispatches to
+`plot.neuron` dispatches to
 [`plot_raster`](https://michaelbarkasi.github.io/neuronsDG/reference/plot_raster.md)
 or
 [`plot_autocorrelation`](https://michaelbarkasi.github.io/neuronsDG/reference/plot_autocorrelation.md)
-depending on `type`, defaulting to the raster view. A neuron object is
-formally S4, so auto-printing it at the console (typing it by itself,
-rather than calling [`print()`](https://rdrr.io/r/base/print.html)
-explicitly) goes through an S4 `show` method instead, which simply calls
-`print.Rcpp_neuron`.
+depending on `type`, defaulting to the raster view. A neuron object is a
+plain S3 wrapper around the package's internal C++ representation, so
+auto-printing it at the console (typing it by itself, rather than
+calling [`print()`](https://rdrr.io/r/base/print.html) explicitly)
+already goes through ordinary S3 dispatch to `print.neuron`, with no
+special handling needed.
 
 ## Usage
 
 ``` r
-# S3 method for class 'Rcpp_neuron'
+# S3 method for class 'neuron'
 print(x, ...)
 
-# S3 method for class 'Rcpp_neuron'
+# S3 method for class 'neuron'
 summary(object, ...)
 
 # S3 method for class 'summary.neuron'
 print(x, ...)
 
-# S3 method for class 'Rcpp_neuron'
+# S3 method for class 'neuron'
 plot(x, type = c("raster", "autocorrelation"), ...)
 ```
 
@@ -34,7 +35,7 @@ plot(x, type = c("raster", "autocorrelation"), ...)
 - x:
 
   A neuron object (or, for `print.summary.neuron`, a `summary.neuron`
-  object from `summary.Rcpp_neuron`).
+  object from `summary.neuron`).
 
 - ...:
 
@@ -55,9 +56,9 @@ plot(x, type = c("raster", "autocorrelation"), ...)
 
 ## Value
 
-`print.Rcpp_neuron` and `print.summary.neuron` return their argument,
-invisibly. `summary.Rcpp_neuron` returns a `summary.neuron` object,
-printed by its own `print` method. `plot.Rcpp_neuron` returns whatever
+`print.neuron` and `print.summary.neuron` return their argument,
+invisibly. `summary.neuron` returns a `summary.neuron` object, printed
+by its own `print` method. `plot.neuron` returns whatever
 [`plot_raster`](https://michaelbarkasi.github.io/neuronsDG/reference/plot_raster.md)/[`plot_autocorrelation`](https://michaelbarkasi.github.io/neuronsDG/reference/plot_autocorrelation.md)
 returns (a ggplot object if `return_plot = TRUE`, otherwise `NULL`,
 invisibly).

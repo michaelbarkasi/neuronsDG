@@ -48,6 +48,13 @@ reference:
   - Rcpp_neuron-class
   - neuron-methods
 
+- title: Neuron accessor functions
+  navbar: Neuron accessor functions
+  contents:
+  - starts_with("fetch.")
+  - load.trial.data
+  - compute.crosscorr
+
 - title: Neuron method wrappers
   navbar: Neuron method wrappers
   contents:

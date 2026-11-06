@@ -192,11 +192,11 @@ neurons <- load.rasters.as.neurons(
 ```
 
 The next step is to compute the cross-correlation between the reference
-cell and the comparison cell. The **compute_crosscorrelation_R()**
-method of a neuron object computes the cross-correlation (raw or
-Pearson) between that neuron and another neuron. The method returns a
-vector of cross-correlation values at lags from zero to the specified
-max lag.
+cell and the comparison cell. The
+[compute.crosscorr()](https://michaelbarkasi.github.io/neuronsDG/reference/compute.crosscorr.md)
+function computes the cross-correlation (raw or Pearson) between a
+reference neuron and a comparison neuron. It returns a vector of
+cross-correlation values at lags from zero to the specified max lag.
 
 ``` r
 
@@ -205,7 +205,8 @@ ref_neuron <- neurons[[paste0("neuron_", ref_cell)]]
 comp_neuron <- neurons[[paste0("neuron_", comp_cell)]]
 
 # Compute raw cross-correlation
-cross_corr <- ref_neuron$compute_crosscorrelation_R(
+cross_corr <- compute.crosscorr(
+    ref_neuron,                 # Reference neuron
     comp_neuron,                # Comparison neuron
     "sum",                      # Binning action ("sum", "mean", "boolean")
     trial_duration/lag_divider, # max lag
@@ -288,9 +289,10 @@ neurons_loaded <- load.rasters.as.neurons(
 # Compute cross-correlation for loaded neurons
 ref_neuron_loaded <- neurons_loaded[[paste0("neuron_", ref_cell)]]
 comp_neuron_loaded <- neurons_loaded[[paste0("neuron_", comp_cell)]]
-cross_corr_loaded <- ref_neuron_loaded$compute_crosscorrelation_R(
-    comp_neuron_loaded, 
-    "sum", 
+cross_corr_loaded <- compute.crosscorr(
+    ref_neuron_loaded,
+    comp_neuron_loaded,
+    "sum",
     trial_duration/lag_divider,
     TRUE,
     TRUE
@@ -349,7 +351,7 @@ for example, is the cross-correlogram for the loaded neuron.
 ``` r
 
 # Fetch the raster of the loaded comparison neuron
-loaded_raster <- comp_neuron_loaded$fetch_spike_raster_R()
+loaded_raster <- fetch.spike.raster(comp_neuron_loaded)
 # Extract spike times relative to reference spikes
 loaded_spikes <- loaded_raster[,1]
 # Plot histogram of spike times
@@ -434,9 +436,10 @@ cross_corr_by_genotype <- function(
         # Compute cross-correlation
         ref_neuron <- neurons[[paste0("neuron_", ref_cell)]]
         comp_neuron <- neurons[[paste0("neuron_", comp_cell)]]
-        cross_corr_cc <- ref_neuron$compute_crosscorrelation_R(
-          comp_neuron, 
-          "sum", 
+        cross_corr_cc <- compute.crosscorr(
+          ref_neuron,
+          comp_neuron,
+          "sum",
           trial_duration/lag_divider,   # max lag
           TRUE,                         # use raw?
           FALSE                         # verbose?

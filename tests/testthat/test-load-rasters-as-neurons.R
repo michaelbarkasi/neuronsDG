@@ -9,7 +9,7 @@ test_that("load.rasters.as.neurons() creates one neuron per unique cell", {
 test_that("load.rasters.as.neurons() propagates metadata columns", {
   raster_df <- make_synthetic_raster()
   neurons <- load.rasters.as.neurons(raster_df, bin_size = 10.0)
-  id <- neurons[["neuron_1"]]$fetch_id_data()
+  id <- fetch.id.data(neurons[["neuron_1"]])
 
   expect_equal(id$id_num, 1)
   expect_equal(id$recording_name, "synthetic_rec")
@@ -26,7 +26,7 @@ test_that("load.rasters.as.neurons() propagates metadata columns", {
 test_that("load.rasters.as.neurons() falls back to 'not_provided' metadata when absent", {
   raster_df <- make_synthetic_raster()[, c("cell", "time_in_ms", "trial")]
   neurons <- load.rasters.as.neurons(raster_df, bin_size = 10.0)
-  id <- neurons[["neuron_1"]]$fetch_id_data()
+  id <- fetch.id.data(neurons[["neuron_1"]])
 
   expect_equal(id$recording_name, "not_provided")
   expect_equal(id$genotype, "not_provided")
@@ -40,15 +40,15 @@ test_that("load.rasters.as.neurons() builds the spike raster each neuron reports
   raster_df <- make_synthetic_raster()
   neurons <- load.rasters.as.neurons(raster_df, bin_size = 10.0)
 
-  sr1 <- neurons[["neuron_1"]]$fetch_spike_raster_R()
+  sr1 <- fetch.spike.raster(neurons[["neuron_1"]])
   expect_equal(nrow(sr1), 8) # 4 spikes in trial 1 + 4 in trial 2
   expect_setequal(sr1[, "time"], c(10, 20, 30, 40, 15, 25, 35, 45))
   expect_setequal(sr1[, "trial"], c(1, 2))
 
-  sr2 <- neurons[["neuron_2"]]$fetch_spike_raster_R()
+  sr2 <- fetch.spike.raster(neurons[["neuron_2"]])
   expect_equal(nrow(sr2), 4)
 
-  sr3 <- neurons[["neuron_3"]]$fetch_spike_raster_R()
+  sr3 <- fetch.spike.raster(neurons[["neuron_3"]])
   expect_equal(nrow(sr3), 2)
 })
 
@@ -60,7 +60,7 @@ test_that("load.rasters.as.neurons() respects time_cutoff", {
   raster_df <- raster_df[raster_df$cell %in% c(1, 2), ]
   neurons <- load.rasters.as.neurons(raster_df, bin_size = 10.0, time_cutoff = 30)
 
-  sr1 <- neurons[["neuron_1"]]$fetch_spike_raster_R()
+  sr1 <- fetch.spike.raster(neurons[["neuron_1"]])
   # Spikes at 10, 20, 30 (trial 1) and 15, 25 (trial 2) survive a 30ms cutoff;
   # 40 and 35, 45 do not.
   expect_true(all(sr1[, "time"] <= 30))
@@ -89,8 +89,8 @@ test_that("load.rasters.as.neurons() accepts a csv file path, not just a data.fr
 
   expect_equal(names(neurons_from_path), names(neurons_from_df))
   expect_equal(
-    neurons_from_path[["neuron_1"]]$fetch_spike_raster_R(),
-    neurons_from_df[["neuron_1"]]$fetch_spike_raster_R()
+    fetch.spike.raster(neurons_from_path[["neuron_1"]]),
+    fetch.spike.raster(neurons_from_df[["neuron_1"]])
   )
 })
 
@@ -99,6 +99,6 @@ test_that("load.rasters.as.neurons() on real demo data matches pinned structure 
 
   expect_length(neurons, 41)
   expect_equal(names(neurons)[c(1, 16)], c("neuron_1", "neuron_16"))
-  expect_equal(nrow(neurons[[16]]$fetch_trial_data_R()), 1540)
-  expect_equal(ncol(neurons[[16]]$fetch_trial_data_R()), 323)
+  expect_equal(nrow(fetch.trial.data(neurons[[16]])), 1540)
+  expect_equal(ncol(fetch.trial.data(neurons[[16]])), 323)
 })

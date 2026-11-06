@@ -22,16 +22,16 @@ test_that("the DG tutorial's full pipeline reproduces its own narrative claims a
   cell_high <- 16; cell_low <- 1
 
   # "The first has high autocorrelation ... The second has low autocorrelation"
-  raster_high <- as.data.frame(neurons[[cell_high]]$fetch_spike_raster_R())
-  raster_low  <- as.data.frame(neurons[[cell_low]]$fetch_spike_raster_R())
+  raster_high <- as.data.frame(fetch.spike.raster(neurons[[cell_high]]))
+  raster_low  <- as.data.frame(fetch.spike.raster(neurons[[cell_low]]))
 
   compute.autocorr(neurons[[cell_high]], use_raw = TRUE)
   fit.edf.autocorr(neurons[[cell_high]])
   compute.autocorr(neurons[[cell_low]], use_raw = TRUE)
   fit.edf.autocorr(neurons[[cell_low]])
 
-  edf_high <- neurons[[cell_high]]$fetch_EDF_parameters()
-  edf_low  <- neurons[[cell_low]]$fetch_EDF_parameters()
+  edf_high <- fetch.edf.parameters(neurons[[cell_high]])
+  edf_low  <- fetch.edf.parameters(neurons[[cell_low]])
 
   expect_equal(unname(edf_high["tau"]), 69.3777201221, tolerance = 1e-3)
   expect_equal(unname(edf_low["tau"]),  37.4334419605, tolerance = 1e-3)

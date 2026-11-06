@@ -1,25 +1,25 @@
 # S3 methods added to fix CRAN's "S3 generic/method consistency" NOTE (plot.raster/
 # plot.autocorrelation looked like unregistered S3 methods for classes "raster"/
-# "autocorrelation", but actually took a neuron object). neuron objects are Rcpp Modules
-# reference objects -- formally S4 (class "Rcpp_neuron") -- so methods target that class
-# directly rather than a wrapper class (prepending a class via class(x) <- c(...) strips
-# their S4-ness and breaks the $ accessor Rcpp modules rely on; see git history). The three
-# list-returning analysis functions are likewise tagged with their own (plain S3) classes.
+# "autocorrelation", but actually took a neuron object). neuron objects are a plain S3 list
+# (class "neuron") wrapping the package's internal C++ representation; see
+# new_neuron_wrapper()/.neuron_ptr() in R/neuronsDG.R for why it's a fresh wrapper object
+# rather than a relabeled copy of that internal representation. The three list-returning
+# analysis functions are likewise tagged with their own (plain S3) classes.
 
 test_that("new.neuron() and load.rasters.as.neurons() produce dispatchable neuron objects", {
   nrn <- new.neuron(id_num = 1)
-  expect_true(inherits(nrn, "Rcpp_neuron"))
-  expect_true(isS4(nrn)) # must stay a formal S4 object for $ method dispatch to keep working
+  expect_true(inherits(nrn, "neuron"))
+  expect_false(isS4(nrn)) # a plain S3 wrapper, not the underlying Rcpp Modules object
 
   raster_df <- make_synthetic_raster()
   neurons <- load.rasters.as.neurons(raster_df, bin_size = 10.0)
-  expect_true(all(vapply(neurons, inherits, logical(1), what = "Rcpp_neuron")))
-  expect_true(all(vapply(neurons, isS4, logical(1))))
+  expect_true(all(vapply(neurons, inherits, logical(1), what = "neuron")))
+  expect_false(any(vapply(neurons, isS4, logical(1))))
 })
 
-test_that("auto-printing a neuron at the console (show()) delegates to print.Rcpp_neuron()", {
+test_that("auto-printing a neuron at the console delegates to print.neuron()", {
   nrn <- new.neuron(id_num = 9, recording_name = "rec9")
-  out <- capture.output(methods::show(nrn))
+  out <- capture.output(nrn) # a bare visible value at top level auto-prints, same as typing `nrn`
   expect_match(paste(out, collapse = "\n"), "#9")
   expect_match(paste(out, collapse = "\n"), "rec9")
 })

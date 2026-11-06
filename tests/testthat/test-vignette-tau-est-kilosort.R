@@ -29,8 +29,8 @@ test_that("the kilosort tutorial's full pipeline reproduces its own narrative cl
   compute.autocorr(neurons[[cell_high]]); fit.edf.autocorr(neurons[[cell_high]])
   compute.autocorr(neurons[[cell_low]]);  fit.edf.autocorr(neurons[[cell_low]])
 
-  edf_high <- neurons[[cell_high]]$fetch_EDF_parameters()
-  edf_low  <- neurons[[cell_low]]$fetch_EDF_parameters()
+  edf_high <- fetch.edf.parameters(neurons[[cell_high]])
+  edf_low  <- fetch.edf.parameters(neurons[[cell_low]])
 
   # "the high-autocorrelation cell has a time constant of Xms and an
   #  amplitude of Y, while the low-autocorrelation cell has a time constant

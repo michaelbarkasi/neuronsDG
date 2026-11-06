@@ -51,7 +51,7 @@ raster_df <- data.frame(
 nrn <- load.rasters.as.neurons(raster_df, bin_size = 10)[["neuron_1"]]
 compute.autocorr(nrn)
 fit.edf.autocorr(nrn)
-nrn$fetch_EDF_parameters()
+fetch.edf.parameters(nrn)
 #>         A       tau bias_term 
 #> 0.9241097 1.5651261 1.0000000 
 ```

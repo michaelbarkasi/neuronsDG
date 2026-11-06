@@ -19,13 +19,40 @@ NULL
     # listing nloptr in Imports does not by itself trigger -- so force it here with a real
     # (harmless) call, which R CMD check also recognizes as actually using the Import.
     invisible(nloptr::is.nloptr(NULL))
-    # show()'s S4 method must be registered only after loadModule() (above) has created the
-    # "Rcpp_neuron" class -- registering it at the top level of this file instead errors with
-    # "no definition for class 'Rcpp_neuron'", since top-level code runs before .onLoad() does.
-    # (Dispatches to print.Rcpp_neuron() by name, not generic print(), so R CMD check's static
-    # scan of .onLoad() for console-writing calls doesn't flag this.)
-    methods::setMethod("show", "Rcpp_neuron", function(object) print.Rcpp_neuron(object))
   }
+
+# neuron objects: hiding the underlying Rcpp Modules class ############################################################
+#
+# Every neuron object returned to a user is a plain S3 list wrapping the real Rcpp Modules
+# reference object (class "Rcpp_neuron") in a single .ptr element, never the raw Rcpp object
+# itself. An earlier version of this package exposed the raw "Rcpp_neuron" object directly;
+# that design was abandoned specifically because `class(x) <- c("neuron", class(x))` on an S4
+# Rcpp Modules object silently strips its S4-ness (R's own class<- warns "result will no longer
+# be an S4 object"), breaking the $ accessor Rcpp Modules relies on for method dispatch -- so
+# the wrapper here is a fresh S3 list holding a reference to the real object, never a relabeled
+# copy of the object itself. Because the wrapped .ptr is still the same underlying reference
+# object, mutating methods called through it (e.g. compute.autocorr()) still mutate in place
+# exactly as before; only the outer wrapper is a plain (non-reference) R list.
+#
+# .neuron_ptr() is the single place that unwraps a neuron argument to the real Rcpp_neuron
+# object for a $method() call; every other function in this file goes through it rather than
+# reaching into $.ptr directly, so there is exactly one place that validates the input and one
+# place to change if the wrapper's internal representation ever changes.
+
+new_neuron_wrapper <- function(ptr) {
+  structure(list(.ptr = ptr), class = "neuron")
+}
+
+.neuron_ptr <- function(nrn, arg = "nrn") {
+  if (!inherits(nrn, "neuron")) {
+    stop(
+      "'", arg, "' must be a neuron object (see new.neuron()/load.rasters.as.neurons()), not ",
+      "an object of class ", paste(class(nrn), collapse = "/"), ".",
+      call. = FALSE
+    )
+  }
+  nrn$.ptr
+}
 
 # Initialization for C++ object classes ################################################################################
 
@@ -69,7 +96,7 @@ new.neuron <- function(
       neuron,
       id_num, recording_name, type, genotype, sex, hemi, region, age, sim, unit_time, unit_sample_rate, unit_data, t_per_bin, sample_rate
     )
-    return(nrn)
+    return(new_neuron_wrapper(nrn))
   }
 
 # Functions for neuron analysis ########################################################################################
@@ -160,7 +187,7 @@ load.rasters.as.neurons <- function(
         sample_rate = sample_rt
       )
       raster <- as.matrix(raster)
-      new_neuron$load_spike_raster_R(raster, min_duration, max_displacement)
+      .neuron_ptr(new_neuron)$load_spike_raster_R(raster, min_duration, max_displacement)
       
       # Save in list
       neuron_list[[new_name]] <- new_neuron
@@ -171,6 +198,113 @@ load.rasters.as.neurons <- function(
     
   }
 
+# Accessor functions for neuron objects #################################################################################
+
+#' Fetch a neuron's trial data matrix
+#'
+#' @param nrn A neuron object.
+#' @return A numeric matrix of trial data, rows as time bins and columns as trials.
+#' @export
+fetch.trial.data <- function(nrn) {
+  .neuron_ptr(nrn)$fetch_trial_data_R()
+}
+
+#' Load a trial data matrix into a neuron object
+#'
+#' Loads a trial data matrix directly into a neuron object, bypassing raster parsing. Mainly
+#' useful for constructing a neuron that shares another neuron's already-loaded trial data.
+#'
+#' @param nrn A neuron object.
+#' @param trial_data A numeric matrix of trial data, rows as time bins and columns as trials
+#'   (e.g. from \code{\link{fetch.trial.data}}).
+#' @return \code{nrn}, invisibly. Modifies \code{nrn} in place.
+#' @export
+load.trial.data <- function(nrn, trial_data) {
+  .neuron_ptr(nrn)$load_trial_data_R(trial_data)
+  invisible(nrn)
+}
+
+#' Fetch a neuron's spike raster
+#'
+#' @param nrn A neuron object.
+#' @return A numeric matrix giving the neuron's spike raster (assumes it has already been
+#'   loaded).
+#' @export
+fetch.spike.raster <- function(nrn) {
+  .neuron_ptr(nrn)$fetch_spike_raster_R()
+}
+
+#' Fetch a neuron's computed empirical autocorrelation
+#'
+#' @param nrn A neuron object.
+#' @return A numeric vector of autocorrelation values by lag (assumes autocorrelation has
+#'   already been computed with \code{\link{compute.autocorr}}).
+#' @export
+fetch.autocorr <- function(nrn) {
+  .neuron_ptr(nrn)$fetch_autocorr_R()
+}
+
+#' Fetch a neuron's fitted exponential-decay parameters
+#'
+#' @param nrn A neuron object.
+#' @return A named numeric vector with elements \code{A}, \code{tau}, and \code{bias_term}
+#'   (assumes a fit has already been run with \code{\link{fit.edf.autocorr}}).
+#' @export
+fetch.edf.parameters <- function(nrn) {
+  .neuron_ptr(nrn)$fetch_EDF_parameters()
+}
+
+#' Fetch a neuron's identifying metadata
+#'
+#' @param nrn A neuron object.
+#' @return A list of the neuron's identifying fields and metadata (id number, recording name,
+#'   type, genotype, sex, hemisphere, region, age, whether simulated, units, bin size, and
+#'   sample rate).
+#' @export
+fetch.id.data <- function(nrn) {
+  .neuron_ptr(nrn)$fetch_id_data()
+}
+
+#' Fetch a neuron's mean spike rate
+#'
+#' @param nrn A neuron object (assumes trial data has already been loaded).
+#' @return A named numeric vector with elements \code{lambda} (mean spike rate per raw time
+#'   unit) and \code{lambda_bin} (mean spike rate per bin).
+#' @export
+fetch.lambda <- function(nrn) {
+  .neuron_ptr(nrn)$fetch_lambda()
+}
+
+#' Compute cross-correlation between two neurons
+#'
+#' Computes the cross-correlation (raw or Pearson) between a reference neuron's spike train and
+#' a lagged copy of a comparison neuron's spike train. It's a wrapper around the
+#' \code{compute_crosscorrelation_R} method of the neuron class.
+#'
+#' @param nrn Reference neuron object.
+#' @param nrn_compare Comparison neuron object; must have trial length at least as long as
+#'   \code{nrn}'s.
+#' @param bin_count_action Method for counting spikes in each bin; one of "boolean", "mean", or
+#'   "sum" (default: "sum").
+#' @param max_lag Maximum lag (in units of the trial data) to compute cross-correlation for.
+#' @param use_raw Logical indicating whether to use raw cross-correlation (true) or standard
+#'   centered and normalized correlation (false) (default: TRUE).
+#' @param verbose Logical indicating whether to print progress information (default: FALSE).
+#' @return A numeric vector of cross-correlation values at lags from zero to \code{max_lag}.
+#' @export
+compute.crosscorr <- function(
+    nrn,
+    nrn_compare,
+    bin_count_action = "sum",
+    max_lag,
+    use_raw = TRUE,
+    verbose = FALSE
+  ) {
+    .neuron_ptr(nrn)$compute_crosscorrelation_R(
+      .neuron_ptr(nrn_compare, "nrn_compare"), bin_count_action, max_lag, use_raw, verbose
+    )
+  }
+
 # Helper function for plotting
 make.plot.title <- function(
     neuron,                   # neuron object
@@ -178,7 +312,7 @@ make.plot.title <- function(
   ) {
     
     # Grab neuron ID info
-    id_data <- neuron$fetch_id_data() 
+    id_data <- fetch.id.data(neuron)
     recording_name <- id_data$recording_name
     id_num <- id_data$id_num
     genotype <- id_data$genotype
@@ -227,9 +361,9 @@ plot_autocorrelation <- function(
     # Make title
     plot_title <- make.plot.title(nrn, plot_title)
     
-    # Fetch estimated and fitted autocorrelation 
-    autocorr <- nrn$fetch_autocorr_R()
-    autocorr_edf <- nrn$fetch_autocorr_edf_R()
+    # Fetch estimated and fitted autocorrelation
+    autocorr <- fetch.autocorr(nrn)
+    autocorr_edf <- .neuron_ptr(nrn)$fetch_autocorr_edf_R()
     
     # Make data frame for plotting 
     df_temp <- data.frame(
@@ -296,7 +430,7 @@ plot_raster <- function(
   ) {
     
     # Grab raster and time bounds
-    spike.raster <- as.data.frame(nrn$fetch_spike_raster_R())
+    spike.raster <- as.data.frame(fetch.spike.raster(nrn))
     total_time <- max(spike.raster$time) - min(spike.raster$time)
     dx <- total_time * 0.0025
     
@@ -339,15 +473,12 @@ plot_raster <- function(
 
   }
 
-# S3/S4 methods for neuron objects ######################################################################################
+# S3 methods for neuron objects ##########################################################################################
 #
-# neuron objects are Rcpp Modules reference objects: formally S4 (class "Rcpp_neuron"), not
-# plain S3. Prepending a class via class(x) <- c("neuron", class(x)) silently strips their
-# S4-ness (R's own class<- warns "result will no longer be an S4 object"), which breaks the $
-# accessor Rcpp modules rely on for method dispatch -- so these methods target "Rcpp_neuron"
-# directly rather than a wrapper class. print()'s S3 dispatch only fires on an explicit
-# print(nrn) call; auto-printing a neuron at the console (typing nrn by itself) goes through
-# the S4 generic show() instead, hence the separate setMethod() below.
+# These target the "neuron" wrapper class (see new_neuron_wrapper()/.neuron_ptr() above), a
+# plain S3 list, not the underlying Rcpp Modules object -- so, unlike when neuron objects
+# exposed that object directly, auto-printing a neuron at the console (typing nrn by itself)
+# already goes through ordinary S3 print() dispatch; no S4 show() method is needed.
 
 #' Print a neuron object
 #'
@@ -355,11 +486,11 @@ plot_raster <- function(
 #' @param ... Unused; present for S3 consistency.
 #' @return \code{x}, invisibly.
 #' @export
-print.Rcpp_neuron <- function(x, ...) {
+print.neuron <- function(x, ...) {
 
-    id_data <- x$fetch_id_data()
-    has_trial_data <- nrow(x$fetch_trial_data_R()) > 0
-    has_autocorr <- length(x$fetch_autocorr_R()) > 0
+    id_data <- fetch.id.data(x)
+    has_trial_data <- nrow(fetch.trial.data(x)) > 0
+    has_autocorr <- length(fetch.autocorr(x)) > 0
 
     header <- paste0("<neuron> #", id_data$id_num, " (", id_data$recording_name, ")")
     if (id_data$sim) header <- paste0(header, " [simulated]")
@@ -371,7 +502,7 @@ print.Rcpp_neuron <- function(x, ...) {
     }
     cat("  trial data loaded:", has_trial_data, "\n")
     if (has_trial_data) {
-      lambda <- x$fetch_lambda()
+      lambda <- fetch.lambda(x)
       cat("    lambda:    ", signif(unname(lambda["lambda"]), 4), id_data$unit_data, "per", id_data$unit_time, "\n")
       cat("    lambda_bin:", signif(unname(lambda["lambda_bin"]), 4), id_data$unit_data, "per bin\n")
     }
@@ -387,20 +518,20 @@ print.Rcpp_neuron <- function(x, ...) {
 #' @param ... Unused; present for S3 consistency.
 #' @return A \code{summary.neuron} object, printed by its own \code{print} method.
 #' @export
-summary.Rcpp_neuron <- function(object, ...) {
+summary.neuron <- function(object, ...) {
 
-    id_data <- object$fetch_id_data()
-    has_trial_data <- nrow(object$fetch_trial_data_R()) > 0
-    has_autocorr <- length(object$fetch_autocorr_R()) > 0
-    has_fit <- length(object$fetch_autocorr_edf_R()) > 0
+    id_data <- fetch.id.data(object)
+    has_trial_data <- nrow(fetch.trial.data(object)) > 0
+    has_autocorr <- length(fetch.autocorr(object)) > 0
+    has_fit <- length(.neuron_ptr(object)$fetch_autocorr_edf_R()) > 0
 
     out <- list(
       id_data = id_data,
       has_trial_data = has_trial_data,
       has_autocorr = has_autocorr,
       has_fit = has_fit,
-      lambda = if (has_trial_data) object$fetch_lambda() else NULL,
-      edf_parameters = if (has_fit) object$fetch_EDF_parameters() else NULL
+      lambda = if (has_trial_data) fetch.lambda(object) else NULL,
+      edf_parameters = if (has_fit) fetch.edf.parameters(object) else NULL
     )
     class(out) <- "summary.neuron"
     out
@@ -453,7 +584,7 @@ print.summary.neuron <- function(x, ...) {
 #' @param ... Additional arguments passed on to \code{\link{plot_raster}} or \code{\link{plot_autocorrelation}}.
 #' @return Whatever \code{\link{plot_raster}}/\code{\link{plot_autocorrelation}} returns (a ggplot object if \code{return_plot = TRUE}, otherwise \code{NULL}, invisibly).
 #' @export
-plot.Rcpp_neuron <- function(x, type = c("raster", "autocorrelation"), ...) {
+plot.neuron <- function(x, type = c("raster", "autocorrelation"), ...) {
     type <- match.arg(type)
     if (type == "raster") {
       plot_raster(x, ...)
@@ -550,29 +681,29 @@ process.autocorr <- function(
       trial_lengths <- rep(Inf, length(neuron_list))
       for (i in seq_along(neuron_list)) {
         nrn <- neuron_list[[i]]
-        trial_lengths[i] <- nrow(nrn$fetch_trial_data_R())
+        trial_lengths[i] <- nrow(fetch.trial.data(nrn))
       }
       max_lag <- min(trial_lengths)
     }
-    
+
     # Loop through neurons in the list
     for (i in seq_along(neuron_list)) {
-      
+
       # Grab neuron
       nrn <- neuron_list[[i]]
-      
-      # Set exponential decay function (EDF) parameters 
-      nrn$set_edf_initials(A0, tau0)
-      nrn$set_edf_termination(ctol, max_evals)
-      
+
+      # Set exponential decay function (EDF) parameters
+      .neuron_ptr(nrn)$set_edf_initials(A0, tau0)
+      .neuron_ptr(nrn)$set_edf_termination(ctol, max_evals)
+
       # Compute autocorrelation
-      nrn$compute_autocorrelation(bin_count_action, max_lag, use_raw)
-      
-      # Fit autocorrelation 
-      nrn$fit_autocorrelation()
-      
-      # Fetch results 
-      edf_results <- nrn$fetch_EDF_parameters()
+      .neuron_ptr(nrn)$compute_autocorrelation(bin_count_action, max_lag, use_raw)
+
+      # Fit autocorrelation
+      .neuron_ptr(nrn)$fit_autocorrelation()
+
+      # Fetch results
+      edf_results <- fetch.edf.parameters(nrn)
       # ... get amplitude
       A <- edf_results["A"]
       # ... get time constant
@@ -580,9 +711,9 @@ process.autocorr <- function(
       # ... get bias term
       bias_term <- edf_results["bias_term"]
       # ... get lambda (mean spike rate, per ms and per bin)
-      lambda <- nrn$fetch_lambda()
+      lambda <- fetch.lambda(nrn)
       # ... get series of EDF-fitted autocorrelation values
-      autocorr_edf <- nrn$fetch_autocorr_edf_R()
+      autocorr_edf <- .neuron_ptr(nrn)$fetch_autocorr_edf_R()
       
       # Collect results and separate out the first predicted autocorrelation value
       autocor_results_r <- c(
@@ -603,7 +734,7 @@ process.autocorr <- function(
       if (print_plots) {
         
         # Grab neuron ID info
-        id_data <- nrn$fetch_id_data() 
+        id_data <- fetch.id.data(nrn)
         recording_name <- id_data$recording_name
         sim <- id_data$sim
         if (sim) recording_name <- paste(recording_name, "(sim)")
@@ -680,7 +811,7 @@ estimate.autocorr.params <- function(
       trial_lengths <- rep(Inf, length(neuron_list))
       for (i in seq_along(neuron_list)) {
         nrn <- neuron_list[[i]]
-        trial_lengths[i] <- nrow(nrn$fetch_trial_data_R())
+        trial_lengths[i] <- nrow(fetch.trial.data(nrn))
       }
       max_lag <- min(trial_lengths)
     }
@@ -698,15 +829,15 @@ estimate.autocorr.params <- function(
       # Get neuron 
       nrn <- neuron_list[[i]]
       
-      # Get neuron id 
-      nrn_id <- as.data.frame(lapply(nrn$fetch_id_data(), rep, times = 1))
+      # Get neuron id
+      nrn_id <- as.data.frame(lapply(fetch.id.data(nrn), rep, times = 1))
       neuron_id <- rbind(neuron_id, nrn_id)
-      
+
       # Run simulations to estimate value for this neuron and load into matrix
       row_idx_initial <- (i - 1) * n_sims_per_neurons + 1
       row_idx_final <- i * n_sims_per_neurons
       row_idx <- row_idx_initial:row_idx_final
-      dg_estimates[row_idx,] <- nrn$estimate_autocorr_params(
+      dg_estimates[row_idx,] <- .neuron_ptr(nrn)$estimate_autocorr_params(
         n_trials_per_sim,
         n_sims_per_neurons,
         max_lag,
@@ -954,9 +1085,10 @@ compute.autocorr <- function(
     use_raw = TRUE
   ) {
     if (max_lag == 0) {
-      max_lag <- nrow(nrn$fetch_trial_data_R())
+      max_lag <- nrow(fetch.trial.data(nrn))
     }
-    nrn <- nrn$compute_autocorrelation(bin_count_action, max_lag, use_raw)
+    .neuron_ptr(nrn)$compute_autocorrelation(bin_count_action, max_lag, use_raw)
+    invisible(NULL)
   }
 
 #' Fit exponential decay function to autocorrelation of single neuron object
@@ -977,8 +1109,9 @@ fit.edf.autocorr <- function(
     ctol = 1e-8,
     max_evals = 500
   ) {
-    nrn$set_edf_initials(A0, tau0)
-    nrn$set_edf_termination(ctol, max_evals)
-    nrn <- nrn$fit_autocorrelation()
+    .neuron_ptr(nrn)$set_edf_initials(A0, tau0)
+    .neuron_ptr(nrn)$set_edf_termination(ctol, max_evals)
+    .neuron_ptr(nrn)$fit_autocorrelation()
+    invisible(NULL)
   }
 

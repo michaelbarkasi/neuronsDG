@@ -141,14 +141,14 @@ fit.edf.autocorr(neurons[[cell_high]])
 plot_autocorrelation(neurons[[cell_high]])
 ```
 
-The fitted model is plotted as the red line. The parameters of the exponential decay fit can be fetched directly with a neuron method and provide succinct quantification of the empirical autocorrelation. 
+The fitted model is plotted as the red line. The parameters of the exponential decay fit can be fetched directly with [fetch.edf.parameters()](../reference/fetch.edf.parameters.html) and provide succinct quantification of the empirical autocorrelation.
 
 ```{r cache_vals, echo = FALSE}
-cached_tau <- round(neurons[[cell_high]]$fetch_EDF_parameters()["tau"],1)
-cached_A <- round(neurons[[cell_high]]$fetch_EDF_parameters()["A"],3)
+cached_tau <- round(fetch.edf.parameters(neurons[[cell_high]])["tau"],1)
+cached_A <- round(fetch.edf.parameters(neurons[[cell_high]])["A"],3)
 ```
 ```{r fetch_fit_parameters_high}
-print(neurons[[cell_high]]$fetch_EDF_parameters())
+print(fetch.edf.parameters(neurons[[cell_high]]))
 ```
 
 In this case, the time constant tau is estimated to be `r cached_tau`ms and the initial autocorrelation $A$ is estimated to be `r cached_A`. 

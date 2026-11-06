@@ -226,21 +226,21 @@ Here is the plot for the low-autocorrelation cell:
 plot_autocorrelation(neurons[[cell_low]])
 ```
 
-The parameters of the exponential decay fit can be fetched directly with a neuron method and provide succinct quantification of the empirical autocorrelation. 
+The parameters of the exponential decay fit can be fetched directly with [fetch.edf.parameters()](../reference/fetch.edf.parameters.html) and provide succinct quantification of the empirical autocorrelation.
 
 ```{r}
 # Fetch and print exponential decay parameters
-print(neurons[[cell_high]]$fetch_EDF_parameters())
+print(fetch.edf.parameters(neurons[[cell_high]]))
 
 # Fetch and print exponential decay parameters
-print(neurons[[cell_low]]$fetch_EDF_parameters())
+print(fetch.edf.parameters(neurons[[cell_low]]))
 ```
 
 ```{r cache_vals, echo = FALSE}
-cached_tau_high <- round(neurons[[cell_high]]$fetch_EDF_parameters()["tau"],1)
-cached_A_high <- round(neurons[[cell_high]]$fetch_EDF_parameters()["A"],3)
-cached_tau_low <- round(neurons[[cell_low]]$fetch_EDF_parameters()["tau"],1)
-cached_A_low <- round(neurons[[cell_low]]$fetch_EDF_parameters()["A"],3)
+cached_tau_high <- round(fetch.edf.parameters(neurons[[cell_high]])["tau"],1)
+cached_A_high <- round(fetch.edf.parameters(neurons[[cell_high]])["A"],3)
+cached_tau_low <- round(fetch.edf.parameters(neurons[[cell_low]])["tau"],1)
+cached_A_low <- round(fetch.edf.parameters(neurons[[cell_low]])["A"],3)
 ```
 
 The amplitude, $A$, gives the autocorrelation at lag time 1 (minus the bias), while the time constant, $\tau$ (tau), gives the rate of decay in autocorrelation as lag time increases. Notice how the high-autocorrelation cell has a time constant of `r cached_tau_high`ms and an amplitude of `r cached_A_high`, while the low-autocorrelation cell has a time constant of only `r cached_tau_low`ms and an amplitude of `r cached_A_low`. 

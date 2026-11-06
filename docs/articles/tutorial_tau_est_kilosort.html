@@ -83,7 +83,7 @@ Barkasi</h4>
             
             <h4 data-toc-skip class="date">November 6, 2026 (v1.0)</h4>
       
-
+      <small class="dont-index">Source: <a href="https://github.com/michaelbarkasi/neuronsDG/blob/HEAD/vignettes/articles/tutorial_tau_est_kilosort.Rmd" class="external-link"><code>vignettes/articles/tutorial_tau_est_kilosort.Rmd</code></a></small>
       <div class="d-none name"><code>tutorial_tau_est_kilosort.Rmd</code></div>
     </div>
 
@@ -124,7 +124,7 @@ function takes its own <code>seed</code> argument instead.</p>
 <span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">12345</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Load package</span></span>
-<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va">neuronsDG</span>, quietly <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div>
+<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://michaelbarkasi.github.io/neuronsDG/">neuronsDG</a></span>, quietly <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div>
 <h3>
 Spike and stimulus data
 </h3>
@@ -458,16 +458,17 @@ empirical autocorrelation. Here is the high-autocorrelation cell:</p>
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/plot_autocorrelation.html">plot_autocorrelation</a></span><span class="op">(</span><span class="va">neurons</span><span class="op">[[</span><span class="va">cell_low</span><span class="op">]</span><span class="op">]</span><span class="op">)</span></span></code></pre></div>
 <p><img src="tutorial_tau_est_kilosort_files/figure-html/plot_autocor_low-1.png" class="r-plt" alt="" width="700"></p>
 <p>The parameters of the exponential decay fit can be fetched directly
-with a neuron method and provide succinct quantification of the
-empirical autocorrelation.</p>
+with <a href="../reference/fetch.edf.parameters.html">fetch.edf.parameters()</a>
+and provide succinct quantification of the empirical
+autocorrelation.</p>
 <div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Fetch and print exponential decay parameters</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">neurons</span><span class="op">[[</span><span class="va">cell_high</span><span class="op">]</span><span class="op">]</span><span class="op">$</span><span class="fu">fetch_EDF_parameters</span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="fu"><a href="../reference/fetch.edf.parameters.html">fetch.edf.parameters</a></span><span class="op">(</span><span class="va">neurons</span><span class="op">[[</span><span class="va">cell_high</span><span class="op">]</span><span class="op">]</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <pre class="scroll-output"><code><span><span class="co">##            A          tau    bias_term </span></span>
 <span><span class="co">## 3.054616e-02 1.044057e+02 1.232224e-03</span></span></code></pre>
 <div class="sourceCode" id="cb24"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Fetch and print exponential decay parameters</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">neurons</span><span class="op">[[</span><span class="va">cell_low</span><span class="op">]</span><span class="op">]</span><span class="op">$</span><span class="fu">fetch_EDF_parameters</span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="fu"><a href="../reference/fetch.edf.parameters.html">fetch.edf.parameters</a></span><span class="op">(</span><span class="va">neurons</span><span class="op">[[</span><span class="va">cell_low</span><span class="op">]</span><span class="op">]</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <pre class="scroll-output"><code><span><span class="co">##            A          tau    bias_term </span></span>
 <span><span class="co">## 3.874510e-03 4.415250e+01 2.736809e-05</span></span></code></pre>
 <p>The amplitude, <span class="math inline">A</span>, gives the
@@ -631,7 +632,7 @@ Code summary
 <code class="sourceCode R"><span><span class="co"># Setup</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/rm.html" class="external-link">rm</a></span><span class="op">(</span>list <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/ls.html" class="external-link">ls</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">12345</span><span class="op">)</span> </span>
-<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va">neuronsDG</span><span class="op">)</span> </span>
+<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://michaelbarkasi.github.io/neuronsDG/">neuronsDG</a></span><span class="op">)</span> </span>
 <span></span>
 <span><span class="co"># Load and format metadata</span></span>
 <span><span class="va">kilo4_metadata</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/utils/read.table.html" class="external-link">read.csv</a></span><span class="op">(</span></span>

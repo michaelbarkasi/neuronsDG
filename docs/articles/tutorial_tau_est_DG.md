@@ -324,12 +324,13 @@ plot_autocorrelation(neurons[[cell_high]])
 ![](tutorial_tau_est_DG_files/figure-html/fit_autocorrelation_high-1.png)
 
 The fitted model is plotted as the red line. The parameters of the
-exponential decay fit can be fetched directly with a neuron method and
-provide succinct quantification of the empirical autocorrelation.
+exponential decay fit can be fetched directly with
+[fetch.edf.parameters()](https://michaelbarkasi.github.io/neuronsDG/reference/fetch.edf.parameters.md)
+and provide succinct quantification of the empirical autocorrelation.
 
 ``` r
 
-print(neurons[[cell_high]]$fetch_EDF_parameters())
+print(fetch.edf.parameters(neurons[[cell_high]]))
 ```
 
 ``` scroll-output

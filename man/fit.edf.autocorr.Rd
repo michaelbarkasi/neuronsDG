@@ -32,5 +32,5 @@ raster_df <- data.frame(
 nrn <- load.rasters.as.neurons(raster_df, bin_size = 10)[["neuron_1"]]
 compute.autocorr(nrn)
 fit.edf.autocorr(nrn)
-nrn$fetch_EDF_parameters()
+fetch.edf.parameters(nrn)
 }

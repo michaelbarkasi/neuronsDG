@@ -2,7 +2,7 @@
 # section of vignettes/tutorial_synchrony_crosscorr.Rmd against
 # inst/extdata/cross_corr_demo_data.csv with set.seed(12345).
 
-test_that("compute_crosscorrelation_R() matches pinned values for the vignette demo pair", {
+test_that("compute.crosscorr() matches pinned values for the vignette demo pair", {
   raster <- crosscorr_demo_raster()
   trial_duration <- 100; lag_divider <- 2; bs <- 1.0; pre_ratio <- 0.25
   ref_cell <- 13; comp_cell <- 15
@@ -24,8 +24,8 @@ test_that("compute_crosscorrelation_R() matches pinned values for the vignette d
   ref_neuron <- neurons[[paste0("neuron_", ref_cell)]]
   comp_neuron <- neurons[[paste0("neuron_", comp_cell)]]
 
-  cross_corr <- ref_neuron$compute_crosscorrelation_R(
-    comp_neuron, "sum", trial_duration / lag_divider, TRUE, FALSE
+  cross_corr <- compute.crosscorr(
+    ref_neuron, comp_neuron, "sum", trial_duration / lag_divider, TRUE, FALSE
   )
 
   expect_length(cross_corr, 50)
@@ -80,25 +80,25 @@ test_that("loading lagged spikes produces a cross-correlation peak at the loaded
     )
     ref_neuron_loaded <- neurons_loaded[[paste0("neuron_", ref_cell)]]
     comp_neuron_loaded <- neurons_loaded[[paste0("neuron_", comp_cell)]]
-    ref_neuron_loaded$compute_crosscorrelation_R(
-      comp_neuron_loaded, "sum", trial_duration / lag_divider, TRUE, FALSE
+    compute.crosscorr(
+      ref_neuron_loaded, comp_neuron_loaded, "sum", trial_duration / lag_divider, TRUE, FALSE
     )
   })
 
   expect_equal(which.max(result), 11)
 })
 
-test_that("compute_crosscorrelation_R() of a neuron against a copy of itself matches pinned values", {
+test_that("compute.crosscorr() of a neuron against a copy of itself matches pinned values", {
   # Note: this is close to, but NOT identical to, that neuron's own
   # autocorrelation (compute_autocorrelation uses a different normalization /
-  # valid-lag-step convention) -- so this pins compute_crosscorrelation_R()'s
+  # valid-lag-step convention) -- so this pins compute.crosscorr()'s
   # own output directly rather than asserting equality between the two.
   neurons <- dg_demo_neurons()
   nrn <- neurons[[16]]
-  nrn_copy <- new.neuron(t_per_bin = nrn$fetch_id_data()$t_per_bin)
-  nrn_copy$load_trial_data_R(nrn$fetch_trial_data_R())
+  nrn_copy <- new.neuron(t_per_bin = fetch.id.data(nrn)$t_per_bin)
+  load.trial.data(nrn_copy, fetch.trial.data(nrn))
 
-  cross <- nrn$compute_crosscorrelation_R(nrn_copy, "sum", 100, TRUE, FALSE)
+  cross <- compute.crosscorr(nrn, nrn_copy, "sum", 100, TRUE, FALSE)
 
   expect_length(cross, 10)
   expect_equal(

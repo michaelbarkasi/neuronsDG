@@ -8,6 +8,8 @@ Authors@R: person(given = "Michael",
                    email = "barkasi@wustl.edu")
 Description: Various tools for modeling neurons with dichotomized Gaussians. Defines a C++ class 'neuron' intended to model a single neuron, accessible through R functions. Provides analysis methods for autocorrelation and cross-correlation.
 License: GPL-3
+URL: https://michaelbarkasi.github.io/neuronsDG/, https://github.com/michaelbarkasi/neuronsDG
+BugReports: https://github.com/michaelbarkasi/neuronsDG/issues
 Imports: Rcpp (>= 1.0.13), R.matlab, hdf5r, reticulate, methods, ggplot2, nloptr
 LinkingTo: Rcpp, RcppEigen, BH, nloptr
 Suggests: testthat (>= 3.0.0), mvtnorm, Matrix, MASS

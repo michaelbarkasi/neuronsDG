@@ -27,7 +27,7 @@ test_that("estimate.autocorr.params()'s simulated lambda_bin tracks the neuron's
   # default.
   neurons <- dg_demo_neurons()
   nrn <- neurons[[16]]
-  true_lambda_bin <- unname(nrn$fetch_lambda()[2])
+  true_lambda_bin <- unname(fetch.lambda(nrn)[2])
   expect_gt(true_lambda_bin, 0.01) # sanity: this neuron's t_per_bin (10) actually matters here
 
   ests <- estimate.autocorr.params(
@@ -109,7 +109,7 @@ test_that("estimate.autocorr.params() works across neurons with heterogeneous tr
   # surfaced with >=2 neurons of differing raw trial length -- which is the
   # realistic case (see test-autocorrelation.R's min(trial_lengths) check).
   neurons <- dg_demo_neurons()
-  trial_lengths <- sapply(neurons, function(nrn) nrow(nrn$fetch_trial_data_R()))
+  trial_lengths <- sapply(neurons, function(nrn) nrow(fetch.trial.data(nrn)))
   expect_gt(length(unique(trial_lengths)), 1) # sanity: data really is heterogeneous
 
   shortest_and_longest <- neurons[c(which.min(trial_lengths), which.max(trial_lengths))]

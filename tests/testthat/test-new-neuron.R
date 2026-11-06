@@ -1,8 +1,8 @@
 test_that("new.neuron() uses its documented defaults", {
   nrn <- new.neuron()
-  id <- nrn$fetch_id_data()
+  id <- fetch.id.data(nrn)
 
-  expect_s4_class(nrn, "Rcpp_neuron")
+  expect_s3_class(nrn, "neuron")
   expect_equal(id$id_num, 0)
   expect_equal(id$recording_name, "not_provided")
   expect_equal(id$type, "generic")
@@ -35,7 +35,7 @@ test_that("new.neuron() stores custom arguments", {
     t_per_bin = 5.0,
     sample_rate = 2e3
   )
-  id <- nrn$fetch_id_data()
+  id <- fetch.id.data(nrn)
 
   expect_equal(id$id_num, 7)
   expect_equal(id$recording_name, "rec_A")
@@ -56,6 +56,6 @@ test_that("new.neuron() stores custom arguments", {
 test_that("each new.neuron() call is an independent object", {
   n1 <- new.neuron(id_num = 1)
   n2 <- new.neuron(id_num = 2)
-  expect_equal(n1$fetch_id_data()$id_num, 1)
-  expect_equal(n2$fetch_id_data()$id_num, 2)
+  expect_equal(fetch.id.data(n1)$id_num, 1)
+  expect_equal(fetch.id.data(n2)$id_num, 2)
 })

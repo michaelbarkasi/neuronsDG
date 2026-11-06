@@ -83,7 +83,7 @@ Barkasi</h4>
             
             <h4 data-toc-skip class="date">November 6, 2026 (v1.0)</h4>
       
-
+      <small class="dont-index">Source: <a href="https://github.com/michaelbarkasi/neuronsDG/blob/HEAD/vignettes/articles/tutorial_synchrony_crosscorr.Rmd" class="external-link"><code>vignettes/articles/tutorial_synchrony_crosscorr.Rmd</code></a></small>
       <div class="d-none name"><code>tutorial_synchrony_crosscorr.Rmd</code></div>
     </div>
 
@@ -119,7 +119,7 @@ neuronsDG.</p>
 <span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">12345</span><span class="op">)</span> </span>
 <span></span>
 <span><span class="co"># Load package</span></span>
-<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va">neuronsDG</span>, quietly <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span> </span></code></pre></div>
+<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://michaelbarkasi.github.io/neuronsDG/">neuronsDG</a></span>, quietly <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span> </span></code></pre></div>
 <p>The next step is to load data representing the spike trains to be
 analyzed. In this case, the data is in a csv file and formatted as a
 compact (spike-indexed) raster. That is, each row represents a spike,
@@ -256,18 +256,18 @@ function.</p>
 <span>    max_displacement <span class="op">=</span> <span class="op">-</span><span class="va">trial_duration</span><span class="op">*</span><span class="va">pre_ratio</span></span>
 <span>  <span class="op">)</span></span></code></pre></div>
 <p>The next step is to compute the cross-correlation between the
-reference cell and the comparison cell. The
-<strong>compute_crosscorrelation_R()</strong> method of a neuron object
-computes the cross-correlation (raw or Pearson) between that neuron and
-another neuron. The method returns a vector of cross-correlation values
-at lags from zero to the specified max lag.</p>
+reference cell and the comparison cell. The <a href="../reference/compute.crosscorr.html">compute.crosscorr()</a>
+function computes the cross-correlation (raw or Pearson) between a
+reference neuron and a comparison neuron. It returns a vector of
+cross-correlation values at lags from zero to the specified max lag.</p>
 <div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Grab neurons from list</span></span>
 <span><span class="va">ref_neuron</span> <span class="op">&lt;-</span> <span class="va">neurons</span><span class="op">[[</span><span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">"neuron_"</span>, <span class="va">ref_cell</span><span class="op">)</span><span class="op">]</span><span class="op">]</span></span>
 <span><span class="va">comp_neuron</span> <span class="op">&lt;-</span> <span class="va">neurons</span><span class="op">[[</span><span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">"neuron_"</span>, <span class="va">comp_cell</span><span class="op">)</span><span class="op">]</span><span class="op">]</span></span>
 <span></span>
 <span><span class="co"># Compute raw cross-correlation</span></span>
-<span><span class="va">cross_corr</span> <span class="op">&lt;-</span> <span class="va">ref_neuron</span><span class="op">$</span><span class="fu">compute_crosscorrelation_R</span><span class="op">(</span></span>
+<span><span class="va">cross_corr</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compute.crosscorr.html">compute.crosscorr</a></span><span class="op">(</span></span>
+<span>    <span class="va">ref_neuron</span>,                 <span class="co"># Reference neuron</span></span>
 <span>    <span class="va">comp_neuron</span>,                <span class="co"># Comparison neuron</span></span>
 <span>    <span class="st">"sum"</span>,                      <span class="co"># Binning action ("sum", "mean", "boolean")</span></span>
 <span>    <span class="va">trial_duration</span><span class="op">/</span><span class="va">lag_divider</span>, <span class="co"># max lag</span></span>
@@ -339,9 +339,10 @@ neuron with lagged copies of spikes from the reference neuron.</p>
 <span><span class="co"># Compute cross-correlation for loaded neurons</span></span>
 <span><span class="va">ref_neuron_loaded</span> <span class="op">&lt;-</span> <span class="va">neurons_loaded</span><span class="op">[[</span><span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">"neuron_"</span>, <span class="va">ref_cell</span><span class="op">)</span><span class="op">]</span><span class="op">]</span></span>
 <span><span class="va">comp_neuron_loaded</span> <span class="op">&lt;-</span> <span class="va">neurons_loaded</span><span class="op">[[</span><span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">"neuron_"</span>, <span class="va">comp_cell</span><span class="op">)</span><span class="op">]</span><span class="op">]</span></span>
-<span><span class="va">cross_corr_loaded</span> <span class="op">&lt;-</span> <span class="va">ref_neuron_loaded</span><span class="op">$</span><span class="fu">compute_crosscorrelation_R</span><span class="op">(</span></span>
-<span>    <span class="va">comp_neuron_loaded</span>, </span>
-<span>    <span class="st">"sum"</span>, </span>
+<span><span class="va">cross_corr_loaded</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compute.crosscorr.html">compute.crosscorr</a></span><span class="op">(</span></span>
+<span>    <span class="va">ref_neuron_loaded</span>,</span>
+<span>    <span class="va">comp_neuron_loaded</span>,</span>
+<span>    <span class="st">"sum"</span>,</span>
 <span>    <span class="va">trial_duration</span><span class="op">/</span><span class="va">lag_divider</span>,</span>
 <span>    <span class="cn">TRUE</span>,</span>
 <span>    <span class="cn">TRUE</span></span>
@@ -388,7 +389,7 @@ comparison neuron relative to spikes from the reference neuron. Here,
 for example, is the cross-correlogram for the loaded neuron.</p>
 <div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Fetch the raster of the loaded comparison neuron</span></span>
-<span><span class="va">loaded_raster</span> <span class="op">&lt;-</span> <span class="va">comp_neuron_loaded</span><span class="op">$</span><span class="fu">fetch_spike_raster_R</span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="va">loaded_raster</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fetch.spike.raster.html">fetch.spike.raster</a></span><span class="op">(</span><span class="va">comp_neuron_loaded</span><span class="op">)</span></span>
 <span><span class="co"># Extract spike times relative to reference spikes</span></span>
 <span><span class="va">loaded_spikes</span> <span class="op">&lt;-</span> <span class="va">loaded_raster</span><span class="op">[</span>,<span class="fl">1</span><span class="op">]</span></span>
 <span><span class="co"># Plot histogram of spike times</span></span>
@@ -469,9 +470,10 @@ distortion.</p>
 <span>        <span class="co"># Compute cross-correlation</span></span>
 <span>        <span class="va">ref_neuron</span> <span class="op">&lt;-</span> <span class="va">neurons</span><span class="op">[[</span><span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">"neuron_"</span>, <span class="va">ref_cell</span><span class="op">)</span><span class="op">]</span><span class="op">]</span></span>
 <span>        <span class="va">comp_neuron</span> <span class="op">&lt;-</span> <span class="va">neurons</span><span class="op">[[</span><span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">"neuron_"</span>, <span class="va">comp_cell</span><span class="op">)</span><span class="op">]</span><span class="op">]</span></span>
-<span>        <span class="va">cross_corr_cc</span> <span class="op">&lt;-</span> <span class="va">ref_neuron</span><span class="op">$</span><span class="fu">compute_crosscorrelation_R</span><span class="op">(</span></span>
-<span>          <span class="va">comp_neuron</span>, </span>
-<span>          <span class="st">"sum"</span>, </span>
+<span>        <span class="va">cross_corr_cc</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compute.crosscorr.html">compute.crosscorr</a></span><span class="op">(</span></span>
+<span>          <span class="va">ref_neuron</span>,</span>
+<span>          <span class="va">comp_neuron</span>,</span>
+<span>          <span class="st">"sum"</span>,</span>
 <span>          <span class="va">trial_duration</span><span class="op">/</span><span class="va">lag_divider</span>,   <span class="co"># max lag</span></span>
 <span>          <span class="cn">TRUE</span>,                         <span class="co"># use raw?</span></span>
 <span>          <span class="cn">FALSE</span>                         <span class="co"># verbose?</span></span>

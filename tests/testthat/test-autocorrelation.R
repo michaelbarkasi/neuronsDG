@@ -16,13 +16,13 @@ test_that("compute.autocorr() + fit.edf.autocorr() match pinned values for the h
 
   compute.autocorr(cell_high, use_raw = TRUE)
   fit.edf.autocorr(cell_high)
-  edf <- cell_high$fetch_EDF_parameters()
+  edf <- fetch.edf.parameters(cell_high)
 
   expect_equal(unname(edf["A"]), 0.1269031385, tolerance = 1e-5)
   expect_equal(unname(edf["tau"]), 69.3777201221, tolerance = 1e-3)
   expect_equal(unname(edf["bias_term"]), 0.0110591807, tolerance = 1e-6)
 
-  autocorr <- cell_high$fetch_autocorr_R()
+  autocorr <- fetch.autocorr(cell_high)
   expect_length(autocorr, 154)
   expect_equal(
     head(autocorr, 5),
@@ -40,7 +40,7 @@ test_that("compute.autocorr() + fit.edf.autocorr() match pinned values for the l
 
   compute.autocorr(cell_low, use_raw = TRUE)
   fit.edf.autocorr(cell_low)
-  edf <- cell_low$fetch_EDF_parameters()
+  edf <- fetch.edf.parameters(cell_low)
 
   expect_equal(unname(edf["A"]), 0.0123107279, tolerance = 1e-5)
   expect_equal(unname(edf["tau"]), 37.4334419605, tolerance = 1e-3)
@@ -62,8 +62,8 @@ test_that("the demo's 'high autocorrelation' cell has a larger tau than the 'low
   compute.autocorr(neurons[[16]]); fit.edf.autocorr(neurons[[16]])
   compute.autocorr(neurons[[1]]);  fit.edf.autocorr(neurons[[1]])
 
-  tau_high <- neurons[[16]]$fetch_EDF_parameters()["tau"]
-  tau_low  <- neurons[[1]]$fetch_EDF_parameters()["tau"]
+  tau_high <- fetch.edf.parameters(neurons[[16]])["tau"]
+  tau_low  <- fetch.edf.parameters(neurons[[1]])["tau"]
   expect_gt(unname(tau_high), unname(tau_low))
 })
 
@@ -98,7 +98,7 @@ test_that("process.autocorr() uses a shared max_lag across the whole neuron list
   # each neuron's own trial length) -- this is why row16$tau above differs
   # very slightly from the standalone compute.autocorr() value pinned above.
   neurons <- dg_demo_neurons()
-  trial_lengths <- sapply(neurons, function(nrn) nrow(nrn$fetch_trial_data_R()))
+  trial_lengths <- sapply(neurons, function(nrn) nrow(fetch.trial.data(nrn)))
   expect_equal(min(trial_lengths), 1420)
 })
 
@@ -109,7 +109,7 @@ test_that("compute.autocorr() default max_lag uses the neuron's own trial length
   neurons <- load.rasters.as.neurons(raster, bin_size = 10.0)
   n1 <- neurons[["neuron_1"]]
 
-  own_length <- nrow(n1$fetch_trial_data_R())
+  own_length <- nrow(fetch.trial.data(n1))
   compute.autocorr(n1, use_raw = TRUE)
-  expect_length(n1$fetch_autocorr_R(), own_length %/% 10)
+  expect_length(fetch.autocorr(n1), own_length %/% 10)
 })

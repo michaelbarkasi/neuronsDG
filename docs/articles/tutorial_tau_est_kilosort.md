@@ -446,13 +446,13 @@ plot_autocorrelation(neurons[[cell_low]])
 ![](tutorial_tau_est_kilosort_files/figure-html/plot_autocor_low-1.png)
 
 The parameters of the exponential decay fit can be fetched directly with
-a neuron method and provide succinct quantification of the empirical
-autocorrelation.
+[fetch.edf.parameters()](https://michaelbarkasi.github.io/neuronsDG/reference/fetch.edf.parameters.md)
+and provide succinct quantification of the empirical autocorrelation.
 
 ``` r
 
 # Fetch and print exponential decay parameters
-print(neurons[[cell_high]]$fetch_EDF_parameters())
+print(fetch.edf.parameters(neurons[[cell_high]]))
 ```
 
 ``` scroll-output
@@ -463,7 +463,7 @@ print(neurons[[cell_high]]$fetch_EDF_parameters())
 ``` r
 
 # Fetch and print exponential decay parameters
-print(neurons[[cell_low]]$fetch_EDF_parameters())
+print(fetch.edf.parameters(neurons[[cell_low]]))
 ```
 
 ``` scroll-output

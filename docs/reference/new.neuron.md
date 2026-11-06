@@ -96,7 +96,7 @@ new.neuron(
 
 ## Value
 
-A new neuron object (class `"Rcpp_neuron"`; see
+A new neuron object (class `"neuron"`; see
 [`neuron-methods`](https://michaelbarkasi.github.io/neuronsDG/reference/neuron-methods.md)
 for its `print`/`summary`/`plot` methods).
 

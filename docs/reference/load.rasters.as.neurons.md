@@ -50,7 +50,7 @@ load.rasters.as.neurons(
 
 ## Value
 
-A list of neuron objects (class `"Rcpp_neuron"`; see
+A list of neuron objects (class `"neuron"`; see
 [`neuron-methods`](https://michaelbarkasi.github.io/neuronsDG/reference/neuron-methods.md)),
 one per unique cell in the raster data.
 

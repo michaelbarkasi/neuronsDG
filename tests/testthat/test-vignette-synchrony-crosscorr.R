@@ -28,8 +28,8 @@ test_that("the synchrony vignette's single-pair demo matches its own narrative c
   ref_neuron <- neurons[[paste0("neuron_", ref_cell)]]
   comp_neuron <- neurons[[paste0("neuron_", comp_cell)]]
 
-  cross_corr <- ref_neuron$compute_crosscorrelation_R(
-    comp_neuron, "sum", trial_duration / lag_divider, TRUE, FALSE
+  cross_corr <- compute.crosscorr(
+    ref_neuron, comp_neuron, "sum", trial_duration / lag_divider, TRUE, FALSE
   )
   # "these two neurons seem to have no obvious peak in their
   #  cross-correlation" -- i.e. a fairly flat profile, not a sharp spike
@@ -48,8 +48,8 @@ test_that("the synchrony vignette's single-pair demo matches its own narrative c
   )
   ref_neuron_loaded <- neurons_loaded[[paste0("neuron_", ref_cell)]]
   comp_neuron_loaded <- neurons_loaded[[paste0("neuron_", comp_cell)]]
-  cross_corr_loaded <- ref_neuron_loaded$compute_crosscorrelation_R(
-    comp_neuron_loaded, "sum", trial_duration / lag_divider, TRUE, FALSE
+  cross_corr_loaded <- compute.crosscorr(
+    ref_neuron_loaded, comp_neuron_loaded, "sum", trial_duration / lag_divider, TRUE, FALSE
   )
 
   # "Notice that now there is a clear peak ... at a lag of 10ms"
@@ -57,7 +57,7 @@ test_that("the synchrony vignette's single-pair demo matches its own narrative c
   expect_gt(max(cross_corr_loaded) / mean(cross_corr_loaded), 5)
 
   # "The above histogram shows a clear peak at 10ms"
-  loaded_raster <- comp_neuron_loaded$fetch_spike_raster_R()
+  loaded_raster <- fetch.spike.raster(comp_neuron_loaded)
   loaded_spikes <- loaded_raster[, 1]
   hist_counts <- hist(loaded_spikes, breaks = 50, plot = FALSE)
   peak_mid <- hist_counts$mids[which.max(hist_counts$counts)]

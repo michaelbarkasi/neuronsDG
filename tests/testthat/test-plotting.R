@@ -28,7 +28,7 @@ test_that("plot_autocorrelation() returns a ggplot built from the neuron's own a
   expect_length(plt$layers, 2)
 
   built <- ggplot2::ggplot_build(plt)
-  autocorr <- nrn$fetch_autocorr_R()
+  autocorr <- fetch.autocorr(nrn)
   expect_equal(built$data[[1]]$y, autocorr[2:length(autocorr)], tolerance = 1e-8)
 })
 
@@ -64,7 +64,7 @@ test_that("plot_raster() returns one line segment per spike", {
   expect_length(plt$layers, 1)
 
   built <- ggplot2::ggplot_build(plt)
-  expect_equal(nrow(built$data[[1]]), nrow(nrn$fetch_spike_raster_R()))
+  expect_equal(nrow(built$data[[1]]), nrow(fetch.spike.raster(nrn)))
 })
 
 test_that("plot_raster() draws a stimulus-onset line only when zero_as_onset finds a non-positive time", {
