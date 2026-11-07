@@ -45,7 +45,10 @@ reference:
 - title: The neuron class
   navbar: The neuron class
   contents:
-  - neuron-methods
+  - print.neuron
+  - summary.neuron
+  - print.summary.neuron
+  - plot.neuron
 
 - title: Neuron accessor functions
   navbar: Neuron accessor functions

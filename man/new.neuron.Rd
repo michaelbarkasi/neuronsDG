@@ -51,7 +51,7 @@ new.neuron(
 \item{sample_rate}{Sample rate (in above units), e.g., 1e4 Hz (default: 1e4).}
 }
 \value{
-A new neuron object (class \code{"neuron"}; see \code{\link{neuron-methods}} for its \code{print}/\code{summary}/\code{plot} methods).
+A new neuron object (class \code{"neuron"}; see \code{\link{print.neuron}}, \code{\link{summary.neuron}}, and \code{\link{plot.neuron}} for its methods).
 }
 \description{
 This function initializes a new neuron object with specified parameters. The neuron objects are the main tools for running correlation analyses of spike data.

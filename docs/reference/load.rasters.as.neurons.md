@@ -51,7 +51,10 @@ load.rasters.as.neurons(
 ## Value
 
 A list of neuron objects (class `"neuron"`; see
-[`neuron-methods`](https://michaelbarkasi.github.io/neuronsDG/reference/neuron-methods.md)),
+[`print.neuron`](https://michaelbarkasi.github.io/neuronsDG/reference/print.neuron.md),
+[`summary.neuron`](https://michaelbarkasi.github.io/neuronsDG/reference/summary.neuron.md),
+and
+[`plot.neuron`](https://michaelbarkasi.github.io/neuronsDG/reference/plot.neuron.md)),
 one per unique cell in the raster data.
 
 ## Examples

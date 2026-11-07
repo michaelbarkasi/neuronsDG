@@ -27,16 +27,19 @@
 <url><loc>https://michaelbarkasi.github.io/neuronsDG/reference/index.html</loc></url>
 <url><loc>https://michaelbarkasi.github.io/neuronsDG/reference/load.rasters.as.neurons.html</loc></url>
 <url><loc>https://michaelbarkasi.github.io/neuronsDG/reference/load.trial.data.html</loc></url>
-<url><loc>https://michaelbarkasi.github.io/neuronsDG/reference/neuron-methods.html</loc></url>
 <url><loc>https://michaelbarkasi.github.io/neuronsDG/reference/neuronsDG_analysis-methods.html</loc></url>
 <url><loc>https://michaelbarkasi.github.io/neuronsDG/reference/new.neuron.html</loc></url>
+<url><loc>https://michaelbarkasi.github.io/neuronsDG/reference/plot.neuron.html</loc></url>
 <url><loc>https://michaelbarkasi.github.io/neuronsDG/reference/plot.neuronsDG_autocorr_table.html</loc></url>
 <url><loc>https://michaelbarkasi.github.io/neuronsDG/reference/plot_autocorrelation.html</loc></url>
 <url><loc>https://michaelbarkasi.github.io/neuronsDG/reference/plot_raster.html</loc></url>
 <url><loc>https://michaelbarkasi.github.io/neuronsDG/reference/preprocess.kilo4.html</loc></url>
+<url><loc>https://michaelbarkasi.github.io/neuronsDG/reference/print.neuron.html</loc></url>
 <url><loc>https://michaelbarkasi.github.io/neuronsDG/reference/print.neuronsDG_estimates.html</loc></url>
+<url><loc>https://michaelbarkasi.github.io/neuronsDG/reference/print.summary.neuron.html</loc></url>
 <url><loc>https://michaelbarkasi.github.io/neuronsDG/reference/process.autocorr.html</loc></url>
 <url><loc>https://michaelbarkasi.github.io/neuronsDG/reference/summarize.cluster.key.html</loc></url>
+<url><loc>https://michaelbarkasi.github.io/neuronsDG/reference/summary.neuron.html</loc></url>
 <url><loc>https://michaelbarkasi.github.io/neuronsDG/reference/test.sigma.assumption.html</loc></url>
 </urlset>
 

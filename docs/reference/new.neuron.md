@@ -97,8 +97,11 @@ new.neuron(
 ## Value
 
 A new neuron object (class `"neuron"`; see
-[`neuron-methods`](https://michaelbarkasi.github.io/neuronsDG/reference/neuron-methods.md)
-for its `print`/`summary`/`plot` methods).
+[`print.neuron`](https://michaelbarkasi.github.io/neuronsDG/reference/print.neuron.md),
+[`summary.neuron`](https://michaelbarkasi.github.io/neuronsDG/reference/summary.neuron.md),
+and
+[`plot.neuron`](https://michaelbarkasi.github.io/neuronsDG/reference/plot.neuron.md)
+for its methods).
 
 ## Examples
 

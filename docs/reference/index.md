@@ -9,11 +9,14 @@
 
 ## The neuron class
 
-- [`print(`*`<neuron>`*`)`](https://michaelbarkasi.github.io/neuronsDG/reference/neuron-methods.md)
-  [`summary(`*`<neuron>`*`)`](https://michaelbarkasi.github.io/neuronsDG/reference/neuron-methods.md)
-  [`print(`*`<summary.neuron>`*`)`](https://michaelbarkasi.github.io/neuronsDG/reference/neuron-methods.md)
-  [`plot(`*`<neuron>`*`)`](https://michaelbarkasi.github.io/neuronsDG/reference/neuron-methods.md)
-  : S3 methods for neuron objects
+- [`print(`*`<neuron>`*`)`](https://michaelbarkasi.github.io/neuronsDG/reference/print.neuron.md)
+  : Print a neuron object
+- [`summary(`*`<neuron>`*`)`](https://michaelbarkasi.github.io/neuronsDG/reference/summary.neuron.md)
+  : Summarize a neuron object
+- [`print(`*`<summary.neuron>`*`)`](https://michaelbarkasi.github.io/neuronsDG/reference/print.summary.neuron.md)
+  : Print a neuron summary
+- [`plot(`*`<neuron>`*`)`](https://michaelbarkasi.github.io/neuronsDG/reference/plot.neuron.md)
+  : Plot a neuron object
 
 ## Neuron accessor functions
 
