@@ -9,8 +9,6 @@
 <url><loc>https://michaelbarkasi.github.io/neuronsDG/articles/tutorial_thresholding.html</loc></url>
 <url><loc>https://michaelbarkasi.github.io/neuronsDG/authors.html</loc></url>
 <url><loc>https://michaelbarkasi.github.io/neuronsDG/index.html</loc></url>
-<url><loc>https://michaelbarkasi.github.io/neuronsDG/reference/C++Object-class.html</loc></url>
-<url><loc>https://michaelbarkasi.github.io/neuronsDG/reference/Rcpp_neuron-class.html</loc></url>
 <url><loc>https://michaelbarkasi.github.io/neuronsDG/reference/analyze.autocorr.html</loc></url>
 <url><loc>https://michaelbarkasi.github.io/neuronsDG/reference/compute.autocorr.html</loc></url>
 <url><loc>https://michaelbarkasi.github.io/neuronsDG/reference/compute.crosscorr.html</loc></url>
@@ -32,17 +30,13 @@
 <url><loc>https://michaelbarkasi.github.io/neuronsDG/reference/neuron-methods.html</loc></url>
 <url><loc>https://michaelbarkasi.github.io/neuronsDG/reference/neuronsDG_analysis-methods.html</loc></url>
 <url><loc>https://michaelbarkasi.github.io/neuronsDG/reference/new.neuron.html</loc></url>
-<url><loc>https://michaelbarkasi.github.io/neuronsDG/reference/plot.Rcpp_neuron.html</loc></url>
 <url><loc>https://michaelbarkasi.github.io/neuronsDG/reference/plot.neuronsDG_autocorr_table.html</loc></url>
 <url><loc>https://michaelbarkasi.github.io/neuronsDG/reference/plot_autocorrelation.html</loc></url>
 <url><loc>https://michaelbarkasi.github.io/neuronsDG/reference/plot_raster.html</loc></url>
 <url><loc>https://michaelbarkasi.github.io/neuronsDG/reference/preprocess.kilo4.html</loc></url>
-<url><loc>https://michaelbarkasi.github.io/neuronsDG/reference/print.Rcpp_neuron.html</loc></url>
 <url><loc>https://michaelbarkasi.github.io/neuronsDG/reference/print.neuronsDG_estimates.html</loc></url>
 <url><loc>https://michaelbarkasi.github.io/neuronsDG/reference/process.autocorr.html</loc></url>
-<url><loc>https://michaelbarkasi.github.io/neuronsDG/reference/show,Rcpp_neuron-method.html</loc></url>
 <url><loc>https://michaelbarkasi.github.io/neuronsDG/reference/summarize.cluster.key.html</loc></url>
-<url><loc>https://michaelbarkasi.github.io/neuronsDG/reference/summary.Rcpp_neuron.html</loc></url>
 <url><loc>https://michaelbarkasi.github.io/neuronsDG/reference/test.sigma.assumption.html</loc></url>
 </urlset>
 

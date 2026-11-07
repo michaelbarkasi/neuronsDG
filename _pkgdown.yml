@@ -45,7 +45,6 @@ reference:
 - title: The neuron class
   navbar: The neuron class
   contents:
-  - Rcpp_neuron-class
   - neuron-methods
 
 - title: Neuron accessor functions
